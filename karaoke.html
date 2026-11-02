@@ -311,7 +311,9 @@ function blockOf(i){const k=keyOf(i),ch=!!P.lines[i].chorus;let a=i,b=i;while(a>
 const rangeTxt=ix=>{const s=[...ix].sort((a,b)=>a-b);return s.length===1?`שורה ${s[0]+1}`:(s[s.length-1]-s[0]===s.length-1?`שורות ${s[0]+1}–${s[s.length-1]+1}`:`${s.length} שורות`)};
 const nameOfKey=a=>!a||!a.length?'אף אחד':a.includes('ALL')?'כולם':a.map(id=>pById(id)?.name||'?').join(' + ');
 // visible part of the page (the tool may sit in a tall iframe on the site)
-function visBox(){try{if(window.frameElement){const r=window.frameElement.getBoundingClientRect();const vh=window.parent.innerHeight;return {top:Math.max(0,-r.top),h:Math.min(vh,r.bottom)-Math.max(0,r.top)}}}catch(e){}return {top:window.scrollY,h:window.innerHeight}}
+// height of the site's fixed header (so floating bars are not hidden under it)
+function siteInset(){try{const W=window.parent,D=W.document;let b=0;for(const x of [W.innerWidth*0.2,W.innerWidth/2,W.innerWidth*0.8]){let e=D.elementFromPoint(x,2);while(e&&e!==D.body&&e!==D.documentElement){if(e.tagName==='IFRAME')break;const s=W.getComputedStyle(e);if(s.position==='fixed'||s.position==='sticky'){const bb=e.getBoundingClientRect().bottom;if(bb>b)b=bb;break}e=e.parentElement}}return b<W.innerHeight*0.45?b:0}catch(e){return 0}}
+function visBox(){try{if(window.frameElement){const r=window.frameElement.getBoundingClientRect();const vh=window.parent.innerHeight;const ins=siteInset();return {top:Math.max(0,ins-r.top),h:Math.min(vh,r.bottom)-Math.max(ins,r.top),ins}}}catch(e){}return {top:window.scrollY,h:window.innerHeight,ins:0}}
 function placeFloats(){const v=visBox();placePick(v);placeDock(v);const bar=$('selBar');if(bar&&!bar.hidden){bar.style.top=(v.top+v.h-bar.offsetHeight-10)+'px'}const m=$('askBox');if(m&&!m.hidden){m.style.top=(v.top+Math.max(10,(v.h-m.offsetHeight)/2))+'px'}let emb=false;try{emb=!!window.frameElement}catch(e){}if(emb){const t=$('toast');t.style.top=(v.top+v.h-70)+'px';t.style.bottom='auto'}}
 try{if(window.frameElement){window.parent.addEventListener('scroll',placeFloats,{passive:true});window.parent.document.addEventListener('scroll',placeFloats,{passive:true,capture:true});window.parent.addEventListener('resize',placeFloats)}}catch(e){}
 setInterval(()=>{const s=document.querySelector('[data-step="split"]'),y=document.querySelector('[data-step="sync"]');if(s&&!s.hidden||y&&!y.hidden)placeFloats()},400);
@@ -778,7 +780,7 @@ function show(i){const F=flow();step=Math.max(0,Math.min(F.length-1,i));const ke
  if(key==='sync')renderSync();if(key==='people')renderPeople();if(key==='split'){if(P.people.length&&!Object.values(P.assign).some(a=>a&&a.length))autoSplit();else renderSplit()}if(key==='look')renderThemes();if(key==='video'){sizePreview();audio.currentTime=0;drawPreview()}
  toTop()}
 // back to the top of the tool (on the site the tool sits in an iframe, so scroll the site itself)
-function toTop(){try{if(window.frameElement){const r=window.frameElement.getBoundingClientRect();if(r.top<0||r.top>window.parent.innerHeight*0.6)window.parent.scrollBy({top:r.top-90,behavior:'smooth'});return}}catch(e){}window.scrollTo({top:0,behavior:'smooth'})}
+function toTop(){try{if(window.frameElement){const r=window.frameElement.getBoundingClientRect();const ins=siteInset();if(r.top<ins||r.top>window.parent.innerHeight*0.6)window.parent.scrollBy({top:r.top-ins-12,behavior:'smooth'});return}}catch(e){}window.scrollTo({top:0,behavior:'smooth'})}
 $('steps').addEventListener('click',e=>{const g=e.target.dataset.go;if(g!=null)show(+g)});
 $('prev').onclick=()=>show(step-1);
 $('next').onclick=()=>{const key=flow()[step][0];

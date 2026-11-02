@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>קריוקי משפחתי – אולפני קולות</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f2fa;--paper:#fff;--ink:#22172e;--muted:#6d6278;--line:#e5dcef;--accent:#6b2fb3;--accent-ink:#fff;--soft:#efe5fa;--ok:#1f8a4c;--warn:#b5402a;--gold:#f2b635;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#15101b;--paper:#1f1828;--ink:#f1ebf7;--muted:#a99cb8;--line:#372c45;--accent:#b78bf0;--accent-ink:#1a1224;--soft:#2b2139;color-scheme:dark}}
+:root[data-theme=dark]{--bg:#15101b;--paper:#1f1828;--ink:#f1ebf7;--muted:#a99cb8;--line:#372c45;--accent:#b78bf0;--accent-ink:#1a1224;--soft:#2b2139;color-scheme:dark}
+*{box-sizing:border-box}[hidden]{display:none!important}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Rubik,"Segoe UI",Arial,sans-serif;font-size:17px;line-height:1.5}
+.wrap{max-width:1100px;margin:0 auto;padding:16px max(16px,env(safe-area-inset-left)) 60px}
+header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+header h1{font-size:clamp(22px,4vw,30px);margin:0;font-weight:800}
+.brand{color:var(--accent);font-weight:600;font-size:14px}
+.sp{flex:1}
+.steps{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 14px}
+.steps button{flex:1 1 0;min-width:0;border-radius:999px;padding:8px 6px;font-size:15px;background:var(--paper);color:var(--muted);border:1.5px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.steps button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.steps button.done{color:var(--ink);border-color:var(--accent)}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:18px;display:grid;gap:14px}
+h2{margin:0;font-size:22px}
+.hint{color:var(--muted);font-size:15px;margin:0}
+label{font-weight:600;display:block;margin-bottom:4px}
+input[type=text],input[type=number],textarea,select{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:10px;padding:10px 12px}
+textarea{min-height:220px;resize:vertical;line-height:1.6}
+button,.btn{font:inherit;font-weight:600;border-radius:12px;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);padding:10px 16px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+button.primary,.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button.big{font-size:20px;padding:16px 22px;border-radius:16px}
+button:disabled{opacity:.45;cursor:default}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.nav{display:flex;gap:10px;justify-content:space-between;margin-top:6px}
+.drop{border:2px dashed var(--line);border-radius:14px;padding:18px;text-align:center;color:var(--muted);cursor:pointer}
+.drop.has{border-color:var(--ok);color:var(--ok);border-style:solid}
+.lines{display:grid;gap:6px;max-height:60vh;overflow:auto;padding:2px}
+.ln{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--bg);cursor:pointer}
+.ln .tx{font-size:18px}
+.ln .sec{font-size:12px;color:var(--muted)}
+.ln.cur{border-color:var(--accent);background:var(--soft)}
+.ln.chorus .tx::after{content:" · פזמון";font-size:12px;color:var(--muted)}
+.ln .tm{font-variant-numeric:tabular-nums;font-size:14px;color:var(--muted);direction:ltr}
+.ln .who{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 12px;font-weight:600;font-size:15px;border:2px solid transparent;cursor:pointer;background:var(--bg);color:var(--ink)}
+.chip .dot{width:12px;height:12px;border-radius:50%}
+.chip.on{border-color:var(--ink)}
+.mini{border-radius:999px;padding:2px 9px;font-size:13px;font-weight:600;color:#fff}
+.people{display:grid;gap:8px}
+.person{display:flex;gap:10px;align-items:center;padding:8px 12px;border-radius:12px;background:var(--bg);border:1.5px solid var(--line)}
+.person .dot{width:18px;height:18px;border-radius:50%;flex:none}
+.person .nm{flex:1;font-size:18px}
+.x{border:none;background:transparent;font-size:22px;color:var(--muted);padding:2px 8px}
+.themes{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.theme{border:2px solid transparent;border-radius:12px;padding:0;overflow:hidden;cursor:pointer;background:none;display:grid}
+.theme canvas{width:100%;aspect-ratio:16/9;display:block}
+.theme span{font-size:14px;padding:4px;text-align:center;color:var(--ink)}
+.theme.on{border-color:var(--accent)}
+.stage{position:relative;background:#000;border-radius:14px;overflow:hidden}
+.stage canvas{width:100%;display:block}
+.tap{width:100%;font-size:26px;padding:26px;border-radius:20px}
+.now{font-size:24px;font-weight:800;text-align:center;min-height:1.6em}
+.next{font-size:16px;color:var(--muted);text-align:center}
+.bar{height:8px;background:var(--line);border-radius:99px;overflow:hidden}.bar>i{display:block;height:100%;background:var(--accent);width:0}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
+.toast.show{opacity:1}
+.warn{color:var(--warn);font-weight:600}
+.ok{color:var(--ok);font-weight:600}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label{margin:0;border:1.5px solid var(--line);border-radius:999px;padding:7px 14px;cursor:pointer;background:var(--paper);font-weight:600}
+.seg input:checked+label{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.grid2{grid-template-columns:1fr}.steps button{font-size:13px}}
+.small{font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><div class="brand">אולפני קולות</div><h1 id="hTitle">קריוקי משפחתי</h1></div>
+    <span class="sp"></span>
+    <div class="seg" id="modeSeg" hidden>
+      <input type="radio" name="mode" id="m-staff" value="staff"><label for="m-staff">הכנה (צוות)</label>
+      <input type="radio" name="mode" id="m-client" value="client" checked><label for="m-client">תצוגת לקוח</label>
+    </div>
+  </header>
+  <div class="steps" id="steps"></div>
+
+  <!-- STAFF 1: song -->
+  <section class="card" data-step="song" hidden>
+    <h2>השיר</h2>
+    <div><label for="title">שם השיר</label><input type="text" id="title" placeholder="למשל: שיר לבת המצווה של נועה"></div>
+    <div><label for="lyrics">מילות השיר</label>
+      <p class="hint">כל שורה בשורה נפרדת, שורה ריקה בין בתים. את הפזמון מגדירים פעם אחת עם הכותרת "פזמון:". בכל מקום שכתוב "פזמון" או "פזמון חוזר" הוא יודבק אוטומטית. אפשר גם לכתוב "x2" בסוף שורה שחוזרת.</p>
+      <textarea id="lyrics" placeholder="בית 1:&#10;שורה ראשונה&#10;שורה שנייה&#10;&#10;פזמון:&#10;שורה של הפזמון&#10;עוד שורה&#10;&#10;בית 2:&#10;...&#10;&#10;פזמון חוזר"></textarea></div>
+    <div><label>הגייד (קובץ שמע)</label>
+      <div class="drop" id="drop" tabindex="0">לחצו לבחירת קובץ או גררו לכאן (mp3, wav, m4a)</div>
+      <input type="file" id="audioFile" accept="audio/*,.mp3,.wav,.m4a" hidden></div>
+    <p id="parseMsg" class="hint"></p>
+    <div class="lines" id="parsePreview"></div>
+  </section>
+
+  <!-- STAFF 2: sync -->
+  <section class="card" data-step="sync" hidden>
+    <h2>סנכרון השורות לגייד</h2>
+    <p class="hint">לוחצים "התחלה", ובכל פעם שמתחילה שורה מקישים על הכפתור הגדול (או מקש רווח). אפשר לעצור, ללחוץ על שורה כדי לחזור אליה ולהקיש שוב. ההקשות מיושרות אוטומטית לקצב.</p>
+    <div class="row small"><span>קצב: <b id="bpmTxt">—</b></span><button id="bpmDetect" class="small">זיהוי קצב</button><button id="tapTempo" class="small">הקשת קצב</button>
+      <label class="row small" style="font-weight:400;margin:0"><input type="checkbox" id="snap" checked> יישור לקצב</label><span class="sp"></span><span id="clock" class="tm" style="direction:ltr">0:00.0</span></div>
+    <div class="bar"><i id="seekBar"></i></div>
+    <div class="now" id="syncNow">—</div><div class="next" id="syncNext"></div>
+    <button class="primary tap" id="tapBtn">▶ התחלה</button>
+    <div class="row"><button id="syncPause">⏸ עצירה</button><button id="syncBack">↶ שורה אחורה</button><button id="syncRestart">⟲ מההתחלה</button><span class="sp"></span><span class="hint" id="syncCount"></span></div>
+    <div class="lines" id="syncList"></div>
+  </section>
+
+  <!-- CLIENT 1: people -->
+  <section class="card" data-step="people" hidden>
+    <h2>מי שר?</h2>
+    <p class="hint">כותבים את השמות של כל מי שישיר, אחד אחרי השני. כל משתתף מקבל צבע משלו בסרטון.</p>
+    <div class="row"><input type="text" id="pName" placeholder="שם, למשל: סבתא רחל" style="flex:1;min-width:180px"><button class="primary" id="pAdd">+ הוספה</button></div>
+    <div class="people" id="peopleList"></div>
+  </section>
+
+  <!-- CLIENT 2: split -->
+  <section class="card" data-step="split" hidden>
+    <h2>מי שר מה?</h2>
+    <p class="hint">בוחרים משתתף למעלה, ואז לוחצים על השורות שלו. לחיצה נוספת מורידה אותו מהשורה. אפשר כמה משתתפים באותה שורה.</p>
+    <div class="row" id="pickChips"></div>
+    <div class="row small"><span>חלוקה מהירה:</span><button id="autoStanza" class="small">כל בית למשתתף אחר</button><button id="autoLine" class="small">כל שורה למשתתף אחר</button><button id="autoChorus" class="small">פזמון – כולם יחד</button><button id="clearSplit" class="small">ניקוי</button></div>
+    <div class="lines" id="splitList"></div>
+  </section>
+
+  <!-- CLIENT 3: look -->
+  <section class="card" data-step="look" hidden>
+    <h2>איך זה ייראה?</h2>
+    <p class="hint">בוחרים רקע. סימנו לכם רקע שמתאים לשיר, ואפשר להחליף.</p>
+    <div class="themes" id="themes"></div>
+    <div class="row"><label style="margin:0">או צבע משלכם:</label><input type="color" id="bgColor" value="#4b1d7a"><button id="useColor" class="small">להשתמש בצבע</button>
+      <button id="pickImg" class="small">📷 תמונה משלכם</button><input type="file" id="imgFile" accept="image/*" hidden></div>
+    <div class="seg"><input type="radio" name="ratio" id="r-h" value="h" checked><label for="r-h">לרוחב (טלוויזיה ומחשב)</label><input type="radio" name="ratio" id="r-v" value="v"><label for="r-v">לאורך (טלפון)</label></div>
+  </section>
+
+  <!-- CLIENT 4: video -->
+  <section class="card" data-step="video" hidden>
+    <h2>הסרטון</h2>
+    <div class="stage"><canvas id="preview" width="1280" height="720"></canvas></div>
+    <div class="row"><button class="primary" id="pPlay">▶ צפייה</button><input type="range" id="pSeek" min="0" max="1000" value="0" style="flex:1"><span id="pTime" class="tm" style="direction:ltr">0:00</span></div>
+    <div class="grid2">
+      <button class="big" id="expLow">⬇ סרטון קטן לוואטסאפ</button>
+      <button class="big primary" id="expHigh">⬇ סרטון באיכות גבוהה</button>
+    </div>
+    <div id="expBox" hidden class="card" style="background:var(--soft)">
+      <div id="expMsg" class="now" style="font-size:18px"></div><div class="bar"><i id="expBar"></i></div>
+      <p class="hint">יצירת הסרטון לוקחת בערך כאורך השיר. השאירו את הדף פתוח ואל תעברו לחלון אחר עד שזה נגמר.</p>
+      <button id="expCancel">ביטול</button>
+    </div>
+    <div id="doneBox" hidden class="row"><a class="btn primary" id="dlLink" download>⬇ הורדה</a><button id="shareBtn">שיתוף (וואטסאפ, מייל…)</button><a class="btn" id="waLink" target="_blank" rel="noopener">שליחה בוואטסאפ</a></div>
+  </section>
+
+  <div class="nav"><button id="prev">→ הקודם</button><button class="primary" id="next">הבא ←</button></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $=id=>document.getElementById(id);
+const toast=m=>{const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove('show'),2200)};
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=(s,dec)=>{s=Math.max(0,s||0);const m=Math.floor(s/60),r=s-m*60;return m+':'+(dec?r.toFixed(1).padStart(4,'0'):String(Math.floor(r)).padStart(2,'0'))};
+const COLORS=['#ff5c8a','#3db8ff','#ffc23d','#4cd97b','#b98bff','#ff8a3d','#2fe0d0','#ff6b6b','#a3e635','#f472b6'];
+
+// ---------- state ----------
+const P={title:'',lyrics:'',lines:[],bpm:0,beat0:0,people:[],assign:{},bg:{type:'theme',v:'party'},ratio:'h',img:null};
+let audioBuf=null,audioBlob=null,audioURL='';
+const audio=new Audio();audio.preload='auto';
+
+// ---------- lyrics parsing ----------
+const HDR=/^\s*[\[\(]?\s*(פזמון(?:\s+חוזר)?|בית(?:\s+\S+)?|גשר|מעבר|פתיחה|סיום|קודה|סולו|chorus|verse\s*\d*|bridge|intro|outro)\s*\d*\s*[\]\)]?\s*[:：]?\s*$/i;
+const CHMARK=/^\s*[\[\(]?\s*(?:פזמון(?:\s+חוזר)?|חוזר(?:ים)? על הפזמון|chorus)\s*(?:[x×*]\s*(\d+)|(\d+)\s*[x×*])?\s*[\]\)]?\s*[:：]?\s*$/i;
+const REP=/\s*[\(\[]?\s*(?:[x×*]\s*(\d+)|(\d+)\s*[x×*])\s*[\)\]]?\s*$/i;
+function parseLyrics(raw){
+ const stanzas=String(raw||'').replace(/\r/g,'').split(/\n\s*\n/).map(s=>s.split('\n').map(l=>l.trim()).filter(Boolean)).filter(s=>s.length);
+ let chorus=null;const out=[];const pending=[];let warn='';
+ // first pass: find chorus definition
+ for(const st of stanzas){const h=st[0].match(HDR);if(h&&/פזמון|chorus/i.test(h[1])&&st.length>1&&!chorus)chorus=st.slice(1)}
+ let sIdx=0;
+ for(const st of stanzas){
+  let label='',body=st;const h=st[0].match(HDR);
+  if(h&&!(CHMARK.test(st[0])&&st.length===1)){label=h[1].replace(/[:：]$/,'');body=st.slice(1)}
+  const isCh=/פזמון|chorus/i.test(label);
+  const push=(text,ch)=>{let n=1;const m=text.match(REP);if(m&&text.replace(REP,'').trim()){n=+(m[1]||m[2]);text=text.replace(REP,'').trim()}for(let k=0;k<Math.min(n,8);k++)out.push({text,t:null,chorus:!!ch,st:sIdx,sec:ch?'פזמון':label})};
+  for(const l of body){const cm=l.match(CHMARK);
+   if(cm){const n=+(cm[1]||cm[2]||1);if(chorus){sIdx++;for(let k=0;k<Math.min(n,6);k++){chorus.forEach(c=>push(c,true));sIdx++}}else warn='כתוב "פזמון" אבל לא מצאתי איפה הפזמון מוגדר. הוסיפו בתחילת הפזמון שורה "פזמון:".';continue}
+   push(l,isCh)}
+  if(!body.length&&CHMARK.test(st[0])){const cm=st[0].match(CHMARK);const n=+(cm[1]||cm[2]||1);if(chorus){sIdx++;for(let k=0;k<Math.min(n,6);k++){chorus.forEach(c=>push(c,true));sIdx++}}else warn='כתוב "פזמון" אבל לא מצאתי איפה הפזמון מוגדר. הוסיפו בתחילת הפזמון שורה "פזמון:".'}
+  sIdx++}
+ return {lines:out,warn,hasChorus:!!chorus}}
+
+// ---------- audio analysis: tempo ----------
+async function decode(blob){const ac=new (window.AudioContext||window.webkitAudioContext)();const buf=await ac.decodeAudioData(await blob.arrayBuffer());ac.close&&ac.close();return buf}
+function detectTempo(buf){
+ const sr=buf.sampleRate,ch=buf.numberOfChannels,len=buf.length;const hop=512,win=1024;const mono=new Float32Array(len);
+ for(let c=0;c<ch;c++){const d=buf.getChannelData(c);for(let i=0;i<len;i++)mono[i]+=d[i]/ch}
+ const n=Math.floor((len-win)/hop);const env=new Float32Array(n);let prev=0;
+ for(let f=0;f<n;f++){let e=0;const o=f*hop;for(let i=0;i<win;i+=2){const v=mono[o+i];e+=v*v}e=Math.log(1e-6+e);env[f]=Math.max(0,e-prev);prev=e}
+ const fps=sr/hop;let best=0,bestLag=0;const score=[];
+ for(let bpm=70;bpm<=180;bpm+=0.5){const lag=fps*60/bpm;let s=0,cnt=0;for(let i=0;i+lag*2<n;i+=1){const a=env[i],b=env[Math.round(i+lag)],c2=env[Math.round(i+lag*2)];s+=a*b+0.5*a*c2;cnt++}s/=Math.max(1,cnt);const prior=Math.exp(-Math.pow(Math.log2(bpm/115),2)/0.5);const v=s*prior;score.push([bpm,v]);if(v>best){best=v;bestLag=bpm}}
+ const bpm=bestLag;const period=fps*60/bpm;let bestPh=0,bestS=-1;
+ for(let ph=0;ph<period;ph+=0.5){let s=0;for(let k=ph;k<n;k+=period)s+=env[Math.round(k)]||0;if(s>bestS){bestS=s;bestPh=ph}}
+ return {bpm:Math.round(bpm*2)/2,beat0:bestPh/fps}}
+const beatLen=()=>P.bpm?60/P.bpm:0;
+function snapT(t){if(!P.bpm||!$('snap').checked)return t;const half=beatLen()/2;const k=Math.round((t-P.beat0)/half);const s=P.beat0+k*half;return Math.abs(s-t)<half*0.6?s:t}
+
+// ---------- persistence (this device, stage 1) ----------
+const DB={open(){return new Promise((res,rej)=>{const r=indexedDB.open('kolot-karaoke',1);r.onupgradeneeded=()=>r.result.createObjectStore('p');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})},
+ async put(k,v){try{const d=await this.open();await new Promise((res,rej)=>{const tx=d.transaction('p','readwrite');tx.objectStore('p').put(v,k);tx.oncomplete=res;tx.onerror=()=>rej(tx.error)})}catch(e){}},
+ async get(k){try{const d=await this.open();return await new Promise(res=>{const r=d.transaction('p').objectStore('p').get(k);r.onsuccess=()=>res(r.result);r.onerror=()=>res(null)})}catch(e){return null}}};
+let saveT=null;const save=()=>{clearTimeout(saveT);saveT=setTimeout(()=>DB.put('proj',{P:JSON.parse(JSON.stringify({...P,img:null})),img:P.img}),400)};
+
+// ---------- people & split ----------
+const pById=id=>P.people.find(p=>p.id===id);
+function addPerson(name){name=name.trim();if(!name)return;const id='p'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);P.people.push({id,name,color:COLORS[P.people.length%COLORS.length]});if(!pick)pick=id;save();renderPeople();renderSplit()}
+let pick=null;
+function whoOf(i){const a=P.assign[i]||[];if(a.includes('ALL'))return {label:'כולם יחד',color:'#ffd166',all:true,ids:['ALL']};const ps=a.map(pById).filter(Boolean);if(!ps.length)return null;return {label:ps.map(p=>p.name).join(' + '),color:ps[0].color,colors:ps.map(p=>p.color),ids:a}}
+function renderPeople(){$('peopleList').innerHTML=P.people.map((p,i)=>`<div class="person"><span class="dot" style="background:${p.color}"></span><span class="nm">${esc(p.name)}</span><button class="x" data-del="${p.id}" aria-label="הסרה">×</button></div>`).join('')||'<p class="hint">עדיין לא הוספתם משתתפים.</p>'}
+$('peopleList').addEventListener('click',e=>{const id=e.target.dataset.del;if(!id)return;P.people=P.people.filter(p=>p.id!==id);Object.keys(P.assign).forEach(k=>P.assign[k]=P.assign[k].filter(x=>x!==id));if(pick===id)pick=P.people[0]?.id||null;save();renderPeople()});
+$('pAdd').onclick=()=>{addPerson($('pName').value);$('pName').value='';$('pName').focus()};
+$('pName').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('pAdd').click()}});
+function renderSplit(){
+ $('pickChips').innerHTML=P.people.map(p=>`<span class="chip${pick===p.id?' on':''}" data-pick="${p.id}"><span class="dot" style="background:${p.color}"></span>${esc(p.name)}</span>`).join('')+`<span class="chip${pick==='ALL'?' on':''}" data-pick="ALL"><span class="dot" style="background:linear-gradient(90deg,${COLORS.slice(0,4).join(',')})"></span>כולם יחד</span>`;
+ $('splitList').innerHTML=P.lines.map((l,i)=>{const w=whoOf(i);return `<div class="ln${l.chorus?' chorus':''}" data-i="${i}"><span class="sec">${i+1}</span><span class="tx">${esc(l.text)}</span><span class="who">${w?(w.all?'<span class="mini" style="background:#ffd166;color:#1a1224">כולם</span>':w.ids.map(id=>{const p=pById(id);return p?`<span class="mini" style="background:${p.color}">${esc(p.name)}</span>`:''}).join('')):'<span class="hint small">—</span>'}</span></div>`}).join('')}
+$('pickChips').addEventListener('click',e=>{const c=e.target.closest('[data-pick]');if(!c)return;pick=c.dataset.pick;renderSplit()});
+$('splitList').addEventListener('click',e=>{const r=e.target.closest('.ln');if(!r||!pick)return;const i=+r.dataset.i;let a=P.assign[i]||[];if(pick==='ALL')a=a.includes('ALL')?[]:['ALL'];else{a=a.filter(x=>x!=='ALL');a=a.includes(pick)?a.filter(x=>x!==pick):[...a,pick]}P.assign[i]=a;save();renderSplit()});
+$('autoStanza').onclick=()=>{if(!P.people.length)return toast('קודם מוסיפים משתתפים');let k=-1,last=-1;P.lines.forEach((l,i)=>{if(l.chorus){P.assign[i]=['ALL'];return}if(l.st!==last){k++;last=l.st}P.assign[i]=[P.people[k%P.people.length].id]});save();renderSplit()};
+$('autoLine').onclick=()=>{if(!P.people.length)return toast('קודם מוסיפים משתתפים');let k=0;P.lines.forEach((l,i)=>{P.assign[i]=[P.people[k++%P.people.length].id]});save();renderSplit()};
+$('autoChorus').onclick=()=>{P.lines.forEach((l,i)=>{if(l.chorus)P.assign[i]=['ALL']});save();renderSplit()};
+$('clearSplit').onclick=()=>{P.assign={};save();renderSplit()};
+
+// ---------- backgrounds ----------
+const THEMES=[['party','חגיגה'],['gold','זהב'],['night','לילה וכוכבים'],['sunset','שקיעה'],['sea','ים'],['pink','ורוד'],['blue','כחול'],['green','טבע']];
+const TH={party:['#2a0b4a','#7a1fa2','#ff5c8a'],gold:['#120c02','#3b2a07','#f2b635'],night:['#030616','#0f1d4a','#9ec5ff'],sunset:['#2b0b2e','#c2410c','#fcd34d'],sea:['#02152b','#0e5a8a','#5eead4'],pink:['#3a0a2a','#be185d','#fbcfe8'],blue:['#04122e','#1d4ed8','#93c5fd'],green:['#04170d','#166534','#bef264']};
+function suggestTheme(){const t=(P.title+' '+P.lines.map(l=>l.text).join(' '));if(/ים|גל|חוף|מים/.test(t))return 'sea';if(/שמש|שקיעה|קיץ|אור/.test(t))return 'sunset';if(/לילה|כוכב|ירח|חלום/.test(t))return 'night';if(/זהב|מלך|מלכה|כתר|יהלום/.test(t))return 'gold';if(/פרח|עץ|שדה|טבע|ירוק/.test(t))return 'green';return 'party'}
+const seedRand=s=>()=>{s=(s*16807)%2147483647;return s/2147483647};
+function drawBg(c,W,H,t){const b=P.bg;
+ if(b.type==='image'&&imgEl){const z=1.06+0.04*Math.sin(t/12);const r=Math.max(W/imgEl.width,H/imgEl.height)*z;const w=imgEl.width*r,h=imgEl.height*r;c.drawImage(imgEl,(W-w)/2,(H-h)/2,w,h);c.fillStyle='rgba(0,0,0,.5)';c.fillRect(0,0,W,H);return}
+ let pal=TH[b.v]||TH.party;if(b.type==='color'){const col=b.v;pal=[shade(col,-0.65),col,'#ffffff']}
+ const g=c.createLinearGradient(0,0,W*0.4,H);g.addColorStop(0,pal[0]);g.addColorStop(1,pal[1]);c.fillStyle=g;c.fillRect(0,0,W,H);
+ const R=seedRand(7);const n=b.v==='night'?90:26;const S=Math.min(W,H);
+ for(let i=0;i<n;i++){const x=R()*W,y0=R()*H,sz=(b.v==='night'?R()*2+0.6:R()*S*0.09+S*0.02),sp=R()*0.5+0.2;const y=(y0-t*sp*S*0.02)%(H+sz*2);const yy=y<-sz?y+H+sz*2:y;
+  c.globalAlpha=b.v==='night'?(0.4+0.6*Math.abs(Math.sin(t*sp*2+i))):0.10+0.08*Math.sin(t*sp+i);c.fillStyle=b.v==='night'?'#fff':pal[2];c.beginPath();c.arc(x,yy,sz,0,7);c.fill()}
+ c.globalAlpha=1;const v=c.createRadialGradient(W/2,H/2,S*0.2,W/2,H/2,Math.max(W,H)*0.75);v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(0,0,0,.55)');c.fillStyle=v;c.fillRect(0,0,W,H)}
+function shade(hex,k){const n=parseInt(hex.slice(1),16);let r=n>>16,g=n>>8&255,b=n&255;const f=k<0?0:255,p=Math.abs(k);r=Math.round((f-r)*p+r);g=Math.round((f-g)*p+g);b=Math.round((f-b)*p+b);return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1)}
+let imgEl=null;
+function renderThemes(){$('themes').innerHTML=THEMES.map(([k,n])=>`<button class="theme${P.bg.type==='theme'&&P.bg.v===k?' on':''}" data-th="${k}"><canvas width="320" height="180"></canvas><span>${n}${k===suggestTheme()?' ✦':''}</span></button>`).join('');
+ [...$('themes').querySelectorAll('canvas')].forEach((cv,i)=>{const save=P.bg;P.bg={type:'theme',v:THEMES[i][0]};drawBg(cv.getContext('2d'),320,180,3);P.bg=save})}
+$('themes').addEventListener('click',e=>{const b=e.target.closest('[data-th]');if(!b)return;P.bg={type:'theme',v:b.dataset.th};save();renderThemes()});
+$('useColor').onclick=()=>{P.bg={type:'color',v:$('bgColor').value};save();renderThemes();toast('הרקע עודכן')};
+$('pickImg').onclick=()=>$('imgFile').click();
+$('imgFile').onchange=async()=>{const f=$('imgFile').files[0];if(!f)return;P.img=await shrinkImage(f);await loadImg();P.bg={type:'image'};save();renderThemes();toast('התמונה נבחרה')};
+async function shrinkImage(f){const bm=await createImageBitmap(f);const r=Math.min(1,1920/Math.max(bm.width,bm.height));const cv=document.createElement('canvas');cv.width=bm.width*r;cv.height=bm.height*r;cv.getContext('2d').drawImage(bm,0,0,cv.width,cv.height);return await new Promise(res=>cv.toBlob(res,'image/jpeg',0.85))}
+async function loadImg(){if(!P.img){imgEl=null;return}imgEl=await createImageBitmap(P.img)}
+document.querySelectorAll('input[name=ratio]').forEach(r=>r.onchange=()=>{P.ratio=r.value;save();sizePreview();drawPreview()});
+
+// ---------- karaoke renderer ----------
+function timeline(){const L=P.lines.map((l,i)=>({...l,i})).filter(l=>l.t!=null).sort((a,b)=>a.t-b.t);
+ const dur=audioBuf?audioBuf.duration:(L.length?L[L.length-1].t+8:0);
+ L.forEach((l,k)=>{const nx=L[k+1];const words=l.text.split(/\s+/).length;const est=Math.max(1.6,words*(beatLen()||0.5)*0.9+0.6);l.end=nx?Math.min(nx.t,l.t+Math.max(est,Math.min(nx.t-l.t,est*1.6))):Math.min(dur,l.t+est+1.5)});return {L,dur}}
+let FONT='Rubik, "Segoe UI", Arial, sans-serif';
+function wrap(c,text,maxW){const words=text.split(/\s+/);const lines=[];let cur='';for(const w of words){const t=cur?cur+' '+w:w;if(c.measureText(t).width>maxW&&cur){lines.push(cur);cur=w}else cur=t}if(cur)lines.push(cur);return lines}
+function pill(c,x,y,text,color,size,align){c.font=`700 ${size}px ${FONT}`;const w=c.measureText(text).width+size*1.2,h=size*1.6;const x0=align==='center'?x-w/2:x-w;c.fillStyle=color;roundRect(c,x0,y-h/2,w,h,h/2);c.fill();c.fillStyle=lum(color)>0.6?'#1a1224':'#fff';c.textAlign='center';c.textBaseline='middle';c.fillText(text,x0+w/2,y+size*0.05);return w}
+function roundRect(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath()}
+function lum(hex){if(!/^#/.test(hex))return 1;const n=parseInt(hex.slice(1),16);return (0.299*(n>>16)+0.587*(n>>8&255)+0.114*(n&255))/255}
+function drawFrame(c,W,H,t,TL){
+ drawBg(c,W,H,t);const {L,dur}=TL;const S=Math.min(W,H),vert=H>W;c.direction='rtl';
+ const k=L.findIndex((l,j)=>t>=l.t&&(j===L.length-1||t<L[j+1].t));const cur=k>=0?L[k]:null;const nxt=k>=0?L[k+1]:L[0];
+ const beat=beatLen()||0.6;
+ // intro / title
+ if(!cur||(cur&&t>cur.end&&nxt&&nxt.t-t>beat*6)){
+  if(!cur){c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';c.font=`800 ${S*0.085}px ${FONT}`;const tl=wrap(c,P.title||'קריוקי משפחתי',W*0.85);tl.forEach((s,i)=>c.fillText(s,W/2,H*0.36+(i-(tl.length-1)/2)*S*0.1));
+   c.font=`600 ${S*0.032}px ${FONT}`;c.globalAlpha=0.85;const names=P.people.map(p=>p.name).join(' · ');if(names)wrap(c,names,W*0.85).slice(0,2).forEach((s,i)=>c.fillText(s,W/2,H*0.47+i*S*0.045));c.globalAlpha=1}
+  else{c.fillStyle='rgba(255,255,255,.8)';c.textAlign='center';c.font=`600 ${S*0.045}px ${FONT}`;c.fillText('♪ מעבר מוזיקלי ♪',W/2,H*0.4)}
+  if(nxt){const left=nxt.t-t;const bars=P.bpm?Math.ceil(left/(beat*4)):0;if(left>beat*4.5){c.font=`600 ${S*0.034}px ${FONT}`;c.fillStyle='rgba(255,255,255,.75)';c.fillText(bars?`מתחילים בעוד ${bars} ${bars===1?'תיבה':'תיבות'}`:`מתחילים בעוד ${Math.ceil(left)} שניות`,W/2,H*(vert?0.62:0.66))}
+   drawUpNext(c,W,H,t,nxt,S,beat,true)}
+  brand(c,W,H,S,t,dur,L.length?L[L.length-1].end:0);return}
+ // current line
+ const w=whoOf(cur.i);const col=w?w.color:'#ffffff';
+ const fs=S*(vert?0.075:0.085);c.font=`800 ${fs}px ${FONT}`;const rows=wrap(c,cur.text,W*0.86);const lh=fs*1.25;const y0=H*(vert?0.42:0.45)-(rows.length-1)*lh/2;
+ if(w)pill(c,W/2,y0-fs*1.25,w.label,w.color,S*0.034,'center');
+ c.font=`800 ${fs}px ${FONT}`;
+ const p=Math.max(0,Math.min(1,(t-cur.t)/Math.max(0.5,(cur.end-cur.t)*0.92)));const total=rows.reduce((a,r)=>a+c.measureText(r).width,0);let acc=0;
+ rows.forEach((r,i)=>{const y=y0+i*lh;const rw=c.measureText(r).width;c.textAlign='center';c.textBaseline='middle';c.font=`800 ${fs}px ${FONT}`;
+  c.lineWidth=fs*0.12;c.strokeStyle='rgba(0,0,0,.55)';c.lineJoin='round';c.strokeText(r,W/2,y);c.fillStyle='rgba(255,255,255,.55)';c.fillText(r,W/2,y);
+  const part=Math.max(0,Math.min(1,(p*total-acc)/rw));acc+=rw;if(part>0){c.save();const xr=W/2+rw/2;c.beginPath();c.rect(xr-rw*part-2,y-fs,rw*part+4,fs*2);c.clip();c.fillStyle=col;c.fillText(r,W/2,y);c.restore()}});
+ // after the line is sung and a long gap follows
+ if(t>cur.end&&nxt&&nxt.t-t>beat*4.5){c.textAlign='center';c.font=`600 ${S*0.03}px ${FONT}`;c.fillStyle='rgba(255,255,255,.7)';const bars=P.bpm?Math.ceil((nxt.t-t)/(beat*4)):0;c.fillText(bars?`♪ עוד ${bars} ${bars===1?'תיבה':'תיבות'} ♪`:'♪',W/2,y0+rows.length*lh+S*0.02)}
+ if(nxt)drawUpNext(c,W,H,t,nxt,S,beat,false,w);
+ brand(c,W,H,S,t,dur,L.length?L[L.length-1].end:0)}
+function drawUpNext(c,W,H,t,nxt,S,beat,intro,curW){
+ const nw=whoOf(nxt.i);const yb=H*(H>W?0.74:0.8);const fs=S*0.038;
+ c.font=`600 ${fs}px ${FONT}`;c.textAlign='center';c.textBaseline='middle';const r=wrap(c,nxt.text,W*0.8)[0]+(wrap(c,nxt.text,W*0.8).length>1?'…':'');c.fillStyle='rgba(255,255,255,.62)';c.fillText(r,W/2,yb);
+ const same=curW&&nw&&curW.ids.join()===nw.ids.join();
+ if(nw&&!same){pill(c,W/2,yb-fs*1.5,'הבא בתור: '+nw.label,nw.color,S*0.026,'center')}
+ const left=nxt.t-t;const nb=Math.ceil(left/beat);
+ if(left>0&&left<=beat*4+0.02&&(!same||intro)){const cx=W/2,cy=H*(H>W?0.585:0.615),R=S*0.05;const frac=1-((left/beat)%1);
+  c.save();c.globalAlpha=0.95;c.lineWidth=S*0.01;c.strokeStyle='rgba(255,255,255,.25)';c.beginPath();c.arc(cx,intro?H*0.6:cy,R,0,7);c.stroke();
+  c.strokeStyle=nw?nw.color:'#fff';c.beginPath();c.arc(cx,intro?H*0.6:cy,R,-Math.PI/2,-Math.PI/2+Math.PI*2*frac);c.stroke();
+  c.fillStyle='#fff';c.font=`800 ${R*1.1*(1+0.15*(1-frac))}px ${FONT}`;c.fillText(String(Math.max(1,nb)),cx,(intro?H*0.6:cy)+R*0.05);c.restore()}}
+function brand(c,W,H,S,t,dur,lastEnd){c.textAlign='left';c.textBaseline='bottom';c.font=`600 ${S*0.024}px ${FONT}`;c.fillStyle='rgba(255,255,255,.55)';c.direction='ltr';c.fillText('Kolot · אולפני קולות',S*0.03,H-S*0.025);c.direction='rtl';
+ const os=Math.max(dur-4,(lastEnd||0)+0.3);if(dur&&t>os){const a=Math.min(1,(t-os)/1.0);c.fillStyle=`rgba(10,4,20,${0.88*a})`;c.fillRect(0,0,W,H);c.globalAlpha=a;c.textAlign='center';c.textBaseline='middle';c.fillStyle='#fff';c.font=`800 ${S*0.06}px ${FONT}`;c.fillText('הופק באולפני קולות',W/2,H*0.45);c.font=`600 ${S*0.034}px ${FONT}`;c.fillText('kolot-studios.com',W/2,H*0.55);c.globalAlpha=1}}
+
+// ---------- preview ----------
+const pv=$('preview'),pc=pv.getContext('2d');let pvTL=null,pvRaf=0;
+function sizePreview(){if(P.ratio==='v'){pv.width=720;pv.height=1280;pv.style.maxWidth='360px';pv.style.margin='0 auto'}else{pv.width=1280;pv.height=720;pv.style.maxWidth='';pv.style.margin=''}}
+function drawPreview(){pvTL=timeline();drawFrame(pc,pv.width,pv.height,audio.currentTime||0,pvTL);const d=pvTL.dur||1;$('pSeek').value=Math.round((audio.currentTime||0)/d*1000);$('pTime').textContent=fmt(audio.currentTime)+' / '+fmt(d)}
+function pvLoop(){drawPreview();if(!audio.paused)pvRaf=requestAnimationFrame(pvLoop)}
+$('pPlay').onclick=async()=>{if(!audioURL)return toast('אין עדיין גייד');if(audio.paused){await audio.play();$('pPlay').textContent='⏸ עצירה';pvLoop()}else{audio.pause();$('pPlay').textContent='▶ צפייה'}};
+$('pSeek').oninput=()=>{const d=timeline().dur||0;audio.currentTime=$('pSeek').value/1000*d;drawPreview()};
+audio.addEventListener('ended',()=>{$('pPlay').textContent='▶ צפייה'});
+
+// ---------- export ----------
+let expCancel=false;
+function pickMime(){const c=['video/mp4;codecs=avc1.42E01F,mp4a.40.2','video/mp4;codecs=avc1,mp4a','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];return c.find(m=>window.MediaRecorder&&MediaRecorder.isTypeSupported(m))||''}
+async function exportVideo(q){
+ if(!audioBuf)return toast('אין עדיין גייד');const mime=pickMime();if(!mime)return toast('הדפדפן הזה לא תומך ביצירת סרטון. נסו בכרום.');
+ const vert=P.ratio==='v';const W=q==='high'?(vert?1080:1920):(vert?480:854),H=q==='high'?(vert?1920:1080):(vert?854:480);
+ const cv=document.createElement('canvas');cv.width=W;cv.height=H;const c=cv.getContext('2d');const TL=timeline();
+ audio.pause();expCancel=false;$('expBox').hidden=false;$('doneBox').hidden=true;$('expMsg').textContent='יוצר סרטון…';
+ const ac=new (window.AudioContext||window.webkitAudioContext)();const src=ac.createBufferSource();src.buffer=audioBuf;const dest=ac.createMediaStreamDestination();src.connect(dest);
+ const vs=cv.captureStream(30);const stream=new MediaStream([...vs.getVideoTracks(),...dest.stream.getAudioTracks()]);
+ const rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:q==='high'?8e6:1.2e6,audioBitsPerSecond:q==='high'?192000:96000});const chunks=[];rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
+ const done=new Promise(res=>rec.onstop=res);
+ drawFrame(c,W,H,0,TL);rec.start(1000);await ac.resume();const t0=ac.currentTime+0.05;src.start(t0);
+ let stop=false;const tick=()=>{if(stop)return;const t=ac.currentTime-t0;drawFrame(c,W,H,Math.max(0,t),TL);$('expBar').style.width=Math.min(100,t/audioBuf.duration*100)+'%';$('expMsg').textContent=`יוצר סרטון… ${Math.min(100,Math.round(t/audioBuf.duration*100))}%`;
+  if(expCancel||t>=audioBuf.duration+0.3){stop=true;try{src.stop()}catch(e){}setTimeout(()=>rec.stop(),300);return}requestAnimationFrame(tick)};
+ const bg=setInterval(()=>{if(!stop&&document.hidden){const t=ac.currentTime-t0;drawFrame(c,W,H,Math.max(0,t),TL);if(t>=audioBuf.duration+0.3)tick()}},1000/30);
+ requestAnimationFrame(tick);await done;clearInterval(bg);ac.close();
+ if(expCancel){$('expBox').hidden=true;return}
+ const ext=mime.includes('mp4')?'mp4':'webm';const blob=new Blob(chunks,{type:mime.split(';')[0]});const name=(P.title||'קריוקי').replace(/[\\/:*?"<>|]/g,'')+(q==='high'?'':' - קטן')+'.'+ext;
+ const url=URL.createObjectURL(blob);$('dlLink').href=url;$('dlLink').download=name;$('expBox').hidden=true;$('doneBox').hidden=false;
+ const file=new File([blob],name,{type:blob.type});$('shareBtn').hidden=!(navigator.canShare&&navigator.canShare({files:[file]}));$('shareBtn').onclick=()=>navigator.share({files:[file],title:P.title||'קריוקי',text:'הקריוקי שלנו מאולפני קולות 🎤'}).catch(()=>{});
+ $('waLink').href='https://wa.me/?text='+encodeURIComponent('הקריוקי שלנו מאולפני קולות 🎤 '+(P.title||''));
+ toast(ext==='mp4'?'הסרטון מוכן':'הסרטון מוכן (בפורמט WebM – בכרום מעודכן הוא יוצא MP4)')}
+$('expLow').onclick=()=>exportVideo('low');$('expHigh').onclick=()=>exportVideo('high');$('expCancel').onclick=()=>{expCancel=true};
+
+// ---------- staff: song + audio ----------
+function reparse(){P.title=$('title').value.trim();P.lyrics=$('lyrics').value;const r=parseLyrics(P.lyrics);
+ const old=new Map();P.lines.forEach(l=>{if(!old.has(l.text))old.set(l.text,[]);old.get(l.text).push(l.t)});
+ P.lines=r.lines.map(l=>{const a=old.get(l.text);return {...l,t:a&&a.length?a.shift():null}});
+ $('parseMsg').innerHTML=r.lines.length?`<span class="ok">${r.lines.length} שורות</span>${r.hasChorus?' · הפזמון הודבק בכל מקום שכתוב "פזמון"':''}${r.warn?` · <span class="warn">${esc(r.warn)}</span>`:''}`:'';
+ $('parsePreview').innerHTML=P.lines.map((l,i)=>`<div class="ln${l.chorus?' chorus':''}"><span class="sec">${i+1}</span><span class="tx">${esc(l.text)}</span><span class="sec">${esc(l.sec||'')}</span></div>`).join('');
+ $('hTitle').textContent=P.title||'קריוקי משפחתי';save()}
+$('title').addEventListener('input',reparse);$('lyrics').addEventListener('input',()=>{clearTimeout(reparse.t);reparse.t=setTimeout(reparse,300)});
+$('drop').onclick=()=>$('audioFile').click();$('drop').onkeydown=e=>{if(e.key==='Enter')$('audioFile').click()};
+['dragover','dragenter'].forEach(ev=>$('drop').addEventListener(ev,e=>{e.preventDefault()}));
+$('drop').addEventListener('drop',e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f)setAudio(f,true)});
+$('audioFile').onchange=()=>{const f=$('audioFile').files[0];if(f)setAudio(f,true)};
+async function setAudio(blob,fresh){audioBlob=blob;if(audioURL)URL.revokeObjectURL(audioURL);audioURL=URL.createObjectURL(blob);audio.src=audioURL;$('drop').classList.add('has');$('drop').textContent='טוען את הגייד…';
+ try{audioBuf=await decode(blob);$('drop').textContent=`✓ ${blob.name||'גייד'} · ${fmt(audioBuf.duration)}`;if(fresh){const r=detectTempo(audioBuf);P.bpm=r.bpm;P.beat0=r.beat0;$('bpmTxt').textContent=P.bpm+' BPM';DB.put('audio',blob);save()}}
+ catch(e){$('drop').textContent='לא הצלחתי לקרוא את הקובץ. נסו mp3 או wav.';$('drop').classList.remove('has')}}
+
+// ---------- staff: sync ----------
+let cur=0;let tapTimes=[];
+function renderSync(){const d=audioBuf?audioBuf.duration:1;$('syncList').innerHTML=P.lines.map((l,i)=>`<div class="ln${i===cur?' cur':''}${l.chorus?' chorus':''}" data-i="${i}"><span class="tm">${l.t!=null?fmt(l.t,true):'—'}</span><span class="tx">${esc(l.text)}</span><span class="row"><button class="small" data-n="-0.1" data-i="${i}">−0.1</button><button class="small" data-n="0.1" data-i="${i}">+0.1</button></span></div>`).join('');
+ $('syncNow').textContent=P.lines[cur]?P.lines[cur].text:'✓ כל השורות מסונכרנות';$('syncNext').textContent=P.lines[cur+1]?'הבאה: '+P.lines[cur+1].text:'';
+ $('syncCount').textContent=`${P.lines.filter(l=>l.t!=null).length}/${P.lines.length} שורות`;$('bpmTxt').textContent=P.bpm?P.bpm+' BPM':'—';
+ const el=$('syncList').querySelector('.cur');if(el)el.scrollIntoView({block:'nearest'})}
+const LAT=0.06;
+function tap(){if(!audioURL)return toast('קודם מעלים גייד');if(audio.paused){audio.play();$('tapBtn').textContent='⬇ הקישו בתחילת השורה';syncLoop();return}
+ if(cur>=P.lines.length)return;P.lines[cur].t=Math.round(snapT(Math.max(0,audio.currentTime-LAT))*100)/100;cur++;save();renderSync()}
+$('tapBtn').onclick=tap;
+document.addEventListener('keydown',e=>{if(e.code==='Space'&&!$('syncList').closest('section').hidden&&!/INPUT|TEXTAREA/.test(document.activeElement.tagName)){e.preventDefault();tap()}});
+$('syncPause').onclick=()=>{audio.pause();$('tapBtn').textContent='▶ המשך'};
+$('syncBack').onclick=()=>{cur=Math.max(0,cur-1);const t=P.lines[cur].t;if(t!=null)audio.currentTime=Math.max(0,t-3);renderSync()};
+$('syncRestart').onclick=()=>{if(!confirm('למחוק את כל הזמנים ולהתחיל מההתחלה?'))return;P.lines.forEach(l=>l.t=null);cur=0;audio.currentTime=0;audio.pause();$('tapBtn').textContent='▶ התחלה';save();renderSync()};
+$('syncList').addEventListener('click',e=>{const b=e.target.closest('[data-n]');if(b){e.stopPropagation();const l=P.lines[+b.dataset.i];if(l.t!=null){l.t=Math.max(0,Math.round((l.t+ +b.dataset.n)*100)/100);save();renderSync()}return}
+ const r=e.target.closest('.ln');if(!r)return;cur=+r.dataset.i;const t=P.lines[cur].t;audio.currentTime=Math.max(0,(t!=null?t:(P.lines[cur-1]?.t||0))-3);renderSync()});
+function syncLoop(){$('clock').textContent=fmt(audio.currentTime,true);if(audioBuf)$('seekBar').style.width=(audio.currentTime/audioBuf.duration*100)+'%';if(!audio.paused)requestAnimationFrame(syncLoop)}
+$('bpmDetect').onclick=()=>{if(!audioBuf)return toast('קודם מעלים גייד');const r=detectTempo(audioBuf);P.bpm=r.bpm;P.beat0=r.beat0;save();renderSync();toast('קצב: '+P.bpm+' BPM')};
+$('tapTempo').onclick=()=>{const now=performance.now()/1000;tapTimes=tapTimes.filter(x=>now-x<3).concat(now);if(tapTimes.length>=4){const d=(tapTimes[tapTimes.length-1]-tapTimes[0])/(tapTimes.length-1);P.bpm=Math.round(60/d);if(!audio.paused)P.beat0=(audio.currentTime-LAT)%d;save();renderSync()}else toast('ממשיכים להקיש בקצב…')};
+
+// ---------- steps ----------
+const STAFF=[['song','1. השיר'],['sync','2. סנכרון'],['people','3. משתתפים'],['split','4. חלוקה'],['look','5. רקע'],['video','6. סרטון']];
+const CLIENT=[['people','1. מי שר'],['split','2. מי שר מה'],['look','3. רקע'],['video','4. סרטון']];
+let mode=new URLSearchParams(location.search).has('staff')?'staff':'client';let step=0;
+const flow=()=>mode==='staff'?STAFF:CLIENT;
+function show(i){const F=flow();step=Math.max(0,Math.min(F.length-1,i));const key=F[step][0];
+ document.querySelectorAll('[data-step]').forEach(s=>s.hidden=s.dataset.step!==key);
+ $('steps').innerHTML=F.map(([k,n],j)=>`<button data-go="${j}" class="${j===step?'on':j<step?'done':''}">${n}</button>`).join('');
+ $('prev').style.visibility=step?'visible':'hidden';$('next').hidden=step===F.length-1;
+ if(key!=='sync'&&key!=='video'){audio.pause()}
+ if(key==='sync')renderSync();if(key==='people')renderPeople();if(key==='split')renderSplit();if(key==='look')renderThemes();if(key==='video'){sizePreview();audio.currentTime=0;drawPreview()}
+ window.scrollTo({top:0,behavior:'smooth'})}
+$('steps').addEventListener('click',e=>{const g=e.target.dataset.go;if(g!=null)show(+g)});
+$('prev').onclick=()=>show(step-1);
+$('next').onclick=()=>{const key=flow()[step][0];
+ if(key==='song'&&!P.lines.length)return toast('קודם מדביקים את מילות השיר');
+ if(key==='people'&&!P.people.length)return toast('מוסיפים לפחות משתתף אחד');
+ if(key==='split'&&P.lines.some((l,i)=>!(P.assign[i]||[]).length)&&!confirm('יש שורות שלא שייכתם לאף אחד. להמשיך בכל זאת?'))return;
+ show(step+1)};
+document.querySelectorAll('input[name=mode]').forEach(r=>r.onchange=()=>{mode=r.value;show(0)});
+
+// ---------- boot ----------
+(async()=>{
+ if(mode==='staff'){$('modeSeg').hidden=false;$('m-staff').checked=true}
+ try{await document.fonts.load(`800 40px Rubik`);await document.fonts.load(`600 40px Rubik`)}catch(e){}
+ const saved=await DB.get('proj');if(saved&&saved.P){Object.assign(P,saved.P);P.img=saved.img||null;await loadImg()}
+ const ab=await DB.get('audio');if(ab)await setAudio(ab,false);
+ $('title').value=P.title;$('lyrics').value=P.lyrics;if(P.lyrics)reparse();if(P.ratio==='v')$('r-v').checked=true;
+ if(P.bg.type==='theme'&&!saved)P.bg.v=suggestTheme();
+ cur=Math.max(0,P.lines.findIndex(l=>l.t==null));if(cur<0)cur=P.lines.length;
+ show(0)})();
+</script>
+</body>
+</html>

@@ -41,9 +41,21 @@ button:disabled{opacity:.45;cursor:default}
 .ln .tx{font-size:18px}
 .sechdr{font-size:13px;font-weight:800;color:var(--accent);margin:8px 4px 0;letter-spacing:.02em}
 .ln .sec{font-size:12px;color:var(--muted)}
+.ln.playing{box-shadow:inset -4px 0 0 #ff4d6d}
 .ln.cur{border-color:var(--accent);background:var(--soft)}
 .ln.chorus .tx::after{content:" · פזמון";font-size:12px;color:var(--muted)}
 .ln .tm{font-variant-numeric:tabular-nums;font-size:14px;color:var(--muted);direction:ltr}
+.tlbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tlwrap{position:relative;border:1.5px solid var(--line);border-radius:12px;background:#120d18;overflow:hidden;touch-action:none;direction:ltr}
+.tlwrap canvas{display:block;width:100%;height:150px}
+#tlScroll{width:100%;direction:ltr;margin:0;accent-color:var(--accent)}
+.ln .tm b{font-weight:600;color:var(--ink)}
+.ln.low{border-color:#e8a23a}
+.ln.low .tm::before{content:"⚠ ";color:#e8a23a}
+.ln.miss .tm{color:var(--warn)}
+details.tap{border:1px dashed var(--line);border-radius:12px;padding:8px 12px}
+details.tap summary{cursor:pointer;font-weight:600;color:var(--muted)}
+details.tap[open]{display:grid;gap:10px}
 .ln .who{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
 .chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 12px;font-weight:600;font-size:15px;border:2px solid transparent;cursor:pointer;background:var(--bg);color:var(--ink)}
 .chip .dot{width:12px;height:12px;border-radius:50%}
@@ -106,15 +118,23 @@ button:disabled{opacity:.45;cursor:default}
 
   <!-- STAFF 2: sync -->
   <section class="card" data-step="sync" hidden>
-    <h2>סנכרון השורות לגייד</h2>
-    <p class="hint">לוחצים "התחלה", ובכל פעם שמתחילה שורה מקישים על הכפתור הגדול (או מקש רווח). אפשר לעצור, ללחוץ על שורה כדי לחזור אליה ולהקיש שוב. ההקשות מיושרות אוטומטית לקצב.</p>
-    <div class="row small"><span>קצב: <b id="bpmTxt">—</b></span><button id="bpmDetect" class="small">זיהוי קצב</button><button id="tapTempo" class="small">הקשת קצב</button>
-      <label class="row small" style="font-weight:400;margin:0"><input type="checkbox" id="snap" checked> יישור לקצב</label><span class="sp"></span><span id="clock" class="tm" style="direction:ltr">0:00.0</span></div>
-    <div class="bar"><i id="seekBar"></i></div>
-    <div class="now" id="syncNow">—</div><div class="next" id="syncNext"></div>
-    <button class="primary tap" id="tapBtn">▶ התחלה</button>
-    <div class="row"><button id="syncPause">⏸ עצירה</button><button id="syncBack">↶ שורה אחורה</button><button id="syncRestart">⟲ מההתחלה</button><span class="sp"></span><span class="hint" id="syncCount"></span></div>
+    <h2>מיקום השורות על הגייד</h2>
+    <p class="hint">לוחצים "זיהוי אוטומטי", והמערכת מאתרת לבד איפה כל שורה מתחילה ונגמרת. אחר כך מתקנים בציר הזמן, כמו בתוכנת כתוביות: גוררים שורה כדי להזיז אותה, מושכים את הקצה כדי להאריך או לקצר, ולחיצה על מקום ריק קופצת לשם.</p>
+    <div class="row"><button class="primary" id="autoBtn">🪄 זיהוי אוטומטי</button><span class="hint" id="autoMsg"></span></div>
+    <div class="tlbar small"><button id="tlPlay" class="small">▶ ניגון</button><span id="clock" class="tm" style="direction:ltr;font-variant-numeric:tabular-nums">0:00.0</span><span class="sp"></span>
+      <button id="zOut" class="small" aria-label="הקטנה">−</button><span class="hint small">זום</span><button id="zIn" class="small" aria-label="הגדלה">+</button>
+      <label class="row small" style="font-weight:400;margin:0"><input type="checkbox" id="snap" checked> הצמדה לקצב</label><span class="hint small">קצב: <b id="bpmTxt">—</b></span><button id="bpmDetect" class="small">זיהוי קצב</button></div>
+    <div class="tlwrap" id="tlWrap"><canvas id="tl"></canvas></div>
+    <input type="range" id="tlScroll" min="0" max="1000" value="0" aria-label="גלילה בציר הזמן">
+    <div class="row small"><button id="setStart" class="small">⇤ השורה מתחילה כאן</button><button id="setEnd" class="small">השורה נגמרת כאן ⇥</button><button id="playLine" class="small">▶ ניגון השורה</button><span class="sp"></span><span class="hint" id="syncCount"></span></div>
     <div class="lines" id="syncList"></div>
+    <details class="tap" id="tapBox"><summary>הקשה ידנית (לא חובה)</summary>
+      <p class="hint">לוחצים "התחלה", ובכל פעם שמתחילה שורה מקישים על הכפתור הגדול (או מקש רווח).</p>
+      <div class="bar"><i id="seekBar"></i></div>
+      <div class="now" id="syncNow">—</div><div class="next" id="syncNext"></div>
+      <button class="primary tap" id="tapBtn">▶ התחלה</button>
+      <div class="row"><button id="syncPause">⏸ עצירה</button><button id="syncBack">↶ שורה אחורה</button><button id="syncRestart">⟲ מחיקת כל הזמנים</button><button id="tapTempo" class="small">הקשת קצב</button></div>
+    </details>
   </section>
 
   <!-- CLIENT 1: people -->
@@ -308,7 +328,7 @@ document.querySelectorAll('input[name=ratio]').forEach(r=>r.onchange=()=>{P.rati
 // ---------- karaoke renderer ----------
 function timeline(){const L=P.lines.map((l,i)=>({...l,i})).filter(l=>l.t!=null).sort((a,b)=>a.t-b.t);
  const dur=audioBuf?audioBuf.duration:(L.length?L[L.length-1].t+8:0);
- L.forEach((l,k)=>{const nx=L[k+1];const words=l.text.split(/\s+/).length;const est=Math.max(1.6,words*(beatLen()||0.5)*0.9+0.6);l.end=nx?Math.min(nx.t,l.t+Math.max(est,Math.min(nx.t-l.t,est*1.6))):Math.min(dur,l.t+est+1.5)});return {L,dur}}
+ L.forEach((l,k)=>{const nx=L[k+1];const words=l.text.split(/\s+/).length;const est=Math.max(1.6,words*(beatLen()||0.5)*0.9+0.6);l.end=l.e!=null&&l.e>l.t?(nx?Math.min(nx.t,l.e):l.e):nx?Math.min(nx.t,l.t+Math.max(est,Math.min(nx.t-l.t,est*1.6))):Math.min(dur,l.t+est+1.5)});return {L,dur}}
 let FONT='Rubik, "Segoe UI", Arial, sans-serif';const LF='"Secular One", Rubik, "Segoe UI", Arial, sans-serif';
 function wrap(c,text,maxW){const words=text.split(/\s+/);const lines=[];let cur='';for(const w of words){const t=cur?cur+' '+w:w;if(c.measureText(t).width>maxW&&cur){lines.push(cur);cur=w}else cur=t}if(cur)lines.push(cur);return lines}
 function pill(c,x,y,text,color,size,align){c.font=`700 ${size}px ${FONT}`;const w=c.measureText(text).width+size*1.2,h=size*1.6;const x0=align==='center'?x-w/2:x-w;c.fillStyle=color;roundRect(c,x0,y-h/2,w,h,h/2);c.fill();c.fillStyle=lum(color)>0.6?'#1a1224':'#fff';c.textAlign='center';c.textBaseline='middle';c.fillText(text,x0+w/2,y+size*0.05);return w}
@@ -397,8 +417,8 @@ $('expLow').onclick=()=>exportVideo('low');$('expHigh').onclick=()=>exportVideo(
 
 // ---------- staff: song + audio ----------
 function reparse(){P.title=$('title').value.trim();P.lyrics=$('lyrics').value;const r=parseLyrics(P.lyrics);
- const old=new Map();P.lines.forEach(l=>{if(!old.has(l.text))old.set(l.text,[]);old.get(l.text).push(l.t)});
- P.lines=r.lines.map(l=>{const a=old.get(l.text);return {...l,t:a&&a.length?a.shift():null}});
+ const old=new Map();P.lines.forEach(l=>{if(!old.has(l.text))old.set(l.text,[]);old.get(l.text).push([l.t,l.e,l.cf])});
+ P.lines=r.lines.map(l=>{const a=old.get(l.text);const o=a&&a.length?a.shift():[null,null,null];return {...l,t:o[0],e:o[1]??null,cf:o[2]??null}});
  $('parseMsg').innerHTML=r.lines.length?`<span class="ok">${r.lines.length} שורות</span>${r.hasChorus?' · הפזמון הודבק בכל מקום שכתוב "פזמון"':''}${r.warn?` · <span class="warn">${esc(r.warn)}</span>`:''}`:'';
  $('parsePreview').innerHTML=P.lines.map((l,i)=>((i===0||P.lines[i-1].st!==l.st||P.lines[i-1].sec!==l.sec)?`<div class="sechdr">${esc(l.sec||'')}</div>`:'')+`<div class="ln${l.chorus?' chorus':''}"><span class="sec">${i+1}</span><span class="tx">${esc(l.text)}</span><span class="sec">${esc(l.sec||'')}</span></div>`).join('');
  $('hTitle').textContent=P.title||'קריוקי משפחתי';save()}
@@ -408,27 +428,163 @@ $('drop').onclick=()=>$('audioFile').click();$('drop').onkeydown=e=>{if(e.key===
 $('drop').addEventListener('drop',e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f)setAudio(f,true)});
 $('audioFile').onchange=()=>{const f=$('audioFile').files[0];if(f)setAudio(f,true)};
 async function setAudio(blob,fresh){audioBlob=blob;if(audioURL)URL.revokeObjectURL(audioURL);audioURL=URL.createObjectURL(blob);audio.src=audioURL;$('drop').classList.add('has');$('drop').textContent='טוען את הגייד…';
- try{audioBuf=await decode(blob);$('drop').textContent=`✓ ${blob.name||'גייד'} · ${fmt(audioBuf.duration)}`;if(fresh){const r=detectTempo(audioBuf);P.bpm=r.bpm;P.beat0=r.beat0;$('bpmTxt').textContent=P.bpm+' BPM';DB.put('audio',blob);save()}}
+ try{audioBuf=await decode(blob);peaks=null;$('drop').textContent=`✓ ${blob.name||'גייד'} · ${fmt(audioBuf.duration)}`;if(fresh){const r=detectTempo(audioBuf);P.bpm=r.bpm;P.beat0=r.beat0;$('bpmTxt').textContent=P.bpm+' BPM';DB.put('audio',blob);save()}}
  catch(e){$('drop').textContent='לא הצלחתי לקרוא את הקובץ. נסו mp3 או wav.';$('drop').classList.remove('has')}}
 
 // ---------- staff: sync ----------
 let cur=0;let tapTimes=[];
-function renderSync(){const d=audioBuf?audioBuf.duration:1;$('syncList').innerHTML=P.lines.map((l,i)=>`<div class="ln${i===cur?' cur':''}${l.chorus?' chorus':''}" data-i="${i}"><span class="tm">${l.t!=null?fmt(l.t,true):'—'}</span><span class="tx">${esc(l.text)}</span><span class="row"><button class="small" data-n="-0.1" data-i="${i}">−0.1</button><button class="small" data-n="0.1" data-i="${i}">+0.1</button></span></div>`).join('');
+// ---- list + timeline editor ----
+let sel=-1;
+function renderSync(){
+ $('syncList').innerHTML=P.lines.map((l,i)=>((i===0||P.lines[i-1].st!==l.st||P.lines[i-1].sec!==l.sec)?`<div class="sechdr">${esc(l.sec||'')}</div>`:'')+`<div class="ln${i===sel?' cur':''}${l.chorus?' chorus':''}${l.t==null?' miss':(l.cf!=null&&l.cf<0.5?' low':'')}" data-i="${i}"><span class="tm">${l.t!=null?`<b>${fmt(l.t,true)}</b> – ${fmt(endOf(i),true)}`:'לא מוקמה'}</span><span class="tx">${esc(l.text)}</span><span class="sec">${i+1}</span></div>`).join('');
+ const placed=P.lines.filter(l=>l.t!=null).length,low=P.lines.filter(l=>l.t!=null&&l.cf!=null&&l.cf<0.5).length;
+ $('syncCount').textContent=`${placed}/${P.lines.length} שורות מוקמו`+(low?` · ${low} כדאי לבדוק (⚠)`:'');
+ $('bpmTxt').textContent=P.bpm?P.bpm+' BPM':'—';
  $('syncNow').textContent=P.lines[cur]?P.lines[cur].text:'✓ כל השורות מסונכרנות';$('syncNext').textContent=P.lines[cur+1]?'הבאה: '+P.lines[cur+1].text:'';
- $('syncCount').textContent=`${P.lines.filter(l=>l.t!=null).length}/${P.lines.length} שורות`;$('bpmTxt').textContent=P.bpm?P.bpm+' BPM':'—';
- const el=$('syncList').querySelector('.cur');if(el)el.scrollIntoView({block:'nearest'})}
+ drawTL()}
+function endOf(i){const TL=timeline();const x=TL.L.find(l=>l.i===i);return x?x.end:null}
 const LAT=0.06;
 function tap(){if(!audioURL)return toast('קודם מעלים גייד');if(audio.paused){audio.play();$('tapBtn').textContent='⬇ הקישו בתחילת השורה';syncLoop();return}
- if(cur>=P.lines.length)return;P.lines[cur].t=Math.round(snapT(Math.max(0,audio.currentTime-LAT))*100)/100;cur++;save();renderSync()}
+ if(cur>=P.lines.length)return;const l=P.lines[cur];l.t=Math.round(snapT(Math.max(0,audio.currentTime-LAT))*100)/100;l.e=null;l.cf=null;sel=cur;cur++;save();renderSync()}
 $('tapBtn').onclick=tap;
-document.addEventListener('keydown',e=>{if(e.code==='Space'&&!$('syncList').closest('section').hidden&&!/INPUT|TEXTAREA/.test(document.activeElement.tagName)){e.preventDefault();tap()}});
+function togglePlay(){if(!audioURL)return toast('קודם מעלים גייד');if(audio.paused){audio.play();syncLoop()}else audio.pause()}
+$('tlPlay').onclick=togglePlay;
+audio.addEventListener('play',()=>{$('tlPlay').textContent='⏸ עצירה'});audio.addEventListener('pause',()=>{$('tlPlay').textContent='▶ ניגון';drawTL()});
+document.addEventListener('keydown',e=>{if($('tl').closest('section').hidden||/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))return;
+ if(e.code==='Space'){e.preventDefault();if($('tapBox').open)tap();else togglePlay();return}
+ if(sel>=0&&P.lines[sel].t!=null&&(e.key==='ArrowLeft'||e.key==='ArrowRight')){e.preventDefault();const d=(e.key==='ArrowRight'?1:-1)*0.05;const l=P.lines[sel];const en=endOf(sel);l.t=Math.max(0,+(l.t+d).toFixed(2));if(e.shiftKey)l.e=+(en+d).toFixed(2);else if(l.e==null)l.e=+en.toFixed(2);save();renderSync()}});
 $('syncPause').onclick=()=>{audio.pause();$('tapBtn').textContent='▶ המשך'};
 $('syncBack').onclick=()=>{cur=Math.max(0,cur-1);const t=P.lines[cur].t;if(t!=null)audio.currentTime=Math.max(0,t-3);renderSync()};
-$('syncRestart').onclick=()=>{if(!confirm('למחוק את כל הזמנים ולהתחיל מההתחלה?'))return;P.lines.forEach(l=>l.t=null);cur=0;audio.currentTime=0;audio.pause();$('tapBtn').textContent='▶ התחלה';save();renderSync()};
-$('syncList').addEventListener('click',e=>{const b=e.target.closest('[data-n]');if(b){e.stopPropagation();const l=P.lines[+b.dataset.i];if(l.t!=null){l.t=Math.max(0,Math.round((l.t+ +b.dataset.n)*100)/100);save();renderSync()}return}
- const r=e.target.closest('.ln');if(!r)return;cur=+r.dataset.i;const t=P.lines[cur].t;audio.currentTime=Math.max(0,(t!=null?t:(P.lines[cur-1]?.t||0))-3);renderSync()});
-function syncLoop(){$('clock').textContent=fmt(audio.currentTime,true);if(audioBuf)$('seekBar').style.width=(audio.currentTime/audioBuf.duration*100)+'%';if(!audio.paused)requestAnimationFrame(syncLoop)}
+$('syncRestart').onclick=()=>{if(!confirm('למחוק את כל הזמנים ולהתחיל מההתחלה?'))return;P.lines.forEach(l=>{l.t=null;l.e=null;l.cf=null});cur=0;audio.currentTime=0;audio.pause();$('tapBtn').textContent='▶ התחלה';save();renderSync()};
+$('syncList').addEventListener('click',e=>{const r=e.target.closest('.ln');if(!r)return;selectLine(+r.dataset.i,true)});
+function selectLine(i,seek){sel=i;cur=i;const l=P.lines[i];if(seek){const t=l.t!=null?l.t:(P.lines[i-1]?.t??0);audio.currentTime=Math.max(0,t-0.3);if(l.t!=null)ensureVisible(l.t,endOf(i))}
+ document.querySelectorAll('#syncList .ln').forEach(x=>x.classList.toggle('cur',+x.dataset.i===i));drawTL()}
+$('setStart').onclick=()=>{if(sel<0)return toast('בוחרים שורה ברשימה או בציר');const l=P.lines[sel];const t=+snapT(audio.currentTime).toFixed(2);const en=l.t!=null?endOf(sel):null;l.t=t;l.e=en!=null&&en>t+0.3?+en.toFixed(2):+(t+estLen(l)).toFixed(2);l.cf=1;save();renderSync()};
+$('setEnd').onclick=()=>{if(sel<0)return toast('בוחרים שורה ברשימה או בציר');const l=P.lines[sel];if(l.t==null)return toast('קודם מסמנים איפה השורה מתחילה');const t=+snapT(audio.currentTime).toFixed(2);if(t<=l.t+0.2)return toast('הסוף חייב להיות אחרי ההתחלה');l.e=t;l.cf=1;save();renderSync()};
+let stopAt=null;
+$('playLine').onclick=()=>{if(sel<0||P.lines[sel].t==null)return toast('בוחרים שורה שכבר מוקמה');audio.currentTime=Math.max(0,P.lines[sel].t-0.4);stopAt=endOf(sel)+0.4;audio.play();syncLoop()};
+function estLen(l){return Math.max(1.6,l.text.split(/\s+/).length*(beatLen()||0.5)*0.9+0.6)}
+
+// ---- timeline canvas ----
+const tlc=$('tl');let tctx=tlc.getContext('2d'),peaks=null,pps=60,view0=0,drag=null;
+const TLH=150,RUL=18,WAV0=20,WAVH=56,BLK0=82,BLKH=56;
+function tlW(){return tlc.clientWidth||800}
+function durA(){return audioBuf?audioBuf.duration:Math.max(30,...P.lines.map(l=>(l.e||l.t||0)+5))}
+function x2t(x){return view0+x/pps}function t2x(t){return (t-view0)*pps}
+function clampView(){const span=tlW()/pps;view0=Math.max(0,Math.min(view0,Math.max(0,durA()-span)));$('tlScroll').value=Math.round(view0/Math.max(0.001,durA()-span)*1000)||0}
+function ensureVisible(a,b){const span=tlW()/pps;if(a<view0+0.5||(b??a)>view0+span-0.5){view0=a-span*0.25;clampView()}}
+function buildPeaks(){if(!audioBuf)return;const sr=audioBuf.sampleRate,per=Math.floor(sr/200),n=Math.ceil(audioBuf.length/per);peaks=new Float32Array(n);const chs=[];for(let c=0;c<audioBuf.numberOfChannels;c++)chs.push(audioBuf.getChannelData(c));
+ let mx=0;for(let k=0;k<n;k++){let m=0;const o=k*per,e=Math.min(audioBuf.length,o+per);for(let i=o;i<e;i+=4){for(const d of chs){const v=Math.abs(d[i]);if(v>m)m=v}}peaks[k]=m;if(m>mx)mx=m}if(mx>0)for(let k=0;k<n;k++)peaks[k]/=mx}
+function drawTL(){const sec=tlc.closest('section');if(sec.hidden)return;const dpr=window.devicePixelRatio||1,W=tlW();if(tlc.width!==Math.round(W*dpr)||tlc.height!==TLH*dpr){tlc.width=Math.round(W*dpr);tlc.height=TLH*dpr}
+ const c=tctx;c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,W,TLH);c.fillStyle='#120d18';c.fillRect(0,0,W,TLH);
+ if(audioBuf&&!peaks)buildPeaks();const span=W/pps;
+ // beat grid
+ if(P.bpm){const bl=60/P.bpm;let k=Math.ceil((view0-P.beat0)/bl);for(let t=P.beat0+k*bl;t<view0+span;t+=bl,k++){const x=t2x(t);c.fillStyle=(k%4===0)?'rgba(255,255,255,.13)':'rgba(255,255,255,.05)';c.fillRect(Math.round(x),RUL,1,TLH-RUL)}}
+ // ruler
+ c.fillStyle='rgba(255,255,255,.06)';c.fillRect(0,0,W,RUL);c.fillStyle='rgba(255,255,255,.6)';c.font='11px Rubik, Arial';c.textBaseline='middle';c.textAlign='left';
+ const stepS=pps>=120?1:pps>=40?5:pps>=15?10:30;for(let t=Math.ceil(view0/stepS)*stepS;t<view0+span;t+=stepS){const x=t2x(t);c.fillRect(Math.round(x),RUL-6,1,6);c.fillText(fmt(t),x+3,RUL/2)}
+ // waveform
+ if(peaks){c.fillStyle='rgba(183,139,240,.55)';const mid=WAV0+WAVH/2;for(let x=0;x<W;x++){const k0=Math.floor(x2t(x)*200),k1=Math.max(k0+1,Math.floor(x2t(x+1)*200));let m=0;for(let k=k0;k<k1&&k<peaks.length;k++)if(peaks[k]>m)m=peaks[k];const hh=Math.max(1,m*WAVH/2);c.fillRect(x,mid-hh,1,hh*2)}}
+ // blocks
+ const TL=timeline();const ord=TL.L.slice().sort((a,b)=>(a.i===sel)-(b.i===sel));
+ for(const l of ord){const x0=t2x(l.t),x1=t2x(l.end);if(x1<-2||x0>W+2)continue;const w=whoOf(l.i);const on=l.i===sel;const low=P.lines[l.i].cf!=null&&P.lines[l.i].cf<0.5;
+  const bc=w?w.color:(l.chorus?'#ffd166':'#8f7bb0');c.fillStyle=bc;c.globalAlpha=on?0.95:0.72;roundRect(c,x0,BLK0,Math.max(4,x1-x0),BLKH,7);c.fill();c.globalAlpha=1;
+  c.lineWidth=on?3:1.5;c.strokeStyle=on?'#fff':low?'#e8a23a':'rgba(0,0,0,.35)';c.stroke();
+  if(on){c.fillStyle='#fff';c.fillRect(x0,BLK0+BLKH/2-10,3,20);c.fillRect(x1-3,BLK0+BLKH/2-10,3,20)}
+  c.save();c.beginPath();c.rect(x0+6,BLK0,Math.max(0,x1-x0-12),BLKH);c.clip();c.fillStyle=lum(bc)>0.6?'#1a1224':'#fff';c.direction='rtl';c.textAlign='right';c.font='600 14px Rubik, Arial';c.fillText(P.lines[l.i].text,x1-8,BLK0+20);c.font='11px Rubik, Arial';c.globalAlpha=0.8;c.fillText((l.i+1)+(l.sec?' · '+l.sec:'')+(low?' · ⚠':''),x1-8,BLK0+40);c.restore();c.direction='ltr'}
+ // playhead
+ const px=t2x(audio.currentTime||0);if(px>=0&&px<=W){c.fillStyle='#ff4d6d';c.fillRect(Math.round(px)-1,0,2,TLH);c.beginPath();c.moveTo(px-6,0);c.lineTo(px+6,0);c.lineTo(px,8);c.fill()}
+ $('clock').textContent=fmt(audio.currentTime,true)+' / '+fmt(durA())}
+function hitBlock(x,y){if(y<BLK0||y>BLK0+BLKH)return null;const TL=timeline();const cand=TL.L.filter(l=>x>=t2x(l.t)-6&&x<=t2x(l.end)+6);if(!cand.length)return null;
+ cand.sort((a,b)=>(b.i===sel)-(a.i===sel));const l=cand[0];const x0=t2x(l.t),x1=t2x(l.end);const edge=Math.min(10,(x1-x0)/3);
+ return {i:l.i,part:Math.abs(x-x0)<=edge?'s':Math.abs(x-x1)<=edge?'e':'m',t0:l.t,e0:l.end}}
+function bounds(i){let lo=0,hi=durA();for(let j=i-1;j>=0;j--)if(P.lines[j].t!=null){lo=endOf(j)??P.lines[j].t+0.3;lo=Math.max(lo,P.lines[j].t+0.3);break}for(let j=i+1;j<P.lines.length;j++)if(P.lines[j].t!=null){hi=P.lines[j].t;break}return [lo,hi]}
+function snapD(t,ev){return ev.altKey?t:snapT(t)}
+tlc.addEventListener('pointerdown',ev=>{const r=tlc.getBoundingClientRect();const x=ev.clientX-r.left,y=ev.clientY-r.top;const hb=hitBlock(x,y);tlc.setPointerCapture(ev.pointerId);
+ if(hb){selectLine(hb.i,false);const [lo,hi]=bounds(hb.i);drag={...hb,x,lo,hi,moved:false};}else{drag={part:'seek'};audio.currentTime=Math.max(0,Math.min(durA(),x2t(x)));drawTL()}});
+tlc.addEventListener('pointermove',ev=>{const r=tlc.getBoundingClientRect();const x=ev.clientX-r.left,y=ev.clientY-r.top;
+ if(!drag){const hb=hitBlock(x,y);tlc.style.cursor=hb?(hb.part==='m'?'grab':'ew-resize'):'text';return}
+ if(drag.part==='seek'){audio.currentTime=Math.max(0,Math.min(durA(),x2t(x)));drawTL();return}
+ const dt=(x-drag.x)/pps;if(Math.abs(x-drag.x)>2)drag.moved=true;if(!drag.moved)return;const l=P.lines[drag.i];
+ if(drag.part==='m'){const len=drag.e0-drag.t0;let t=snapD(drag.t0+dt,ev);t=Math.max(drag.lo,Math.min(drag.hi-len,t));l.t=+t.toFixed(2);l.e=+(t+len).toFixed(2)}
+ else if(drag.part==='s'){let t=snapD(drag.t0+dt,ev);t=Math.max(drag.lo,Math.min(drag.e0-0.3,t));l.t=+t.toFixed(2);l.e=+drag.e0.toFixed(2)}
+ else{let t=snapD(drag.e0+dt,ev);t=Math.max(drag.t0+0.3,Math.min(drag.hi,t));l.e=+t.toFixed(2)}
+ l.cf=1;drawTL()});
+const endDrag=()=>{if(drag&&drag.moved){save();renderSync()}else if(drag&&drag.part!=='seek'){audio.currentTime=Math.max(0,P.lines[drag.i].t-0.3);drawTL()}drag=null};
+tlc.addEventListener('pointerup',endDrag);tlc.addEventListener('pointercancel',endDrag);
+tlc.addEventListener('dblclick',ev=>{const r=tlc.getBoundingClientRect();const hb=hitBlock(ev.clientX-r.left,ev.clientY-r.top);if(hb){sel=hb.i;$('playLine').click()}});
+tlc.addEventListener('wheel',ev=>{ev.preventDefault();const r=tlc.getBoundingClientRect();const x=ev.clientX-r.left;
+ if(ev.ctrlKey||ev.metaKey){const t=x2t(x);pps=Math.max(8,Math.min(400,pps*(ev.deltaY<0?1.2:1/1.2)));view0=t-x/pps}else view0+=(Math.abs(ev.deltaX)>Math.abs(ev.deltaY)?ev.deltaX:ev.deltaY)/pps;clampView();drawTL()},{passive:false});
+$('zIn').onclick=()=>{const m=tlW()/2,t=x2t(m);pps=Math.min(400,pps*1.5);view0=t-m/pps;clampView();drawTL()};
+$('zOut').onclick=()=>{const m=tlW()/2,t=x2t(m);pps=Math.max(8,pps/1.5);view0=t-m/pps;clampView();drawTL()};
+$('tlScroll').oninput=()=>{const span=tlW()/pps;view0=(+$('tlScroll').value/1000)*Math.max(0,durA()-span);drawTL()};
+new ResizeObserver(()=>drawTL()).observe(tlc);
+function syncLoop(){if(stopAt!=null&&audio.currentTime>=stopAt){audio.pause();stopAt=null}if(audioBuf)$('seekBar').style.width=(audio.currentTime/audioBuf.duration*100)+'%';
+ if(!audio.paused&&!drag){const span=tlW()/pps,t=audio.currentTime;if(t>view0+span*0.9||t<view0){view0=t-span*0.1;clampView()}
+  const TL=timeline();const k=TL.L.findIndex((l,j)=>t>=l.t&&(j===TL.L.length-1||t<TL.L[j+1].t));const ci=k>=0?TL.L[k].i:-1;document.querySelectorAll('#syncList .ln').forEach(x=>x.classList.toggle('playing',+x.dataset.i===ci))}
+ drawTL();if(!audio.paused)requestAnimationFrame(syncLoop)}
 $('bpmDetect').onclick=()=>{if(!audioBuf)return toast('קודם מעלים גייד');const r=detectTempo(audioBuf);P.bpm=r.bpm;P.beat0=r.beat0;save();renderSync();toast('קצב: '+P.bpm+' BPM')};
+// ---------- automatic placement (Whisper word timestamps, aligned to the known lyrics) ----------
+const API='__API__';
+const NW_FIN={'ך':'כ','ם':'מ','ן':'נ','ף':'פ','ץ':'צ'};
+function normW(w){return String(w||'').replace(/[֑-ׇ]/g,'').replace(/[^א-תa-zA-Z0-9]/g,'').replace(/[ךםןףץ]/g,c=>NW_FIN[c]).replace(/וו/g,'ו').replace(/יי/g,'י').toLowerCase()}
+function lev(a,b){if(a===b)return 0;const m=a.length,n=b.length;if(!m)return n;if(!n)return m;let p=new Array(n+1),q=new Array(n+1);for(let j=0;j<=n;j++)p[j]=j;for(let i=1;i<=m;i++){q[0]=i;for(let j=1;j<=n;j++)q[j]=Math.min(p[j]+1,q[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1));[p,q]=[q,p]}return p[n]}
+function simW(a,b){if(!a||!b)return 0;if(a===b)return 1;
+ // Hebrew prefixes (ו/ה/ב/ל/ש/מ/כ) glued to words: compare without them too
+ const s=1-lev(a,b)/Math.max(a.length,b.length);const strip=x=>x.length>2?x.replace(/^[והבלשמכ]{1,2}/,''):x;const a2=strip(a),b2=strip(b);const s2=a2&&b2?(1-lev(a2,b2)/Math.max(a2.length,b2.length))*0.92:0;return Math.max(s,s2)}
+// lines: array of strings; words: [[word,start,end],...]; returns [{t,e,cf}|null per line]
+function alignWords(lines,words,dur){
+ const L=[];lines.forEach((s,li)=>s.split(/\s+/).forEach(w=>{const n=normW(w);if(n)L.push({n,li})}));
+ const Wd=words.map(([w,s,e])=>({n:normW(w),s:+s,e:+e})).filter(w=>w.n);
+ const M=L.length,N=Wd.length,G=-0.45;const S=new Float32Array((M+1)*(N+1)),B=new Uint8Array((M+1)*(N+1));const at=(i,j)=>i*(N+1)+j;
+ const sc=new Float32Array(M*N);for(let i=0;i<M;i++)for(let j=0;j<N;j++){const s=simW(L[i].n,Wd[j].n);sc[i*N+j]=s>=0.99?2:s>=0.75?1.4:s>=0.55?0.7:s>=0.4?0:-1}
+ for(let i=1;i<=M;i++){S[at(i,0)]=i*G;B[at(i,0)]=1}for(let j=1;j<=N;j++){S[at(0,j)]=j*G*0.5;B[at(0,j)]=2}
+ for(let i=1;i<=M;i++)for(let j=1;j<=N;j++){const d=S[at(i-1,j-1)]+sc[(i-1)*N+j-1],u=S[at(i-1,j)]+G,l=S[at(i,j-1)]+G*0.6;// extra recognized words (noise) are cheaper
+  if(d>=u&&d>=l){S[at(i,j)]=d;B[at(i,j)]=0}else if(u>=l){S[at(i,j)]=u;B[at(i,j)]=1}else{S[at(i,j)]=l;B[at(i,j)]=2}}
+ const pair=new Array(M).fill(-1),good=new Array(M).fill(false);let i=M,j=N;while(i>0&&j>0){const b=B[at(i,j)];if(b===0){const s=sc[(i-1)*N+j-1];if(s>=0){pair[i-1]=j-1;good[i-1]=s>=1.4}i--;j--}else if(b===1)i--;else j--}
+ const res=lines.map(()=>null);
+ lines.forEach((_,li)=>{const idx=L.map((x,k)=>x.li===li?k:-1).filter(k=>k>=0);const tm=idx.filter(k=>pair[k]>=0);if(!tm.length)return;
+  const g=idx.filter(k=>good[k]).length/Math.max(1,idx.length);const f=Wd[pair[tm[0]]],z=Wd[pair[tm[tm.length-1]]];
+  if(z.e<=f.s)return;res[li]={t:f.s,e:z.e,cf:g,n:idx.length}});
+ // keep order: drop a placement that goes backwards
+ let last=-1;res.forEach((r,k)=>{if(!r)return;if(r.t<last-0.05){res[k]=null;return}last=r.t});
+ // fill missing lines between neighbours, by word count
+ for(let k=0;k<res.length;k++){if(res[k])continue;let a=k;while(a<res.length&&!res[a])a++;// k..a-1 missing
+  const prevE=k>0&&res[k-1]?res[k-1].e:0;const nextT=a<res.length?res[a].t:Math.min(dur,prevE+(a-k)*3.5);
+  const cnt=lines.slice(k,a).map(s=>s.split(/\s+/).length);const tot=cnt.reduce((x,y)=>x+y,0)||1;const want=tot*0.6+(a-k)*0.4;let t=prevE+0.15;if(nextT-0.3-t>want*1.4)t=nextT-0.3-want;const span=Math.max(0.5,nextT-0.15-t);
+  for(let q=k;q<a;q++){const len=span*cnt[q-k]/tot;res[q]={t,e:t+Math.max(0.4,len-0.1),cf:0,n:cnt[q-k]};t+=len}k=a}
+ // tidy: no overlaps, sane lengths (Whisper may stretch the last word over an instrumental)
+ for(let k=0;k<res.length;k++){const r=res[k];const nx=res[k+1];const maxLen=Math.max(2.5,r.n*1.1+1.5);if(r.e-r.t>maxLen)r.e=r.t+maxLen;if(nx&&r.e>nx.t-0.02)r.e=Math.max(r.t+0.3,nx.t-0.02);
+  r.t=Math.max(0,+(r.t-0.05).toFixed(2));r.e=+r.e.toFixed(2);r.cf=+r.cf.toFixed(2)}
+ return res}
+async function api(body){const r=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body),redirect:'follow'});const tx=await r.text();try{return JSON.parse(tx)}catch(e){return {ok:false,error:'תשובה לא צפויה מהשרת'}}}
+function lsGet(k){try{return localStorage.getItem(k)||''}catch(e){return ''}}function lsSet(k,v){try{v?localStorage.setItem(k,v):localStorage.removeItem(k)}catch(e){}}
+// 16 kHz mono WAV, with the voice band emphasised (small upload, clearer for Whisper)
+async function voiceWav(buf){const sr=16000,n=Math.ceil(buf.duration*sr);const oc=new OfflineAudioContext(1,n,sr);const src=oc.createBufferSource();src.buffer=buf;
+ const hp=oc.createBiquadFilter();hp.type='highpass';hp.frequency.value=120;const lp=oc.createBiquadFilter();lp.type='lowpass';lp.frequency.value=6500;src.connect(hp);hp.connect(lp);lp.connect(oc.destination);src.start();
+ const out=(await oc.startRendering()).getChannelData(0);let pk=0;for(let i=0;i<out.length;i++){const v=Math.abs(out[i]);if(v>pk)pk=v}const g=pk>0?0.95/pk:1;
+ const ab=new ArrayBuffer(44+out.length*2),v=new DataView(ab);const ws=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};
+ ws(0,'RIFF');v.setUint32(4,36+out.length*2,true);ws(8,'WAVE');ws(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);ws(36,'data');v.setUint32(40,out.length*2,true);
+ for(let i=0;i<out.length;i++)v.setInt16(44+i*2,Math.max(-1,Math.min(1,out[i]*g))*32767,true);return new Blob([ab],{type:'audio/wav'})}
+const b64=blob=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(',')[1]);r.onerror=()=>rej(r.error);r.readAsDataURL(blob)});
+function whisperPrompt(){const seen=new Set(),out=[];let len=0;for(const l of P.lines){if(seen.has(l.text))continue;seen.add(l.text);if(len+l.text.length>600)break;out.push(l.text);len+=l.text.length+1}return out.join('\n')}
+let autoBusy=false;
+async function autoAlign(){if(autoBusy)return;if(!audioBuf)return toast('קודם מעלים גייד');if(!P.lines.length)return toast('קודם מדביקים מילים');
+ if(!API||API.indexOf('http')!==0)return toast('הזיהוי האוטומטי עוד לא חובר');
+ if(P.lines.some(l=>l.t!=null)&&!confirm('הזיהוי יחליף את המיקומים הקיימים של כל השורות. להמשיך?'))return;
+ let pass=lsGet('kk_pass');if(!pass){pass=(prompt('סיסמת צוות:')||'').trim();if(!pass)return}
+ const msg=s=>$('autoMsg').textContent=s;autoBusy=true;$('autoBtn').disabled=true;
+ try{msg('מכין את השמע…');const wav=await voiceWav(audioBuf);if(wav.size>24e6)throw new Error('הגייד ארוך מדי לזיהוי (מעל 12 דקות)');
+  msg('מזהה את השירה… (בערך חצי דקה)');const r=await api({action:'transcribe',pass,audio:await b64(wav),mime:'audio/wav',name:(P.title||'guide')+'.wav',prompt:whisperPrompt()});
+  if(!r.ok){if(/סיסמה/.test(r.error||''))lsSet('kk_pass','');throw new Error(r.error||'שגיאה')}lsSet('kk_pass',pass);
+  if(!r.words||!r.words.length)throw new Error('לא זוהתה שירה בגייד');
+  const res=alignWords(P.lines.map(l=>l.text),r.words,audioBuf.duration);res.forEach((x,k)=>{const l=P.lines[k];l.t=x.t;l.e=x.e;l.cf=x.cf});
+  cur=P.lines.length;sel=-1;save();view0=Math.max(0,P.lines[0].t-2);clampView();renderSync();
+  const low=res.filter(x=>x.cf<0.5).length;msg(low?`✓ מוקם. ${low} שורות מסומנות ב־⚠ כדאי לבדוק`:'✓ כל השורות מוקמו')}
+ catch(e){msg('✗ '+(e.message||e))}
+ finally{autoBusy=false;$('autoBtn').disabled=false}}
+$('autoBtn').onclick=autoAlign;
+
 $('tapTempo').onclick=()=>{const now=performance.now()/1000;tapTimes=tapTimes.filter(x=>now-x<3).concat(now);if(tapTimes.length>=4){const d=(tapTimes[tapTimes.length-1]-tapTimes[0])/(tapTimes.length-1);P.bpm=Math.round(60/d);if(!audio.paused)P.beat0=(audio.currentTime-LAT)%d;save();renderSync()}else toast('ממשיכים להקיש בקצב…')};
 
 // ---------- steps ----------

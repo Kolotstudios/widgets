@@ -330,11 +330,17 @@ async function exportVideo(q){
  const vs=cv.captureStream(30);const stream=new MediaStream([...vs.getVideoTracks(),...dest.stream.getAudioTracks()]);
  const rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:q==='high'?8e6:1.2e6,audioBitsPerSecond:q==='high'?192000:96000});const chunks=[];rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
  const done=new Promise(res=>rec.onstop=res);
- drawFrame(c,W,H,0,TL);rec.start(1000);await ac.resume();const t0=ac.currentTime+0.05;src.start(t0);
- let stop=false;const tick=()=>{if(stop)return;const t=ac.currentTime-t0;drawFrame(c,W,H,Math.max(0,t),TL);$('expBar').style.width=Math.min(100,t/audioBuf.duration*100)+'%';$('expMsg').textContent=`יוצר סרטון… ${Math.min(100,Math.round(t/audioBuf.duration*100))}%`;
-  if(expCancel||t>=audioBuf.duration+0.3){stop=true;try{src.stop()}catch(e){}setTimeout(()=>rec.stop(),300);return}requestAnimationFrame(tick)};
- const bg=setInterval(()=>{if(!stop&&document.hidden){const t=ac.currentTime-t0;drawFrame(c,W,H,Math.max(0,t),TL);if(t>=audioBuf.duration+0.3)tick()}},1000/30);
- requestAnimationFrame(tick);await done;clearInterval(bg);ac.close();
+ drawFrame(c,W,H,0,TL);
+ try{await ac.resume()}catch(e){}
+ if(ac.state!=='running'){$('expMsg').textContent='לחצו על "התחלה" כדי ליצור את הסרטון';const go=document.createElement('button');go.className='primary';go.textContent='▶ התחלה';$('expMsg').appendChild(document.createElement('br'));$('expMsg').appendChild(go);
+  await new Promise(res=>{go.onclick=async()=>{try{await ac.resume()}catch(e){}go.remove();res()};const ci=setInterval(()=>{if(expCancel){clearInterval(ci);res()}},200)})}
+ if(expCancel){try{ac.close()}catch(e){}$('expBox').hidden=true;return}
+ rec.start(1000);const t0=ac.currentTime+0.05;src.start(t0);
+ let stop=false;const D=audioBuf.duration;
+ const frame=()=>{if(stop)return;const t=ac.currentTime-t0;drawFrame(c,W,H,Math.max(0,t),TL);const pc=Math.min(100,Math.round(t/D*100));$('expBar').style.width=pc+'%';$('expMsg').textContent=`יוצר סרטון… ${Math.max(0,pc)}%`;
+  if(expCancel||t>=D+0.3){stop=true;clearInterval(iv);try{src.stop()}catch(e){}setTimeout(()=>{try{rec.stop()}catch(e){}},300)}};
+ const iv=setInterval(frame,1000/30);
+ await done;try{ac.close()}catch(e){}
  if(expCancel){$('expBox').hidden=true;return}
  const ext=mime.includes('mp4')?'mp4':'webm';const blob=new Blob(chunks,{type:mime.split(';')[0]});const name=(P.title||'קריוקי').replace(/[\\/:*?"<>|]/g,'')+(q==='high'?'':' - קטן')+'.'+ext;
  const url=URL.createObjectURL(blob);$('dlLink').href=url;$('dlLink').download=name;$('expBox').hidden=true;$('doneBox').hidden=false;

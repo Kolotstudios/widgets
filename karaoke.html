@@ -89,6 +89,8 @@ body.dragging,body.dragging *{cursor:grabbing!important;user-select:none}
 .veil{position:fixed;inset:0;background:rgba(10,5,20,.45);z-index:70}
 .ask{position:absolute;left:12px;right:12px;max-width:520px;margin:0 auto;z-index:71;background:var(--paper);border-radius:16px;padding:16px;display:grid;gap:10px;box-shadow:0 20px 50px rgba(0,0,0,.35)}
 .askopts{display:grid;gap:8px}.askopts button{justify-content:flex-start;text-align:start;white-space:normal}
+.why{border-radius:999px;padding:3px 10px}
+.whytx{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:8px 10px;line-height:1.6}
 .howto{margin:0;padding-inline-start:20px;display:grid;gap:2px}
 .people{display:grid;gap:8px}
 .person{display:flex;gap:10px;align-items:center;padding:8px 12px;border-radius:12px;background:var(--bg);border:1.5px solid var(--line)}
@@ -311,7 +313,8 @@ const nameOfKey=a=>!a||!a.length?'אף אחד':a.includes('ALL')?'כולם':a.ma
 // visible part of the page (the tool may sit in a tall iframe on the site)
 function visBox(){try{if(window.frameElement){const r=window.frameElement.getBoundingClientRect();const vh=window.parent.innerHeight;return {top:Math.max(0,-r.top),h:Math.min(vh,r.bottom)-Math.max(0,r.top)}}}catch(e){}return {top:window.scrollY,h:window.innerHeight}}
 function placeFloats(){const v=visBox();placePick(v);placeDock(v);const bar=$('selBar');if(bar&&!bar.hidden){bar.style.top=(v.top+v.h-bar.offsetHeight-10)+'px'}const m=$('askBox');if(m&&!m.hidden){m.style.top=(v.top+Math.max(10,(v.h-m.offsetHeight)/2))+'px'}let emb=false;try{emb=!!window.frameElement}catch(e){}if(emb){const t=$('toast');t.style.top=(v.top+v.h-70)+'px';t.style.bottom='auto'}}
-try{if(window.frameElement){window.parent.addEventListener('scroll',placeFloats,{passive:true});window.parent.addEventListener('resize',placeFloats)}}catch(e){}
+try{if(window.frameElement){window.parent.addEventListener('scroll',placeFloats,{passive:true});window.parent.document.addEventListener('scroll',placeFloats,{passive:true,capture:true});window.parent.addEventListener('resize',placeFloats)}}catch(e){}
+setInterval(()=>{const s=document.querySelector('[data-step="split"]'),y=document.querySelector('[data-step="sync"]');if(s&&!s.hidden||y&&!y.hidden)placeFloats()},400);
 window.addEventListener('scroll',placeFloats,{passive:true});window.addEventListener('resize',placeFloats);
 function ask(title,body,opts){return new Promise(res=>{const m=$('askBox');$('askT').textContent=title;$('askB').innerHTML=body||'';$('askO').innerHTML=opts.map((o,k)=>`<button class="${k===0?'primary':''}" data-k="${k}">${esc(o.label)}</button>`).join('')+`<button data-k="-1">ביטול</button>`;
  $('askVeil').hidden=false;m.hidden=false;placeFloats();$('askO').onclick=e=>{const k=e.target.closest('[data-k]');if(!k)return;$('askVeil').hidden=true;m.hidden=true;const n=+k.dataset.k;res(n<0?null:opts[n].v)};$('askVeil').onclick=()=>{$('askVeil').hidden=true;m.hidden=true;res(null)}})}
@@ -323,7 +326,7 @@ function placeDock(v){const d=$('tlDock'),ph=$('tlPh');if(!d)return;const sec=tl
  const phTop=ph.getBoundingClientRect().top+sy;const listEnd=$('syncList').getBoundingClientRect().bottom+sy;const fl=phTop<v.top+4&&listEnd>v.top+260;
  if(fl&&!d.classList.contains('float')){ph.style.height=d.offsetHeight+'px';d.classList.add('float');drawTL()}else if(!fl&&d.classList.contains('float')){d.classList.remove('float');ph.style.height='0';d.style.top='';drawTL()}
  if(fl)d.style.top=(v.top+6)+'px'}
-function afterChange(){const before=afterChange.n||0;save();renderSplit();const r=checkSplit();afterChange.n=r.issues.length;if(r.issues.length>before)toast('שימו לב – זה לא מומלץ (ההסבר למעלה)')}
+function afterChange(){const before=afterChange.n||0;save();renderSplit();const r=checkSplit();afterChange.n=r.issues.length;if(r.issues.length>before)toast('שימו לב – זה לא מומלץ (פרטים ו"למה?" בתיבה למעלה)')}
 function setLines(ix,a){ix.forEach(i=>{P.assign[i]=a.slice()})}
 function applyPerson(id,ix){ix=[...ix];if(!ix.length)return;
  if(id==='ALL'){setLines(ix,['ALL'])}
@@ -394,7 +397,8 @@ document.addEventListener('pointerup',endDrag2);document.addEventListener('point
 
 
 // ---- recording-friendly split: solos in consecutive lines, chorus = everyone, at most a pair per line ----
-const POLICY='בדרך כלל מקליטים עד זוג בשורה, וכל משתתף שר כמה שורות ברצף. חלוקה של יותר משניים בשורה, שורות לא צמודות או צמדים שמתחלפים מאריכה משמעותית את זמן ההפקה ועלולה לגרור עלויות נוספות, ולכן אנחנו לא ממליצים עליה. זה אפשרי בקטע מעבר קצר של עד שתי שורות, או בפזמון שבו כולם שרים, אבל לא בבתים.';
+const WHY='כל זוג, שילוב או שורה בודדת במקום אחר בשיר מוסיפים עוד סבב הקלטה וצילום. ככל שההפקה מתארכת אנשים מתעייפים, וזה ניכר אחר כך בצילומים, וילדים מאבדים סבלנות – וחבל. זה גם מאריך את זמן ההפקה ועלול לגרור עלויות נוספות. הכי טוב: כל אחד שר שורה, שתיים או בית משלו ברצף, ובפזמון כולם יחד. זוגות וקבוצות – במידה, ובעיקר בקטע מעבר קצר או בפזמון.';
+const POLICY='שימו לב – החלוקה הזאת לא מומלצת.\n\n'+WHY;
 const isBridge=l=>/גשר|מעבר|bridge/i.test(l.sec||'');
 function verseRuns(){const runs=[];let cur=null;P.lines.forEach((l,i)=>{if(l.chorus){cur=null;return}if(!cur){cur=[];runs.push(cur)}cur.push(i)});return runs}
 function autoSplit(){const solo=P.people.filter(p=>!p.group);if(!solo.length&&!P.people.length)return toast('קודם מוסיפים משתתפים');const ppl=solo.length?solo:P.people;
@@ -414,9 +418,12 @@ function checkSplit(){const issues=[];const runs=verseRuns();
   else if(a.length>2&&!short)issues.push(`שורה ${i+1}: ${a.length} משתתפים באותה שורה – מומלץ עד זוג.`);
   a.map(pById).filter(p=>p&&p.group).forEach(p=>{if(!short)issues.push(`שורה ${i+1}: הקבוצה "${p.name}" שרה בבית – קבוצות מתאימות רק לקטע מעבר קצר.`)})});
  // each person sings one consecutive block (outside the chorus)
- P.people.forEach(p=>{const mine=P.lines.map((l,i)=>i).filter(i=>!P.lines[i].chorus&&(P.assign[i]||[]).includes(p.id));if(mine.length<2)return;
-  let blocks=1;for(let k=1;k<mine.length;k++){const a=mine[k-1],b=mine[k];const between=P.lines.slice(a+1,b);if(between.some(l=>!l.chorus))blocks++}
-  if(blocks>1)issues.push(`${p.name}: שורות בכמה מקומות לא צמודים בבתים – מומלץ רצף אחד של שורות.`)});
+ const runsOf=idx=>{if(!idx.length)return 0;let n=1;for(let k=1;k<idx.length;k++){const a=idx[k-1],b=idx[k];if(P.lines.slice(a+1,b).some(l=>!l.chorus))n++}return n};
+ P.people.forEach(p=>{const verse=P.lines.map((l,i)=>i).filter(i=>!P.lines[i].chorus);const solo=verse.filter(i=>{const a=P.assign[i]||[];return a.length===1&&a[0]===p.id});const all=verse.filter(i=>(P.assign[i]||[]).includes(p.id));
+  if(runsOf(solo)>1||runsOf(all)>2)issues.push(`${p.name}: שר/ה בכמה מקומות לא צמודים בבתים – מומלץ רצף אחד של שורות.`)});
+ // pairs: fine in moderation; too many different pairs (for the number of participants) is not
+ {const N=P.people.filter(p=>!p.group).length,V=P.lines.filter(l=>!l.chorus).length;const pairs=new Set();P.lines.forEach((l,i)=>{if(l.chorus||isBridge(l))return;const a=(P.assign[i]||[]).filter(x=>x!=='ALL');if(a.length===2)pairs.add(a.slice().sort().join('+'))});
+  const allowed=N>V?Math.max(4,N-V):Math.min(4,Math.max(1,Math.floor(N/2)));if(pairs.size>allowed)issues.push(`${pairs.size} זוגות שונים בבתים – עם ${N} משתתפים עדיף לתת לכל אחד שורה, שתיים או בית משלו, מאשר הרבה זוגות.`)}
  // a person should keep the same partner
  P.people.forEach(p=>{const partners=new Set();P.lines.forEach((l,i)=>{if(l.chorus)return;const a=P.assign[i]||[];if(a.includes(p.id)&&a.length===2)partners.add(a.find(x=>x!==p.id))});if(partners.size>1)issues.push(`${p.name}: צמדים שמתחלפים – מומלץ אותו בן או בת זוג לאורך כל השורות.`)});
  const empty=P.lines.filter((l,i)=>!(P.assign[i]||[]).length).length;
@@ -424,7 +431,8 @@ function checkSplit(){const issues=[];const runs=verseRuns();
  return {issues:[...new Set(issues)],empty,idle}}
 function renderRules(){const r=checkSplit();const box=$('rules');
  if(!r.issues.length){box.style.background='';box.innerHTML=`<div class="ok">✓ החלוקה מתאימה להקלטה: סולואים ברצף, והפזמון של כולם.</div>${r.empty?`<div class="hint small">${r.empty} שורות עדיין בלי משתתף.</div>`:''}${r.idle&&r.idle.length?`<div class="hint small">שרים רק בפזמון: ${esc(r.idle.join(', '))}</div>`:''}`;return}
- box.style.background='var(--soft)';box.innerHTML=`<div class="small"><b class="warn">שימו לב – זה לא מומלץ.</b> ${esc(POLICY)}</div><ul class="small" style="margin:4px 0 0;padding-inline-start:18px">${r.issues.slice(0,6).map(x=>`<li>${esc(x)}</li>`).join('')}</ul><button class="small" id="fixSplit">✦ להחזיר לחלוקה המומלצת</button>`;
+ box.style.background='var(--soft)';box.innerHTML=`<div class="row small" style="gap:8px"><b class="warn">שימו לב – זה לא מומלץ</b><button class="small why" id="whyBtn" aria-expanded="false">❓ למה?</button></div><div class="small whytx" id="whyTx" hidden>${esc(WHY)}</div><ul class="small" style="margin:4px 0 0;padding-inline-start:18px">${r.issues.slice(0,6).map(x=>`<li>${esc(x)}</li>`).join('')}</ul><button class="small" id="fixSplit">✦ להחזיר לחלוקה המומלצת</button>`;
+ $('whyBtn').onclick=()=>{const t=$('whyTx');t.hidden=!t.hidden;$('whyBtn').setAttribute('aria-expanded',String(!t.hidden))};
  $('fixSplit').onclick=autoSplit}
 $('autoSplit').onclick=autoSplit;
 $('clearSplit').onclick=()=>{P.assign={};save();renderSplit()};

@@ -408,13 +408,14 @@ document.querySelectorAll('input[name=mode]').forEach(r=>r.onchange=()=>{mode=r.
 
 // ---------- boot ----------
 (async()=>{
- if(mode==='staff'){$('modeSeg').hidden=false;$('m-staff').checked=true}
+ $('modeSeg').hidden=false; // stage 1: both views visible (stage 2: by personal link / admin)
  try{await document.fonts.load(`800 40px Rubik`);await document.fonts.load(`600 40px Rubik`)}catch(e){}
  const saved=await DB.get('proj');if(saved&&saved.P){Object.assign(P,saved.P);P.img=saved.img||null;await loadImg()}
  const ab=await DB.get('audio');if(ab)await setAudio(ab,false);
  $('title').value=P.title;$('lyrics').value=P.lyrics;if(P.lyrics)reparse();if(P.ratio==='v')$('r-v').checked=true;
  if(P.bg.type==='theme'&&!saved)P.bg.v=suggestTheme();
  cur=Math.max(0,P.lines.findIndex(l=>l.t==null));if(cur<0)cur=P.lines.length;
+ if(!P.lines.length)mode='staff';$('m-'+mode).checked=true;
  show(0)})();
 </script>
 </body>

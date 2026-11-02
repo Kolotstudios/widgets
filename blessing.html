@@ -85,7 +85,12 @@ button.small{padding:5px 12px;font-size:14px;justify-self:start}
 .nav{display:flex;gap:8px;align-items:center;border-top:1px solid var(--line);padding-top:12px}
 .nav .sp,.bar .sp{flex:1}
 .mobileOnly{display:none}
-.grid:not(.gen) .result .bar,.grid:not(.gen) .meta,.grid:not(.gen) .result .row,.grid:not(.gen) .result>.note{display:none}
+.grid:not(.gen) .result .bar,.grid:not(.gen) .meta,.grid:not(.gen) .result .row,.grid:not(.gen) .result>.note,.grid:not(.gen) .lead{display:none}
+.lead{background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:16px 18px;display:grid;gap:8px;text-align:center}
+.lead b{font-size:17px;color:var(--ink)}.lead p{margin:0;font-size:14px;color:var(--muted);line-height:1.6}
+.lead a.leadBtn{justify-self:center;display:inline-block;background:#25D366;color:#fff;text-decoration:none;font-weight:700;border-radius:999px;padding:10px 22px;font-size:15px}
+.lead a.leadBtn:hover{filter:brightness(.95)}
+.linkBtn{background:none!important;border:0!important;color:var(--muted)!important;text-decoration:underline;padding:4px!important;font-size:13px!important}
 .placeholder{color:var(--muted);text-align:center;padding:40px 10px;font-family:var(--f-body)}
 .result{position:static}
 @media (max-width:840px){
@@ -246,8 +251,15 @@ html.embedded .wrap{padding-block:12px 16px}
         <a id="wa" href="#" target="_blank" rel="noopener"><button tabindex="-1">שליחה בוואטסאפ</button></a>
         <button id="dl" hidden>הורדה כקובץ</button>
         <button id="ai" hidden>ליטוש כל הברכה עם AI</button>
+        <button id="read">מצב הקראה</button>
+        <button id="print">הדפסה / PDF</button>
       </div>
-      <p class="note">לוחצים על משפט כדי לסמן אותו: אפשר לכתוב בו ישירות, לבקש ניסוח אחר או למחוק. הזמן מחושב לפי קריאה רגועה, בערך 2 מילים בשנייה.</p>
+      <div class="lead" id="lead">
+        <b>רוצים להקליט את הברכה הזאת באולפן?</b>
+        <p>באולפני קולות הברכה נשמעת אחרת: מיקרופון מקצועי, הדרכה בהקלטה, מוזיקת רקע ועריכה מלאה. מקבלים קובץ מוכן להשמעה באירוע.</p>
+        <a class="leadBtn" id="leadWa" href="#" target="_blank" rel="noopener">שלחו לנו את הברכה בוואטסאפ ←</a>
+      </div>
+      <p class="note">לוחצים על משפט כדי לסמן אותו: אפשר לכתוב בו ישירות, לבקש ניסוח אחר או למחוק. הזמן מחושב לפי קריאה רגועה, בערך 2 מילים בשנייה. הפרטים נשמרים אוטומטית במכשיר שלכם. <button type="button" class="linkBtn" id="reset">התחלה מחדש</button></p>
     </div>
   </div>
 </div>
@@ -509,7 +521,7 @@ function draw(){const box=$('blocks');box.innerHTML='';
  if(!paras.length)box.innerHTML='<p class="note">כל המשפטים נמחקו. אפשר ללחוץ "ביטול" או ליצור ברכה מחדש.</p>';
  meta()}
 function focusBlk(i){const b=$('blocks').children[i];if(b)b.querySelector('.tx').focus()}
-function meta(){const t=fullText();const w=words(t);$('words').textContent=w+' מילים';const s=Math.round(w/2/5)*5;$('mins').textContent='כ-'+(s>=60?Math.floor(s/60)+':'+String(s%60).padStart(2,'0')+' דקות':s+' שניות')+' קריאה';$('wa').href='https://wa.me/?text='+encodeURIComponent(t)}
+function meta(){const t=fullText();const w=words(t);$('words').textContent=w+' מילים';const s=Math.round(w/2/5)*5;$('mins').textContent='כ-'+(s>=60?Math.floor(s/60)+':'+String(s%60).padStart(2,'0')+' דקות':s+' שניות')+' קריאה';$('wa').href='https://wa.me/?text='+encodeURIComponent(t);try{const c=ctx();$('leadWa').href='https://wa.me/972555170280?text='+encodeURIComponent('היי, יצרתי ברכה במחולל הברכות באתר ואשמח להקליט אותה באולפן.\nאירוע: '+evName(c)+' של '+c.name+'\nמברכים: '+($('sign').value||'')+'\n\nהברכה:\n'+t)}catch(e){}saveSoon()}
 let baseSeed=7;function render(fresh){if(fresh)baseSeed=Math.floor(Math.random()*1e6)+1;seed=baseSeed;paras=build(ctx());selIdx=-1;draw();snap()}
 document.addEventListener('keydown',e=>{if(!(e.ctrlKey||e.metaKey))return;const inForm=e.target.closest&&e.target.closest('form');if(inForm)return;const k=e.key.toLowerCase();
  if(k==='z'&&!e.shiftKey){e.preventDefault();clearTimeout(typeT);snap();if(hi>0)restore(hi-1)}else if(k==='y'||(k==='z'&&e.shiftKey)){e.preventDefault();if(hi<hist.length-1)restore(hi+1)}});
@@ -559,6 +571,50 @@ function topOfWidget(){try{if(window.frameElement&&window.innerWidth<=840){const
 // auto-height when embedded on a site (same-origin srcdoc frame)
 function fitFrame(){try{const fe=window.frameElement;if(!fe)return;var w=document.querySelector('.wrap');fe.style.height=Math.ceil(w.getBoundingClientRect().height)+18+'px'}catch(e){}}
 try{if(window.frameElement){document.documentElement.classList.add('embedded');new ResizeObserver(fitFrame).observe(document.body)}}catch(e){}
+
+// ---------- analytics (site's GA4 / GTM / Meta pixel, when embedded on the same origin) ----------
+function track(name,params){params=Object.assign({event_category:'blessing_generator'},params||{});
+ try{const w=window.parent;if(w&&w!==window){if(typeof w.gtag==='function')w.gtag('event',name,params);else if(w.dataLayer)w.dataLayer.push(Object.assign({event:name},params));if(typeof w.fbq==='function')w.fbq('trackCustom',name,params)}}catch(e){}}
+let started=false;$('f').addEventListener('input',()=>{if(!started){started=true;track('blessing_start')}},true);
+$('f').addEventListener('submit',()=>{if($('name').value.trim())track('blessing_generate',{blessing_event:val('ev'),blessing_from:$('from').value,blessing_length:val('len'),blessing_style:val('style')})});
+$('copy').addEventListener('click',()=>track('blessing_copy'));
+$('wa').addEventListener('click',()=>track('blessing_share_whatsapp'));
+$('leadWa').addEventListener('click',()=>track('blessing_lead_whatsapp',{blessing_event:val('ev')}));
+$('again').addEventListener('click',()=>track('blessing_regenerate'));
+
+// ---------- reading mode (full screen over the whole page) ----------
+$('read').onclick=()=>{track('blessing_read_mode');let D=document,host=null;try{if(window.frameElement&&window.parent.document){D=window.parent.document}}catch(e){D=document}
+ const ov=D.createElement('div');ov.setAttribute('dir','rtl');let fs=Math.min(34,Math.max(24,Math.round((D.defaultView.innerWidth||800)/30)));
+ ov.style.cssText='position:fixed;inset:0;z-index:2147483646;background:#14101a;color:#f5f0fa;overflow:auto;-webkit-overflow-scrolling:touch;font-family:Assistant,Heebo,Arial,sans-serif';
+ const bar='display:flex;gap:8px;justify-content:space-between;align-items:center;position:sticky;top:0;background:#14101aee;padding:12px 16px;border-bottom:1px solid #3a2f48';
+ const bt='background:#2c2238;color:#fff;border:1px solid #4a3c5c;border-radius:999px;padding:8px 14px;font-size:16px;cursor:pointer;font-family:inherit';
+ ov.innerHTML=`<div style="${bar}"><span><button data-r="minus" style="${bt}">א−</button> <button data-r="plus" style="${bt}">א+</button></span><button data-r="close" style="${bt}">סגירה ✕</button></div><div data-r="txt" style="max-width:820px;margin:0 auto;padding:28px 20px 80px;line-height:1.75"></div>`;
+ const tx=ov.querySelector('[data-r=txt]');const paint=()=>{tx.style.fontSize=fs+'px';tx.innerHTML=paras.map(textOf).filter(s=>s.trim()).map(s=>'<p style="margin:0 0 .9em">'+esc(s)+'</p>').join('')};paint();
+ const prevOv=D.documentElement.style.overflow;D.documentElement.style.overflow='hidden';
+ const close=()=>{ov.remove();D.documentElement.style.overflow=prevOv;D.removeEventListener('keydown',kd)};const kd=e=>{if(e.key==='Escape')close()};D.addEventListener('keydown',kd);
+ ov.addEventListener('click',e=>{const r=e.target.dataset.r;if(r==='close')close();if(r==='plus'){fs=Math.min(60,fs+3);paint()}if(r==='minus'){fs=Math.max(16,fs-3);paint()}});
+ D.body.appendChild(ov)};
+
+// ---------- print / save as PDF ----------
+$('print').onclick=()=>{track('blessing_print');const w=window.open('','_blank');if(!w){toast('הדפדפן חסם חלון חדש. אפשר להעתיק ולהדפיס');return}
+ const c=ctx();w.document.write(`<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>ברכה ל${esc(evName(c))} – ${esc(c.name)}</title><style>body{font-family:Assistant,Heebo,Arial,sans-serif;color:#1d1524;max-width:700px;margin:40px auto;padding:0 24px;font-size:20px;line-height:1.8}h1{font-size:15px;color:#7a6c88;font-weight:400;text-align:center;letter-spacing:.3em;margin-bottom:28px}p{margin:0 0 .9em}footer{margin-top:40px;font-size:12px;color:#9a8fa6;text-align:center}@media print{body{margin:0 auto}}</style></head><body><h1>✦ ✦ ✦</h1>${paras.map(textOf).filter(s=>s.trim()).map(s=>'<p>'+esc(s)+'</p>').join('')}<footer>נכתב במחולל הברכות של אולפני קולות · kolot-studios.com</footer><script>setTimeout(function(){print()},300)<\/script></body></html>`);w.document.close()};
+
+// ---------- autosave (this device only) ----------
+const SKEY='kolot_blessing_v1';let saveT=null,restoring=false;
+function saveSoon(){if(restoring)return;clearTimeout(saveT);saveT=setTimeout(saveNow,400)}
+function saveNow(){try{const fields={};$('f').querySelectorAll('input,select,textarea').forEach(el=>{if(el.dataset.l||el.dataset.s)return;const k=el.id||(el.name+':'+el.value);if(!k||k===':')return;fields[k]=(el.type==='checkbox'||el.type==='radio')?el.checked:el.value});
+ localStorage.setItem(SKEY,JSON.stringify({v:1,at:Date.now(),fields,LISTS,GP,signTouched,step,generated,paras,baseSeed}))}catch(e){}}
+function applyFields(F,only){$('f').querySelectorAll('input,select,textarea').forEach(el=>{if(el.dataset.l||el.dataset.s)return;const k=el.id||(el.name+':'+el.value);if(!(k in F))return;if(only&&!only(el))return;if(el.type==='checkbox'||el.type==='radio')el.checked=F[k];else el.value=F[k]})}
+function restoreSaved(){let d=null;try{d=JSON.parse(localStorage.getItem(SKEY)||'null')}catch(e){}if(!d||d.v!==1||Date.now()-d.at>1000*60*60*24*60)return false;
+ try{restoring=true;applyFields(d.fields,el=>el.tagName!=='SELECT'&&!el.closest('.chips,#hobbies,#together,#thanks,#traits'));
+  ['sibs','kids','asibs'].forEach(k=>{LISTS[k]=Array.isArray(d.LISTS&&d.LISTS[k])?d.LISTS[k]:[];renderList(k)});
+  ['s1','s2'].forEach(k=>{if(d.GP&&d.GP[k])Object.assign(GP[k],d.GP[k])});signTouched=!!d.signTouched;baseSeed=d.baseSeed||7;
+  refresh();applyFields(d.fields);refresh(false);applyFields(d.fields,el=>el.id==='sign');
+  if(d.generated&&Array.isArray(d.paras)&&d.paras.length){generated=true;$('grid').classList.add('gen');paras=d.paras;hist=[];hi=-1;selIdx=-1;draw();snap()}
+  showStep(d.step||1);restoring=false;return true}catch(e){restoring=false;return false}}
+$('f').addEventListener('input',saveSoon);$('f').addEventListener('change',saveSoon);
+$('reset').onclick=()=>{try{localStorage.removeItem(SKEY)}catch(e){}location.reload()};
 chips('traits',TRAITS,'tr',[]);['sibs','kids','asibs'].forEach(renderList);refresh();showStep(1);
+if(restoreSaved())toast('שחזרנו את מה שהתחלתם');
 </script>
 </body></html>

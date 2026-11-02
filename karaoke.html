@@ -711,8 +711,8 @@ function syncLoop(){if(stopAt!=null&&audio.currentTime>=stopAt){audio.pause();st
  drawTL();if(!audio.paused)requestAnimationFrame(syncLoop)}
 $('bpmDetect').onclick=()=>{if(!audioBuf)return toast('קודם מעלים גייד');const r=detectTempo(audioBuf);P.bpm=r.bpm;P.beat0=r.beat0;save();renderSync();toast('קצב: '+P.bpm+' BPM')};
 // ---------- automatic placement (Whisper word timestamps, aligned to the known lyrics) ----------
-const API='__MAIN_API__'; // kolot.studios: projects, links, Whisper
-const KALA_API='https://script.google.com/macros/s/AKfycbyLQiBqLGK3rym-6e-EN-1gqJlq-w2ZqVw_3-KoBi72CRaffMmqC-YDcL0anNKO0fU/exec'; // clips project (kolot.studio1): Kala order lookup only
+const API='https://script.google.com/macros/s/AKfycbyLQiBqLGK3rym-6e-EN-1gqJlq-w2ZqVw_3-KoBi72CRaffMmqC-YDcL0anNKO0fU/exec'; // karaoke web app (kolot.studio1): projects, links, Whisper, Kala lookup
+const KALA_API=API;
 const NW_FIN={'ך':'כ','ם':'מ','ן':'נ','ף':'פ','ץ':'צ'};
 function normW(w){return String(w||'').replace(/[֑-ׇ]/g,'').replace(/[^א-תa-zA-Z0-9]/g,'').replace(/[ךםןףץ]/g,c=>NW_FIN[c]).replace(/וו/g,'ו').replace(/יי/g,'י').toLowerCase()}
 function lev(a,b){if(a===b)return 0;const m=a.length,n=b.length;if(!m)return n;if(!n)return m;let p=new Array(n+1),q=new Array(n+1);for(let j=0;j<=n;j++)p[j]=j;for(let i=1;i<=m;i++){q[0]=i;for(let j=1;j<=n;j++)q[j]=Math.min(p[j]+1,q[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1));[p,q]=[q,p]}return p[n]}
@@ -775,7 +775,7 @@ async function openSetup(){$('setupBox').hidden=false;$('suMsg').textContent='ב
 $('setupOpen').onclick=openSetup;$('suCancel').onclick=()=>{$('setupBox').hidden=true};
 $('suSave').onclick=async()=>{const key=$('suKey').value.trim(),np=$('suPass').value.trim();if(key&&!/^sk-/.test(key))return $('suMsg').textContent='המפתח צריך להתחיל ב־sk-';if(np.length<6)return $('suMsg').textContent='סיסמה של 6 תווים לפחות';
  $('suSave').disabled=true;$('suMsg').textContent='שומר ובודק את המפתח מול OpenAI…';
- try{const r=await api({action:'setup',key,newPass:np,pass:$('suOld').value.trim()});if(!r.ok)throw new Error(r.error||'שגיאה');try{await api({action:'setup',key,newPass:np,pass:$('suOld').value.trim()},KALA_API)}catch(e){}lsSet('kk_pass',np);$('suKey').value='';$('suPass').value='';$('suOld').value='';$('suMsg').textContent='✓ נשמר. אפשר ללחוץ "זיהוי אוטומטי"';setTimeout(()=>{$('setupBox').hidden=true},2500)}
+ try{const r=await api({action:'setup',key,newPass:np,pass:$('suOld').value.trim()});if(!r.ok)throw new Error(r.error||'שגיאה');lsSet('kk_pass',np);$('suKey').value='';$('suPass').value='';$('suOld').value='';$('suMsg').textContent='✓ נשמר. אפשר ללחוץ "זיהוי אוטומטי"';setTimeout(()=>{$('setupBox').hidden=true},2500)}
  catch(e){$('suMsg').textContent='✗ '+(e.message||e)}finally{$('suSave').disabled=false}};
 
 $('tapTempo').onclick=()=>{const now=performance.now()/1000;tapTimes=tapTimes.filter(x=>now-x<3).concat(now);if(tapTimes.length>=4){const d=(tapTimes[tapTimes.length-1]-tapTimes[0])/(tapTimes.length-1);P.bpm=Math.round(60/d);if(!audio.paused)P.beat0=(audio.currentTime-LAT)%d;save();renderSync()}else toast('ממשיכים להקיש בקצב…')};

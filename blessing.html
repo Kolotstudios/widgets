@@ -324,7 +324,7 @@ $('gps').addEventListener('input',e=>{const t=e.target;if(!t.dataset.s)return;GP
 // ---------- who blesses ----------
 function fromOptions(){const m=mode();const n2=$('name2').value.trim()||'החתן',n1=$('name').value.trim()||'הכלה';
  if(m==='child'){const [l1,l2]=parentLabels();const o=[];if(l2)o.push(['parents',l1+' ו'+l2]);o.push(['p1',l1]);if(l2)o.push(['p2',l2+(l1===l2?' (השני/ה)':'')]);
-  o.unshift(['self',cgOf()==='m'?'החוגג בעצמו – דרשה / נאום':'החוגגת בעצמה – דרשה / נאום']);
+  o.push(['self',cgOf()==='m'?'החוגג בעצמו – דרשה / נאום':'החוגגת בעצמה – דרשה / נאום']);
   o.push(['grand','סבא וסבתא'],['grandma','סבתא'],['grandpa','סבא'],['sib','אח או אחות'],['sibs','כל האחים'],['friends','החברים'],['family','כל המשפחה']);return o}
  if(m==='adult')return [['spouse',$('spouse').value.trim()?'בן/בת הזוג ('+$('spouse').value.trim()+')':'בן/בת הזוג'],['kids','הילדים'],['kid','ילד או ילדה'],['grandkids','הנכדים'],['asib','אח או אחות'],['friends','החברים'],['family','כל המשפחה']];
  return [['w1','ההורים של '+n1],['w2','ההורים של '+n2],['wsibs','האחים'],['grand','סבא וסבתא'],['friends','החברים'],['family','כל המשפחה']]}
@@ -735,7 +735,9 @@ $('redo').onclick=()=>{if(hi<hist.length-1)restore(hi+1)};
 // ---------- form sync ----------
 function syncForm(){const ev=val('ev'),m=mode(),cg=cgOf();
  document.querySelectorAll('[data-show]').forEach(el=>{const s=el.dataset.show;el.hidden=!(s===ev||s===m)});
- const W2=ev==='wed'||ev==='hina';$('flBox').hidden=val('style')==='mod';$('nameLbl').textContent=W2?'שם הכלה':cg==='m'?'שם החוגג':'שם החוגגת';$('aboutLbl').textContent=W2?'על הזוג':cg==='m'?'על החוגג':'על החוגגת';$('story').placeholder=W2?'למשל: זוג מצחיק ונדיב, אוהבים לטייל ולארח חברים':cg==='m'?'למשל: מצחיק ורגיש, אוהב כדורגל ולנגן בגיטרה, ותמיד דואג לאחים הקטנים':'למשל: מצחיקה ורגישה, אוהבת לרקוד ולצייר, ותמיד דואגת לאחים הקטנים';
+ const W2=ev==='wed'||ev==='hina';$('flBox').hidden=val('style')==='mod';$('nameLbl').textContent=W2?'שם הכלה':cg==='m'?'שם החוגג':'שם החוגגת';$('aboutLbl').textContent=W2?'על הזוג':cg==='m'?'על החוגג':'על החוגגת';{const gi={f:0,m:1,p:2}[cg]??0;document.querySelectorAll('#traits label').forEach((l,i)=>{if(TRAITS[i])l.textContent=TRAITS[i][gi]});
+ const self=$('from').value==='self';$('memory').placeholder=self?(cg==='m'?'למשל: כשהייתי בן חמש עליתי על הבמה בגן ולא הסכמתי לרדת':'למשל: כשהייתי בת חמש עליתי על הבמה בגן ולא הסכמתי לרדת'):W2?'למשל: הדייט הראשון שלכם, שבו הכל השתבש והיה מושלם':(cg==='m'?'למשל: כשהיית בן חמש עלית על הבמה בגן ולא הסכמת לרדת':'למשל: כשהיית בת חמש עלית על הבמה בגן ולא הסכמת לרדת');
+ const sb=$('sign').closest('div');if(sb)sb.hidden=self;}$('story').placeholder=W2?'למשל: זוג מצחיק ונדיב, אוהבים לטייל ולארח חברים':cg==='m'?'למשל: מצחיק ורגיש, אוהב כדורגל ולנגן בגיטרה, ותמיד דואג לאחים הקטנים':'למשל: מצחיקה ורגישה, אוהבת לרקוד ולצייר, ותמיד דואגת לאחים הקטנים';
  $('w1t').textContent='הצד של '+($('name').value.trim()||'הכלה');$('w2t').textContent='הצד של '+($('name2').value.trim()||'החתן');
  const [l1,l2]=parentLabels();$('p1Lbl').textContent='שם ה'+l1;$('p2Box').hidden=!l2;if(l2)$('p2Lbl').textContent='שם ה'+l2+(l1===l2?' השני/ה':'');
  const md=m==='adult'?'adult':m==='wed'?'wed':'kid';

@@ -711,7 +711,8 @@ function syncLoop(){if(stopAt!=null&&audio.currentTime>=stopAt){audio.pause();st
  drawTL();if(!audio.paused)requestAnimationFrame(syncLoop)}
 $('bpmDetect').onclick=()=>{if(!audioBuf)return toast('קודם מעלים גייד');const r=detectTempo(audioBuf);P.bpm=r.bpm;P.beat0=r.beat0;save();renderSync();toast('קצב: '+P.bpm+' BPM')};
 // ---------- automatic placement (Whisper word timestamps, aligned to the known lyrics) ----------
-const API='https://script.google.com/macros/s/AKfycbyLQiBqLGK3rym-6e-EN-1gqJlq-w2ZqVw_3-KoBi72CRaffMmqC-YDcL0anNKO0fU/exec';
+const API='__MAIN_API__'; // kolot.studios: projects, links, Whisper
+const KALA_API='https://script.google.com/macros/s/AKfycbyLQiBqLGK3rym-6e-EN-1gqJlq-w2ZqVw_3-KoBi72CRaffMmqC-YDcL0anNKO0fU/exec'; // clips project (kolot.studio1): Kala order lookup only
 const NW_FIN={'ך':'כ','ם':'מ','ן':'נ','ף':'פ','ץ':'צ'};
 function normW(w){return String(w||'').replace(/[֑-ׇ]/g,'').replace(/[^א-תa-zA-Z0-9]/g,'').replace(/[ךםןףץ]/g,c=>NW_FIN[c]).replace(/וו/g,'ו').replace(/יי/g,'י').toLowerCase()}
 function lev(a,b){if(a===b)return 0;const m=a.length,n=b.length;if(!m)return n;if(!n)return m;let p=new Array(n+1),q=new Array(n+1);for(let j=0;j<=n;j++)p[j]=j;for(let i=1;i<=m;i++){q[0]=i;for(let j=1;j<=n;j++)q[j]=Math.min(p[j]+1,q[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1));[p,q]=[q,p]}return p[n]}
@@ -743,7 +744,7 @@ function alignWords(lines,words,dur){
  for(let k=0;k<res.length;k++){const r=res[k];const nx=res[k+1];const maxLen=Math.max(2.5,r.n*1.1+1.5);if(r.e-r.t>maxLen)r.e=r.t+maxLen;if(nx&&r.e>nx.t-0.02)r.e=Math.max(r.t+0.3,nx.t-0.02);
   r.t=Math.max(0,+(r.t-0.05).toFixed(2));r.e=+r.e.toFixed(2);r.cf=+r.cf.toFixed(2)}
  return res}
-async function api(body){const r=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({app:'karaoke',...body}),redirect:'follow'});const tx=await r.text();try{return JSON.parse(tx)}catch(e){return {ok:false,error:'תשובה לא צפויה מהשרת'}}}
+async function api(body,url){const r=await fetch(url||API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({app:'karaoke',...body}),redirect:'follow'});const tx=await r.text();try{return JSON.parse(tx)}catch(e){return {ok:false,error:'תשובה לא צפויה מהשרת'}}}
 function lsGet(k){try{return localStorage.getItem(k)||''}catch(e){return ''}}function lsSet(k,v){try{v?localStorage.setItem(k,v):localStorage.removeItem(k)}catch(e){}}
 // 16 kHz mono WAV, with the voice band emphasised (small upload, clearer for Whisper)
 async function voiceWav(buf){const sr=16000,n=Math.ceil(buf.duration*sr);const oc=new OfflineAudioContext(1,n,sr);const src=oc.createBufferSource();src.buffer=buf;
@@ -774,7 +775,7 @@ async function openSetup(){$('setupBox').hidden=false;$('suMsg').textContent='ב
 $('setupOpen').onclick=openSetup;$('suCancel').onclick=()=>{$('setupBox').hidden=true};
 $('suSave').onclick=async()=>{const key=$('suKey').value.trim(),np=$('suPass').value.trim();if(key&&!/^sk-/.test(key))return $('suMsg').textContent='המפתח צריך להתחיל ב־sk-';if(np.length<6)return $('suMsg').textContent='סיסמה של 6 תווים לפחות';
  $('suSave').disabled=true;$('suMsg').textContent='שומר ובודק את המפתח מול OpenAI…';
- try{const r=await api({action:'setup',key,newPass:np,pass:$('suOld').value.trim()});if(!r.ok)throw new Error(r.error||'שגיאה');lsSet('kk_pass',np);$('suKey').value='';$('suPass').value='';$('suOld').value='';$('suMsg').textContent='✓ נשמר. אפשר ללחוץ "זיהוי אוטומטי"';setTimeout(()=>{$('setupBox').hidden=true},2500)}
+ try{const r=await api({action:'setup',key,newPass:np,pass:$('suOld').value.trim()});if(!r.ok)throw new Error(r.error||'שגיאה');try{await api({action:'setup',key,newPass:np,pass:$('suOld').value.trim()},KALA_API)}catch(e){}lsSet('kk_pass',np);$('suKey').value='';$('suPass').value='';$('suOld').value='';$('suMsg').textContent='✓ נשמר. אפשר ללחוץ "זיהוי אוטומטי"';setTimeout(()=>{$('setupBox').hidden=true},2500)}
  catch(e){$('suMsg').textContent='✗ '+(e.message||e)}finally{$('suSave').disabled=false}};
 
 $('tapTempo').onclick=()=>{const now=performance.now()/1000;tapTimes=tapTimes.filter(x=>now-x<3).concat(now);if(tapTimes.length>=4){const d=(tapTimes[tapTimes.length-1]-tapTimes[0])/(tapTimes.length-1);P.bpm=Math.round(60/d);if(!audio.paused)P.beat0=(audio.currentTime-LAT)%d;save();renderSync()}else toast('ממשיכים להקיש בקצב…')};
@@ -826,7 +827,7 @@ $('cloudSave').onclick=()=>{if(!P.lines.length)return toast('קודם מכיני
  <div class="fld"><label for="cDate">תאריך ההקלטה (הלינק פתוח לשינויים עד סוף היום הזה)</label><input type="date" id="cDate" value="${esc(c.recDate||'')}"></div>
  <div class="row"><button class="primary" id="cGo">${c.k?'שמירת השינויים':'שמירה ויצירת לינק'}</button><button id="cX">ביטול</button><span class="hint small" id="cMsg"></span></div><div id="cOut"></div>`);
  $('cX').onclick=hidePanel;
- $('cFind').onclick=async()=>{const id=$('cOrder').value.replace(/\D/g,'');if(!id)return;$('cFindMsg').textContent='מחפש…';try{const r=await staffApi({action:'kk_order',orderId:id});if(!r.ok)throw new Error(r.error);if(r.name&&!$('cName').value.trim()||r.name&&$('cName').value===P.title)$('cName').value=r.name;if(r.date)$('cDate').value=r.date;$('cFindMsg').textContent=r.date?`✓ ${r.name||''} · תאריך מקאלה: ${r.date.split('-').reverse().join('/')}`:`✓ ${r.name||''} – לא מצאתי תאריך בהזמנה, בחרו ידנית`;window.__kkDates=r.dates}catch(e){$('cFindMsg').textContent='✗ '+(e.message||e)}};
+ $('cFind').onclick=async()=>{const id=$('cOrder').value.replace(/\D/g,'');if(!id)return;$('cFindMsg').textContent='מחפש…';try{const r=await api({action:'kk_order',orderId:id,pass:lsGet('kk_pass')},KALA_API);if(!r.ok)throw new Error(r.error);if(r.name&&!$('cName').value.trim()||r.name&&$('cName').value===P.title)$('cName').value=r.name;if(r.date)$('cDate').value=r.date;$('cFindMsg').textContent=r.date?`✓ ${r.name||''} · תאריך האירוע בקאלה: ${r.date.split('-').reverse().join('/')} – אם ההקלטה בתאריך אחר, משנים למטה`:`✓ ${r.name||''} – לא מצאתי תאריך בהזמנה, בחרו ידנית`;window.__kkDates=r.dates}catch(e){$('cFindMsg').textContent='✗ '+(e.message||e)}};
  $('cGo').onclick=async()=>{const name=$('cName').value.trim();if(!name)return $('cMsg').textContent='חסר שם';$('cGo').disabled=true;$('cMsg').textContent='שומר… (מעלה את הגייד)';
   try{const body={action:'kk_save',k:c.k||'',meta:{name,orderId:$('cOrder').value.replace(/\D/g,''),recDate:$('cDate').value||''},project:projData()};
    if(!c.k||audioDirty){body.audio=await b64(audioBlob);body.mime=audioBlob.type||'audio/mpeg'}if(P.img&&(!c.k||imgDirty))body.img=await b64(P.img);

@@ -68,6 +68,8 @@ details.tap[open]{display:grid;gap:10px}
 #splitList .ln.over{border-color:#ff4d6d;border-style:dashed;background:var(--soft)}
 body.dragging,body.dragging *{cursor:grabbing!important;user-select:none}
 .ghost{position:fixed;z-index:60;pointer-events:none;display:none;transform:translate(-50%,-130%);background:var(--accent);color:var(--accent-ink);padding:8px 14px;border-radius:999px;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap}
+.pickfloat{position:absolute;left:12px;right:12px;max-width:900px;margin:0 auto;z-index:39;background:var(--paper);border:1.5px solid var(--line);border-radius:14px;padding:8px 10px;display:grid;gap:4px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.pickfloat .chip{padding:7px 12px}
 .selbar{position:absolute;left:12px;right:12px;max-width:760px;margin:0 auto;z-index:40;background:var(--paper);border:2px solid var(--accent);border-radius:16px;padding:10px 12px;display:grid;gap:8px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
 .selbar .chip{padding:9px 14px;font-size:16px}
 #selAdd.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
@@ -177,6 +179,7 @@ body.dragging,body.dragging *{cursor:grabbing!important;user-select:none}
     <div class="row small"><button id="autoSplit" class="small primary">✦ חלוקה מומלצת</button><button id="clearSplit" class="small">ניקוי</button></div>
     <div id="rules" class="card" style="padding:12px 14px;gap:6px"></div>
     <div class="lines" id="splitList"></div>
+    <div id="pickFloat" class="pickfloat" hidden><div class="row" id="pickFloatChips"></div><span class="hint small">גוררים שם אל שורה, או לוחצים על שורה ואז על שם</span></div>
     <div id="selBar" class="selbar" hidden><div class="row small"><b id="selInfo"></b><span class="sp"></span><button class="small" id="selClose">✕</button></div>
       <div class="row" id="selChips"></div>
       <div class="row small"><button class="small" id="selAdd">➕ להוסיף במקום להחליף</button><button class="small" id="selNone">ללא שיוך</button><span class="hint small" id="selHint"></span></div></div>
@@ -294,12 +297,15 @@ const rangeTxt=ix=>{const s=[...ix].sort((a,b)=>a-b);return s.length===1?`שור
 const nameOfKey=a=>!a||!a.length?'אף אחד':a.includes('ALL')?'כולם':a.map(id=>pById(id)?.name||'?').join(' + ');
 // visible part of the page (the tool may sit in a tall iframe on the site)
 function visBox(){try{if(window.frameElement){const r=window.frameElement.getBoundingClientRect();const vh=window.parent.innerHeight;return {top:Math.max(0,-r.top),h:Math.min(vh,r.bottom)-Math.max(0,r.top)}}}catch(e){}return {top:window.scrollY,h:window.innerHeight}}
-function placeFloats(){const v=visBox();const bar=$('selBar');if(bar&&!bar.hidden){bar.style.top=(v.top+v.h-bar.offsetHeight-10)+'px'}const m=$('askBox');if(m&&!m.hidden){m.style.top=(v.top+Math.max(10,(v.h-m.offsetHeight)/2))+'px'}let emb=false;try{emb=!!window.frameElement}catch(e){}if(emb){const t=$('toast');t.style.top=(v.top+v.h-70)+'px';t.style.bottom='auto'}}
+function placeFloats(){const v=visBox();placePick(v);const bar=$('selBar');if(bar&&!bar.hidden){bar.style.top=(v.top+v.h-bar.offsetHeight-10)+'px'}const m=$('askBox');if(m&&!m.hidden){m.style.top=(v.top+Math.max(10,(v.h-m.offsetHeight)/2))+'px'}let emb=false;try{emb=!!window.frameElement}catch(e){}if(emb){const t=$('toast');t.style.top=(v.top+v.h-70)+'px';t.style.bottom='auto'}}
 try{if(window.frameElement){window.parent.addEventListener('scroll',placeFloats,{passive:true});window.parent.addEventListener('resize',placeFloats)}}catch(e){}
 window.addEventListener('scroll',placeFloats,{passive:true});window.addEventListener('resize',placeFloats);
 function ask(title,body,opts){return new Promise(res=>{const m=$('askBox');$('askT').textContent=title;$('askB').innerHTML=body||'';$('askO').innerHTML=opts.map((o,k)=>`<button class="${k===0?'primary':''}" data-k="${k}">${esc(o.label)}</button>`).join('')+`<button data-k="-1">ביטול</button>`;
  $('askVeil').hidden=false;m.hidden=false;placeFloats();$('askO').onclick=e=>{const k=e.target.closest('[data-k]');if(!k)return;$('askVeil').hidden=true;m.hidden=true;const n=+k.dataset.k;res(n<0?null:opts[n].v)};$('askVeil').onclick=()=>{$('askVeil').hidden=true;m.hidden=true;res(null)}})}
-function afterChange(){const before=afterChange.n||0;save();renderSplit();const r=checkSplit();afterChange.n=r.issues.length;if(r.issues.length>before)toast('שימו לב: יש חריגה מההמלצות להקלטה (פרטים בתיבה הצהובה)')}
+function placePick(v){const f=$('pickFloat');if(!f)return;const sec=$('splitList').closest('section');if(sec.hidden){f.hidden=true;return}
+ const sy=window.frameElement?0:window.scrollY;const top0=$('pickChips').getBoundingClientRect().bottom+sy;const listEnd=$('splitList').getBoundingClientRect().bottom+sy;
+ const show=!sec.hidden&&top0<v.top+4&&listEnd>v.top+120;if(show!==!f.hidden){f.hidden=!show;if(show)$('pickFloatChips').innerHTML=$('pickChips').innerHTML}if(show)f.style.top=(v.top+8)+'px'}
+function afterChange(){const before=afterChange.n||0;save();renderSplit();const r=checkSplit();afterChange.n=r.issues.length;if(r.issues.length>before)toast('שימו לב – זה לא מומלץ (ההסבר למעלה)')}
 function setLines(ix,a){ix.forEach(i=>{P.assign[i]=a.slice()})}
 function applyPerson(id,ix){ix=[...ix];if(!ix.length)return;
  if(id==='ALL'){setLines(ix,['ALL'])}
@@ -309,7 +315,7 @@ function applyPerson(id,ix){ix=[...ix];if(!ix.length)return;
 
 function renderSplit(){setTimeout(renderRules,0);
  const chip=(id,name,dot)=>`<span class="chip drag" data-pick="${id}"><span class="dot" style="background:${dot}"></span>${esc(name)}</span>`;
- $('pickChips').innerHTML=P.people.map(p=>chip(p.id,p.name,p.color)).join('')+chip('ALL','כולם יחד',`linear-gradient(90deg,${COLORS.slice(0,4).join(',')})`);
+ $('pickChips').innerHTML=P.people.map(p=>chip(p.id,p.name,p.color)).join('')+chip('ALL','כולם יחד',`linear-gradient(90deg,${COLORS.slice(0,4).join(',')})`);$('pickFloatChips').innerHTML=$('pickChips').innerHTML;
  $('splitList').innerHTML=P.lines.map((l,i)=>{const w=whoOf(i);const hd=(i===0||P.lines[i-1].st!==l.st||P.lines[i-1].sec!==l.sec)?`<div class="sechdr">${esc(l.sec||'')}</div>`:'';
   const pills=w?(w.all?`<span class="mini drag" data-from="${i}" data-pid="ALL" style="background:#ffd166;color:#1a1224">⠿ כולם</span>`:w.ids.map(id=>{const p=pById(id);return p?`<span class="mini drag" data-from="${i}" data-pid="${id}" style="background:${p.color}">⠿ ${esc(p.name)}</span>`:''}).join('')):'<span class="hint small">— בלי —</span>';
   return hd+`<div class="ln${l.chorus?' chorus':''}${selSet.has(i)?' sel':''}" data-i="${i}"><span class="sec">${i+1}</span><span class="tx">${esc(l.text)}</span><span class="who">${pills}</span></div>`}).join('');
@@ -331,13 +337,13 @@ $('splitList').addEventListener('click',e=>{if(dragJustEnded)return;const r=e.ta
  if(!selSet.size)blockOf(i).forEach(x=>selSet.add(x));else if(selSet.has(i))selSet.delete(i);else selSet.add(i);
  document.querySelectorAll('#splitList .ln').forEach(x=>x.classList.toggle('sel',selSet.has(+x.dataset.i)));renderBar()});
 // tap a name at the top: with lines selected -> give them to that name; otherwise explain
-$('pickChips').addEventListener('click',e=>{if(dragJustEnded)return;const c=e.target.closest('[data-pick]');if(!c)return;
- if(selSet.size){applyPerson(c.dataset.pick,selSet);selSet.clear();addMode=false;renderSplit()}else toast('בוחרים שורות (לחיצה על שורה) ואז לוחצים על שם, או גוררים את השם אל השורה')});
+const pickTap=e=>{if(dragJustEnded)return;const c=e.target.closest('[data-pick]');if(!c)return;
+ if(selSet.size){applyPerson(c.dataset.pick,selSet);selSet.clear();addMode=false;renderSplit()}else toast('בוחרים שורות (לחיצה על שורה) ואז לוחצים על שם, או גוררים את השם אל השורה')};$('pickChips').addEventListener('click',pickTap);$('pickFloatChips').addEventListener('click',pickTap);
 
 // ---- drag & drop (pointer events: mouse, finger, pen) ----
 let drag2=null,dragJustEnded=false;
 function startDrag(ev,src){const g=document.createElement('div');g.className='ghost';g.textContent=src.label;document.body.appendChild(g);drag2={...src,g,x0:ev.clientX,y0:ev.clientY,on:false,pid:ev.pointerId};}
-document.addEventListener('pointerdown',ev=>{const c=ev.target.closest('#pickChips [data-pick]');const p=ev.target.closest('#splitList [data-from]');if(!c&&!p)return;
+document.addEventListener('pointerdown',ev=>{const c=ev.target.closest('#pickChips [data-pick],#pickFloatChips [data-pick]');const p=ev.target.closest('#splitList [data-from]');if(!c&&!p)return;
  if(c){const id=c.dataset.pick;startDrag(ev,{kind:'person',id,label:id==='ALL'?'כולם יחד':pById(id)?.name})}
  else{const i=+p.dataset.from;startDrag(ev,{kind:'block',id:p.dataset.pid,from:blockOf(i),label:(p.dataset.pid==='ALL'?'כולם':pById(p.dataset.pid)?.name)+' · '+rangeTxt(blockOf(i))})}});
 document.addEventListener('pointermove',ev=>{if(!drag2)return;const d=Math.hypot(ev.clientX-drag2.x0,ev.clientY-drag2.y0);if(!drag2.on){if(d<8)return;drag2.on=true;document.body.classList.add('dragging')}
@@ -400,7 +406,7 @@ function checkSplit(){const issues=[];const runs=verseRuns();
  return {issues:[...new Set(issues)],empty,idle}}
 function renderRules(){const r=checkSplit();const box=$('rules');
  if(!r.issues.length){box.style.background='';box.innerHTML=`<div class="ok">✓ החלוקה מתאימה להקלטה: סולואים ברצף, והפזמון של כולם.</div>${r.empty?`<div class="hint small">${r.empty} שורות עדיין בלי משתתף.</div>`:''}${r.idle&&r.idle.length?`<div class="hint small">שרים רק בפזמון: ${esc(r.idle.join(', '))}</div>`:''}`;return}
- box.style.background='var(--soft)';box.innerHTML=`<div class="warn">שימו לב: החלוקה הזאת מסובכת להקלטה</div><div class="small">${esc(POLICY)}</div><ul class="small" style="margin:4px 0 0;padding-inline-start:18px">${r.issues.slice(0,6).map(x=>`<li>${esc(x)}</li>`).join('')}</ul><button class="small" id="fixSplit">✦ להחזיר לחלוקה המומלצת</button>`;
+ box.style.background='var(--soft)';box.innerHTML=`<div class="small"><b class="warn">שימו לב – זה לא מומלץ.</b> ${esc(POLICY)}</div><ul class="small" style="margin:4px 0 0;padding-inline-start:18px">${r.issues.slice(0,6).map(x=>`<li>${esc(x)}</li>`).join('')}</ul><button class="small" id="fixSplit">✦ להחזיר לחלוקה המומלצת</button>`;
  $('fixSplit').onclick=autoSplit}
 $('autoSplit').onclick=autoSplit;
 $('clearSplit').onclick=()=>{P.assign={};save();renderSplit()};
@@ -707,9 +713,11 @@ function show(i){const F=flow();step=Math.max(0,Math.min(F.length-1,i));const ke
  document.querySelectorAll('[data-step]').forEach(s=>s.hidden=s.dataset.step!==key);
  $('steps').innerHTML=F.map(([k,n],j)=>`<button data-go="${j}" class="${j===step?'on':j<step?'done':''}">${n}</button>`).join('');
  $('prev').style.visibility=step?'visible':'hidden';$('next').hidden=step===F.length-1;
- if(key!=='sync'&&key!=='video'){audio.pause()}
+ if(key!=='sync'&&key!=='video'){audio.pause()};setTimeout(placeFloats,60)
  if(key==='sync')renderSync();if(key==='people')renderPeople();if(key==='split'){if(P.people.length&&!Object.values(P.assign).some(a=>a&&a.length))autoSplit();else renderSplit()}if(key==='look')renderThemes();if(key==='video'){sizePreview();audio.currentTime=0;drawPreview()}
- window.scrollTo({top:0,behavior:'smooth'})}
+ toTop()}
+// back to the top of the tool (on the site the tool sits in an iframe, so scroll the site itself)
+function toTop(){try{if(window.frameElement){const r=window.frameElement.getBoundingClientRect();if(r.top<0||r.top>window.parent.innerHeight*0.6)window.parent.scrollBy({top:r.top-90,behavior:'smooth'});return}}catch(e){}window.scrollTo({top:0,behavior:'smooth'})}
 $('steps').addEventListener('click',e=>{const g=e.target.dataset.go;if(g!=null)show(+g)});
 $('prev').onclick=()=>show(step-1);
 $('next').onclick=()=>{const key=flow()[step][0];

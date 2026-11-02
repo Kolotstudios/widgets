@@ -148,8 +148,6 @@ html.embedded .wrap{padding-block:12px 16px}
         <div><span class="lbl">ההורים</span>
           <div class="seg">
             <input type="radio" name="pc" id="pc-mf" value="mf" checked><label for="pc-mf">אמא ואבא</label>
-            <input type="radio" name="pc" id="pc-ff" value="ff"><label for="pc-ff">אמא ואמא</label>
-            <input type="radio" name="pc" id="pc-mm" value="mm"><label for="pc-mm">אבא ואבא</label>
             <input type="radio" name="pc" id="pc-f" value="f"><label for="pc-f">אמא</label>
             <input type="radio" name="pc" id="pc-m" value="m"><label for="pc-m">אבא</label>
           </div>
@@ -313,7 +311,7 @@ function renderList(k){$(k).innerHTML=LISTS[k].map((s,i)=>`<div class="it"><inpu
 document.addEventListener('input',e=>{const t=e.target;if(!t.dataset.l||t.dataset.i==null)return;const s=LISTS[t.dataset.l][+t.dataset.i];s[t.dataset.k]=t.dataset.k==='a'?(t.value===''?null:+t.value):t.value;refresh()});
 document.addEventListener('click',e=>{const t=e.target;if(t.dataset.del!=null&&t.dataset.l){LISTS[t.dataset.l].splice(+t.dataset.del,1);renderList(t.dataset.l);refresh()}if(t.dataset.add){LISTS[t.dataset.add].push({n:'',g:'f',a:null});renderList(t.dataset.add);$(t.dataset.add).querySelector('.it:last-child input').focus()}});
 const GP={s1:{gpa:'',gpaLate:false,gma:'',gmaLate:false},s2:{gpa:'',gpaLate:false,gma:'',gmaLate:false}};
-function parentLabels(){return {mf:['אמא','אבא'],ff:['אמא','אמא'],mm:['אבא','אבא'],f:['אמא',null],m:['אבא',null]}[val('pc')]}
+function parentLabels(){return {mf:['אמא','אבא'],f:['אמא',null],m:['אבא',null]}[val('pc')]||['אמא','אבא']}
 function renderGps(){const [l1,l2]=parentLabels();const p1=$('p1').value.trim(),p2=$('p2').value.trim();
  const side=(k,lbl,nm)=>`<div class="box"><div class="t">הצד של ${esc(lbl)}${nm?' '+esc(nm):''}</div>
   <div class="pair"><span>סבא</span><input type="text" data-s="${k}" data-k="gpa" value="${esc(GP[k].gpa)}" placeholder="שם"><label class="late"><input type="checkbox" data-s="${k}" data-k="gpaLate"${GP[k].gpaLate?' checked':''}> ז״ל</label></div>

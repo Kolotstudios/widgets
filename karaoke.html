@@ -39,6 +39,14 @@ button:disabled{opacity:.45;cursor:default}
 .lines{display:grid;gap:6px;max-height:60vh;overflow:auto;padding:2px}
 .ln{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--bg);cursor:pointer}
 .ln .tx{font-size:18px}
+.ln.sl{grid-template-columns:auto auto 1fr auto}
+.grip{font-size:20px;color:var(--muted);padding:6px 4px;line-height:1}
+.ln.miss .grip{color:var(--warn)}
+.acts{display:flex;gap:6px;align-items:center}
+button.ic{padding:4px 9px;border-radius:9px}
+.ln .edit{grid-column:2/-1;display:grid;gap:8px}
+.ln .edit input{font-size:18px}
+#tlWrap.drop{outline:3px dashed #ff4d6d;outline-offset:2px}
 .sechdr{font-size:13px;font-weight:800;color:var(--accent);margin:8px 4px 0;letter-spacing:.02em}
 .ln .sec{font-size:12px;color:var(--muted)}
 .ln.playing{box-shadow:inset -4px 0 0 #ff4d6d}
@@ -48,6 +56,11 @@ button:disabled{opacity:.45;cursor:default}
 .tlbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .tlwrap{position:relative;border:1.5px solid var(--line);border-radius:12px;background:#120d18;overflow:hidden;touch-action:none;direction:ltr}
 .tlwrap canvas{display:block;width:100%;height:150px}
+#tlDock.float{position:absolute;left:12px;right:12px;max-width:1076px;margin:0 auto;z-index:38;background:var(--paper);border:1.5px solid var(--accent);border-radius:14px;padding:8px;display:grid;gap:6px;box-shadow:0 10px 28px rgba(0,0,0,.25)}
+#tlDock{display:grid;gap:10px}
+#tlDock.float .opt{display:none}
+.sht{display:none}
+@media (max-width:700px){#tlDock.float{padding:6px;gap:4px;left:6px;right:6px}#tlDock.float .tlwrap canvas{height:104px}#tlDock.float button.small{padding:4px 9px;font-size:13px}#tlDock.float #tlScroll{display:none}#tlDock.float .lng{display:none}#tlDock.float .sht{display:inline}#tlDock.float .tlbar,#tlDock.float .row{gap:6px}#tlDock.float #zOut,#tlDock.float #zIn,#tlDock.float .tlbar .hint{display:none}}
 #tlScroll{width:100%;direction:ltr;margin:0;accent-color:var(--accent)}
 .ln .tm b{font-weight:600;color:var(--ink)}
 .ln.low{border-color:#e8a23a}
@@ -135,7 +148,7 @@ body.dragging,body.dragging *{cursor:grabbing!important;user-select:none}
   <!-- STAFF 2: sync -->
   <section class="card" data-step="sync" hidden>
     <h2>מיקום השורות על הגייד</h2>
-    <p class="hint">לוחצים "זיהוי אוטומטי", והמערכת מאתרת לבד איפה כל שורה מתחילה ונגמרת. אחר כך מתקנים בציר הזמן, כמו בתוכנת כתוביות: גוררים שורה כדי להזיז אותה, מושכים את הקצה כדי להאריך או לקצר, ולחיצה על מקום ריק קופצת לשם.</p>
+    <p class="hint">לוחצים "זיהוי אוטומטי", והמערכת מאתרת לבד איפה כל שורה מתחילה ונגמרת. אחר כך מתקנים בציר הזמן, כמו בתוכנת כתוביות: גוררים שורה כדי להזיז אותה, מושכים את הקצה כדי להאריך או לקצר, ולחיצה על מקום ריק קופצת לשם. שורה שלא מוקמה גוררים מהרשימה (⠿) אל הציר, ובכפתור ✎ אפשר לתקן את הטקסט.</p>
     <div class="row"><button class="primary" id="autoBtn">🪄 זיהוי אוטומטי</button><span class="hint" id="autoMsg"></span><span class="sp"></span><button class="small" id="setupOpen" style="border:none;background:none;color:var(--muted);font-weight:400">⚙ הגדרת הזיהוי</button></div>
     <div id="setupBox" hidden style="border:1.5px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:10px;background:var(--bg)">
       <b>הגדרת הזיהוי האוטומטי (פעם אחת)</b>
@@ -145,12 +158,12 @@ body.dragging,body.dragging *{cursor:grabbing!important;user-select:none}
       <div id="suOldRow" hidden><label for="suOld">הסיסמה הנוכחית (לשינוי)</label><input type="password" id="suOld" autocomplete="off" style="direction:ltr"></div>
       <div class="row"><button class="primary" id="suSave">שמירה</button><button id="suCancel">סגירה</button><span class="hint" id="suMsg"></span></div>
     </div>
-    <div class="tlbar small"><button id="tlPlay" class="small">▶ ניגון</button><span id="clock" class="tm" style="direction:ltr;font-variant-numeric:tabular-nums">0:00.0</span><span class="sp"></span>
+    <div id="tlPh"></div><div id="tlDock"><div class="tlbar small"><button id="tlPlay" class="small">▶ ניגון</button><span id="clock" class="tm" style="direction:ltr;font-variant-numeric:tabular-nums">0:00.0</span><span class="sp"></span>
       <button id="zOut" class="small" aria-label="הקטנה">−</button><span class="hint small">זום</span><button id="zIn" class="small" aria-label="הגדלה">+</button>
-      <label class="row small" style="font-weight:400;margin:0"><input type="checkbox" id="snap" checked> הצמדה לקצב</label><span class="hint small">קצב: <b id="bpmTxt">—</b></span><button id="bpmDetect" class="small">זיהוי קצב</button></div>
+      <label class="row small opt" style="font-weight:400;margin:0"><input type="checkbox" id="snap" checked> הצמדה לקצב</label><span class="hint small opt">קצב: <b id="bpmTxt">—</b></span><button id="bpmDetect" class="small opt">זיהוי קצב</button></div>
     <div class="tlwrap" id="tlWrap"><canvas id="tl"></canvas></div>
     <input type="range" id="tlScroll" min="0" max="1000" value="0" aria-label="גלילה בציר הזמן">
-    <div class="row small"><button id="setStart" class="small">⇤ השורה מתחילה כאן</button><button id="setEnd" class="small">השורה נגמרת כאן ⇥</button><button id="playLine" class="small">▶ ניגון השורה</button><span class="sp"></span><span class="hint" id="syncCount"></span></div>
+    <div class="row small"><button id="setStart" class="small">⇤ <span class="lng">השורה מתחילה כאן</span><span class="sht">התחלה</span></button><button id="setEnd" class="small"><span class="lng">השורה נגמרת כאן</span><span class="sht">סוף</span> ⇥</button><button id="playLine" class="small">▶ <span class="lng">ניגון השורה</span><span class="sht">שורה</span></button><span class="sp"></span><span class="hint opt" id="syncCount"></span></div></div>
     <div class="lines" id="syncList"></div>
     <details class="tap" id="tapBox"><summary>הקשה ידנית (לא חובה)</summary>
       <p class="hint">לוחצים "התחלה", ובכל פעם שמתחילה שורה מקישים על הכפתור הגדול (או מקש רווח).</p>
@@ -297,7 +310,7 @@ const rangeTxt=ix=>{const s=[...ix].sort((a,b)=>a-b);return s.length===1?`שור
 const nameOfKey=a=>!a||!a.length?'אף אחד':a.includes('ALL')?'כולם':a.map(id=>pById(id)?.name||'?').join(' + ');
 // visible part of the page (the tool may sit in a tall iframe on the site)
 function visBox(){try{if(window.frameElement){const r=window.frameElement.getBoundingClientRect();const vh=window.parent.innerHeight;return {top:Math.max(0,-r.top),h:Math.min(vh,r.bottom)-Math.max(0,r.top)}}}catch(e){}return {top:window.scrollY,h:window.innerHeight}}
-function placeFloats(){const v=visBox();placePick(v);const bar=$('selBar');if(bar&&!bar.hidden){bar.style.top=(v.top+v.h-bar.offsetHeight-10)+'px'}const m=$('askBox');if(m&&!m.hidden){m.style.top=(v.top+Math.max(10,(v.h-m.offsetHeight)/2))+'px'}let emb=false;try{emb=!!window.frameElement}catch(e){}if(emb){const t=$('toast');t.style.top=(v.top+v.h-70)+'px';t.style.bottom='auto'}}
+function placeFloats(){const v=visBox();placePick(v);placeDock(v);const bar=$('selBar');if(bar&&!bar.hidden){bar.style.top=(v.top+v.h-bar.offsetHeight-10)+'px'}const m=$('askBox');if(m&&!m.hidden){m.style.top=(v.top+Math.max(10,(v.h-m.offsetHeight)/2))+'px'}let emb=false;try{emb=!!window.frameElement}catch(e){}if(emb){const t=$('toast');t.style.top=(v.top+v.h-70)+'px';t.style.bottom='auto'}}
 try{if(window.frameElement){window.parent.addEventListener('scroll',placeFloats,{passive:true});window.parent.addEventListener('resize',placeFloats)}}catch(e){}
 window.addEventListener('scroll',placeFloats,{passive:true});window.addEventListener('resize',placeFloats);
 function ask(title,body,opts){return new Promise(res=>{const m=$('askBox');$('askT').textContent=title;$('askB').innerHTML=body||'';$('askO').innerHTML=opts.map((o,k)=>`<button class="${k===0?'primary':''}" data-k="${k}">${esc(o.label)}</button>`).join('')+`<button data-k="-1">ביטול</button>`;
@@ -305,6 +318,11 @@ function ask(title,body,opts){return new Promise(res=>{const m=$('askBox');$('as
 function placePick(v){const f=$('pickFloat');if(!f)return;const sec=$('splitList').closest('section');if(sec.hidden){f.hidden=true;return}
  const sy=window.frameElement?0:window.scrollY;const top0=$('pickChips').getBoundingClientRect().bottom+sy;const listEnd=$('splitList').getBoundingClientRect().bottom+sy;
  const show=!sec.hidden&&top0<v.top+4&&listEnd>v.top+120;if(show!==!f.hidden){f.hidden=!show;if(show)$('pickFloatChips').innerHTML=$('pickChips').innerHTML}if(show)f.style.top=(v.top+8)+'px'}
+function placeDock(v){const d=$('tlDock'),ph=$('tlPh');if(!d)return;const sec=tlc.closest('section');const sy=window.frameElement?0:window.scrollY;
+ if(sec.hidden){d.classList.remove('float');ph.style.height='0';return}
+ const phTop=ph.getBoundingClientRect().top+sy;const listEnd=$('syncList').getBoundingClientRect().bottom+sy;const fl=phTop<v.top+4&&listEnd>v.top+260;
+ if(fl&&!d.classList.contains('float')){ph.style.height=d.offsetHeight+'px';d.classList.add('float');drawTL()}else if(!fl&&d.classList.contains('float')){d.classList.remove('float');ph.style.height='0';d.style.top='';drawTL()}
+ if(fl)d.style.top=(v.top+6)+'px'}
 function afterChange(){const before=afterChange.n||0;save();renderSplit();const r=checkSplit();afterChange.n=r.issues.length;if(r.issues.length>before)toast('שימו לב – זה לא מומלץ (ההסבר למעלה)')}
 function setLines(ix,a){ix.forEach(i=>{P.assign[i]=a.slice()})}
 function applyPerson(id,ix){ix=[...ix];if(!ix.length)return;
@@ -528,8 +546,9 @@ $('expLow').onclick=()=>exportVideo('low');$('expHigh').onclick=()=>exportVideo(
 
 // ---------- staff: song + audio ----------
 function reparse(){P.title=$('title').value.trim();P.lyrics=$('lyrics').value;const r=parseLyrics(P.lyrics);
- const old=new Map();P.lines.forEach(l=>{if(!old.has(l.text))old.set(l.text,[]);old.get(l.text).push([l.t,l.e,l.cf])});
+ const old=new Map(),oa=new Map(),occ={};P.lines.forEach((l,i)=>{if(!old.has(l.text))old.set(l.text,[]);old.get(l.text).push([l.t,l.e,l.cf]);const k=l.text+'#'+(occ[l.text]=(occ[l.text]||0)+1);if(P.assign[i])oa.set(k,P.assign[i])});
  P.lines=r.lines.map(l=>{const a=old.get(l.text);const o=a&&a.length?a.shift():[null,null,null];return {...l,t:o[0],e:o[1]??null,cf:o[2]??null}});
+ if(oa.size){const na={},oc={};P.lines.forEach((l,i)=>{const k=l.text+'#'+(oc[l.text]=(oc[l.text]||0)+1);if(oa.has(k))na[i]=oa.get(k)});P.assign=na}
  $('parseMsg').innerHTML=r.lines.length?`<span class="ok">${r.lines.length} שורות</span>${r.hasChorus?' · הפזמון הודבק בכל מקום שכתוב "פזמון"':''}${r.warn?` · <span class="warn">${esc(r.warn)}</span>`:''}`:'';
  $('parsePreview').innerHTML=P.lines.map((l,i)=>((i===0||P.lines[i-1].st!==l.st||P.lines[i-1].sec!==l.sec)?`<div class="sechdr">${esc(l.sec||'')}</div>`:'')+`<div class="ln${l.chorus?' chorus':''}"><span class="sec">${i+1}</span><span class="tx">${esc(l.text)}</span><span class="sec">${esc(l.sec||'')}</span></div>`).join('');
  $('hTitle').textContent=P.title||'קריוקי משפחתי';save()}
@@ -547,7 +566,7 @@ let cur=0;let tapTimes=[];
 // ---- list + timeline editor ----
 let sel=-1;
 function renderSync(){
- $('syncList').innerHTML=P.lines.map((l,i)=>((i===0||P.lines[i-1].st!==l.st||P.lines[i-1].sec!==l.sec)?`<div class="sechdr">${esc(l.sec||'')}</div>`:'')+`<div class="ln${i===sel?' cur':''}${l.chorus?' chorus':''}${l.t==null?' miss':(l.cf!=null&&l.cf<0.5?' low':'')}" data-i="${i}"><span class="tm">${l.t!=null?`<b>${fmt(l.t,true)}</b> – ${fmt(endOf(i),true)}`:'לא מוקמה'}</span><span class="tx">${esc(l.text)}</span><span class="sec">${i+1}</span></div>`).join('');
+ $('syncList').innerHTML=P.lines.map((l,i)=>((i===0||P.lines[i-1].st!==l.st||P.lines[i-1].sec!==l.sec)?`<div class="sechdr">${esc(l.sec||'')}</div>`:'')+`<div class="ln sl${i===sel?' cur':''}${l.chorus?' chorus':''}${l.t==null?' miss':(l.cf!=null&&l.cf<0.5?' low':'')}" data-i="${i}"><span class="grip drag" data-grip="${i}" title="גוררים לציר הזמן">⠿</span><span class="tm">${l.t!=null?`<b>${fmt(l.t,true)}</b> – ${fmt(endOf(i),true)}`:'לא מוקמה – גוררים לציר ⇡'}</span><span class="tx">${esc(l.text)}</span><span class="acts"><button class="small ic" data-edit="${i}" aria-label="עריכת השורה">✎</button><span class="sec">${i+1}</span></span></div>`).join('');
  const placed=P.lines.filter(l=>l.t!=null).length,low=P.lines.filter(l=>l.t!=null&&l.cf!=null&&l.cf<0.5).length;
  $('syncCount').textContent=`${placed}/${P.lines.length} שורות מוקמו`+(low?` · ${low} כדאי לבדוק (⚠)`:'');
  $('bpmTxt').textContent=P.bpm?P.bpm+' BPM':'—';
@@ -567,10 +586,43 @@ document.addEventListener('keydown',e=>{if($('tl').closest('section').hidden||/I
 $('syncPause').onclick=()=>{audio.pause();$('tapBtn').textContent='▶ המשך'};
 $('syncBack').onclick=()=>{cur=Math.max(0,cur-1);const t=P.lines[cur].t;if(t!=null)audio.currentTime=Math.max(0,t-3);renderSync()};
 $('syncRestart').onclick=()=>{if(!confirm('למחוק את כל הזמנים ולהתחיל מההתחלה?'))return;P.lines.forEach(l=>{l.t=null;l.e=null;l.cf=null});cur=0;audio.currentTime=0;audio.pause();$('tapBtn').textContent='▶ התחלה';save();renderSync()};
-$('syncList').addEventListener('click',e=>{const r=e.target.closest('.ln');if(!r)return;selectLine(+r.dataset.i,true)});
+$('syncList').addEventListener('click',e=>{if(lnDragEnded)return;const ed=e.target.closest('[data-edit]');if(ed){e.stopPropagation();openEdit(+ed.dataset.edit);return}
+ if(e.target.closest('.edit'))return;const r=e.target.closest('.ln');if(!r)return;selectLine(+r.dataset.i,true)});
+// ---- edit a line right here (text / add a line after / delete) ----
+function lyricLines(){return $('lyrics').value.replace(/\r/g,'').split('\n')}
+function nthLyric(text,n){const L=lyricLines();let c=0;for(let k=0;k<L.length;k++)if(L[k].trim()===text){c++;if(c===n)return k}return -1}
+function occOf(i){const t=P.lines[i].text;let c=0;for(let k=0;k<=i;k++)if(P.lines[k].text===t&&!!P.lines[k].chorus===!!P.lines[i].chorus)c++;return P.lines[i].chorus?1:c}
+function commitLyrics(L){$('lyrics').value=L.join('\n');reparse();renderSync()}
+function openEdit(i){const row=document.querySelector(`#syncList .ln[data-i="${i}"]`);if(!row||row.querySelector('.edit'))return;const l=P.lines[i];
+ const box=document.createElement('div');box.className='edit';box.innerHTML=`<input type="text" value="${esc(l.text)}"><div class="row small"><button class="small primary" data-a="save">שמירה</button><button class="small" data-a="add">➕ שורה חדשה אחריה</button><button class="small" data-a="del">🗑 מחיקת השורה</button><button class="small" data-a="x">ביטול</button>${l.chorus?'<span class="hint small">שינוי בפזמון משנה אותו בכל הפעמים שהוא חוזר</span>':''}</div>`;
+ row.appendChild(box);const inp=box.querySelector('input');inp.focus();inp.select();
+ inp.addEventListener('keydown',ev=>{ev.stopPropagation();if(ev.key==='Enter')act('save');if(ev.key==='Escape')renderSync()});
+ box.addEventListener('click',ev=>{ev.stopPropagation();const b=ev.target.closest('[data-a]');if(b)act(b.dataset.a)});
+ function act(a){const L=lyricLines();const ot=l.text,och=!!l.chorus;const k=nthLyric(ot,occOf(i));
+  if(a==='x')return renderSync();
+  if(a==='save'){const nt=inp.value.trim();if(!nt)return toast('השורה ריקה – אפשר למחוק אותה');if(nt===l.text)return renderSync();
+   P.lines.forEach(x=>{if(x.text===ot&&!!x.chorus===och)x.text=nt});if(k<0){save();return renderSync()}
+   L[k]=L[k].replace(ot,nt);return commitLyrics(L)}
+  if(a==='add'){const nt=(prompt('הטקסט של השורה החדשה:')||'').trim();if(!nt)return;if(k<0)return toast('לא מצאתי את השורה במילים – מוסיפים בשלב "השיר"');L.splice(k+1,0,nt);commitLyrics(L);const ni=P.lines.findIndex((x,j)=>j>i&&x.text===nt);if(ni>=0){sel=ni;renderSync();toast('נוספה שורה – גוררים אותה לציר הזמן')}return}
+  if(a==='del'){if(!confirm(`למחוק את השורה "${l.text}"?`+(l.chorus?' (היא תימחק מכל הפזמונים)':'')))return;if(k<0)return toast('לא מצאתי את השורה במילים – מוחקים בשלב "השיר"');L.splice(k,1);sel=-1;commitLyrics(L)}}}
+
+// ---- drag a line from the list onto the timeline (place / move it there) ----
+let lnDrag=null,lnDragEnded=false;
+document.addEventListener('pointerdown',ev=>{const g=ev.target.closest('#syncList [data-grip]');if(!g)return;const i=+g.dataset.grip;const gh=document.createElement('div');gh.className='ghost';gh.textContent=(i+1)+'. '+P.lines[i].text.slice(0,30);document.body.appendChild(gh);lnDrag={i,gh,x0:ev.clientX,y0:ev.clientY,on:false};selectLine(i,false)});
+document.addEventListener('pointermove',ev=>{if(!lnDrag)return;if(!lnDrag.on){if(Math.hypot(ev.clientX-lnDrag.x0,ev.clientY-lnDrag.y0)<8)return;lnDrag.on=true;document.body.classList.add('dragging')}ev.preventDefault();
+ lnDrag.gh.style.display='block';lnDrag.gh.style.left=ev.clientX+'px';lnDrag.gh.style.top=ev.clientY+'px';const r=tlc.getBoundingClientRect();const over=ev.clientX>=r.left&&ev.clientX<=r.right&&ev.clientY>=r.top&&ev.clientY<=r.bottom;$('tlWrap').classList.toggle('drop',over);
+ if(over){lnDrag.ghostT=snapT(x2t(ev.clientX-r.left));lnDrag.gh.textContent=(lnDrag.i+1)+'. ⇢ '+fmt(lnDrag.ghostT,true)}
+ try{if(window.frameElement){const fr=window.frameElement.getBoundingClientRect();const y=fr.top+ev.clientY,vh=window.parent.innerHeight;if(y<70)window.parent.scrollBy(0,-14);else if(y>vh-70)window.parent.scrollBy(0,14)}else{if(ev.clientY<70)window.scrollBy(0,-14);else if(ev.clientY>innerHeight-70)window.scrollBy(0,14)}}catch(e){}},{passive:false});
+function placeLineAt(i,t){const l=P.lines[i];const len=l.t!=null?Math.max(0.6,endOf(i)-l.t):estLen(l);const [lo,hi]=bounds(i);
+ if(hi-lo<0.6){toast(`אין מקום: השורה צריכה להיות בין שורה ${i} לשורה ${i+2}. קודם מזיזים אותן`);return false}
+ let nt=Math.max(lo,Math.min(t,hi-0.6));if(Math.abs(nt-t)>0.3)toast(`השורה הוצמדה למקום שלה ברצף (בין שורה ${i} לשורה ${i+2})`);
+ l.t=+nt.toFixed(2);l.e=+Math.min(hi,nt+len).toFixed(2);l.cf=1;save();renderSync();return true}
+document.addEventListener('pointerup',ev=>{if(!lnDrag)return;const D=lnDrag;lnDrag=null;D.gh.remove();document.body.classList.remove('dragging');$('tlWrap').classList.remove('drop');if(!D.on)return;lnDragEnded=true;setTimeout(()=>lnDragEnded=false,350);
+ const r=tlc.getBoundingClientRect();if(ev.clientX<r.left||ev.clientX>r.right||ev.clientY<r.top||ev.clientY>r.bottom)return toast('משחררים את השורה מעל ציר הזמן');placeLineAt(D.i,snapT(x2t(ev.clientX-r.left)))});
+document.addEventListener('pointercancel',()=>{if(lnDrag){lnDrag.gh.remove();lnDrag=null;document.body.classList.remove('dragging');$('tlWrap').classList.remove('drop')}});
 function selectLine(i,seek){sel=i;cur=i;const l=P.lines[i];if(seek){const t=l.t!=null?l.t:(P.lines[i-1]?.t??0);audio.currentTime=Math.max(0,t-0.3);if(l.t!=null)ensureVisible(l.t,endOf(i))}
  document.querySelectorAll('#syncList .ln').forEach(x=>x.classList.toggle('cur',+x.dataset.i===i));drawTL()}
-$('setStart').onclick=()=>{if(sel<0)return toast('בוחרים שורה ברשימה או בציר');const l=P.lines[sel];const t=+snapT(audio.currentTime).toFixed(2);const en=l.t!=null?endOf(sel):null;l.t=t;l.e=en!=null&&en>t+0.3?+en.toFixed(2):+(t+estLen(l)).toFixed(2);l.cf=1;save();renderSync()};
+$('setStart').onclick=()=>{if(sel<0)return toast('בוחרים שורה ברשימה או בציר');const l=P.lines[sel];if(l.t==null){placeLineAt(sel,snapT(audio.currentTime));return}const t=+snapT(audio.currentTime).toFixed(2);const en=l.t!=null?endOf(sel):null;l.t=t;l.e=en!=null&&en>t+0.3?+en.toFixed(2):+(t+estLen(l)).toFixed(2);l.cf=1;save();renderSync()};
 $('setEnd').onclick=()=>{if(sel<0)return toast('בוחרים שורה ברשימה או בציר');const l=P.lines[sel];if(l.t==null)return toast('קודם מסמנים איפה השורה מתחילה');const t=+snapT(audio.currentTime).toFixed(2);if(t<=l.t+0.2)return toast('הסוף חייב להיות אחרי ההתחלה');l.e=t;l.cf=1;save();renderSync()};
 let stopAt=null;
 $('playLine').onclick=()=>{if(sel<0||P.lines[sel].t==null)return toast('בוחרים שורה שכבר מוקמה');audio.currentTime=Math.max(0,P.lines[sel].t-0.4);stopAt=endOf(sel)+0.4;audio.play();syncLoop()};
@@ -578,7 +630,8 @@ function estLen(l){return Math.max(1.6,l.text.split(/\s+/).length*(beatLen()||0.
 
 // ---- timeline canvas ----
 const tlc=$('tl');let tctx=tlc.getContext('2d'),peaks=null,pps=60,view0=0,drag=null;
-const TLH=150,RUL=18,WAV0=20,WAVH=56,BLK0=82,BLKH=56;
+let TLH=150,RUL=18,WAV0=20,WAVH=56,BLK0=82,BLKH=56;
+function tlGeo(){TLH=tlc.clientHeight||150;WAVH=Math.round((TLH-WAV0)*0.42);BLK0=WAV0+WAVH+6;BLKH=TLH-BLK0-6}
 function tlW(){return tlc.clientWidth||800}
 function durA(){return audioBuf?audioBuf.duration:Math.max(30,...P.lines.map(l=>(l.e||l.t||0)+5))}
 function x2t(x){return view0+x/pps}function t2x(t){return (t-view0)*pps}
@@ -586,7 +639,7 @@ function clampView(){const span=tlW()/pps;view0=Math.max(0,Math.min(view0,Math.m
 function ensureVisible(a,b){const span=tlW()/pps;if(a<view0+0.5||(b??a)>view0+span-0.5){view0=a-span*0.25;clampView()}}
 function buildPeaks(){if(!audioBuf)return;const sr=audioBuf.sampleRate,per=Math.floor(sr/200),n=Math.ceil(audioBuf.length/per);peaks=new Float32Array(n);const chs=[];for(let c=0;c<audioBuf.numberOfChannels;c++)chs.push(audioBuf.getChannelData(c));
  let mx=0;for(let k=0;k<n;k++){let m=0;const o=k*per,e=Math.min(audioBuf.length,o+per);for(let i=o;i<e;i+=4){for(const d of chs){const v=Math.abs(d[i]);if(v>m)m=v}}peaks[k]=m;if(m>mx)mx=m}if(mx>0)for(let k=0;k<n;k++)peaks[k]/=mx}
-function drawTL(){const sec=tlc.closest('section');if(sec.hidden)return;const dpr=window.devicePixelRatio||1,W=tlW();if(tlc.width!==Math.round(W*dpr)||tlc.height!==TLH*dpr){tlc.width=Math.round(W*dpr);tlc.height=TLH*dpr}
+function drawTL(){const sec=tlc.closest('section');if(sec.hidden)return;tlGeo();const dpr=window.devicePixelRatio||1,W=tlW();if(tlc.width!==Math.round(W*dpr)||tlc.height!==TLH*dpr){tlc.width=Math.round(W*dpr);tlc.height=TLH*dpr}
  const c=tctx;c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,W,TLH);c.fillStyle='#120d18';c.fillRect(0,0,W,TLH);
  if(audioBuf&&!peaks)buildPeaks();const span=W/pps;
  // beat grid
@@ -602,7 +655,7 @@ function drawTL(){const sec=tlc.closest('section');if(sec.hidden)return;const dp
   const bc=w?w.color:(l.chorus?'#ffd166':'#8f7bb0');c.fillStyle=bc;c.globalAlpha=on?0.95:0.72;roundRect(c,x0,BLK0,Math.max(4,x1-x0),BLKH,7);c.fill();c.globalAlpha=1;
   c.lineWidth=on?3:1.5;c.strokeStyle=on?'#fff':low?'#e8a23a':'rgba(0,0,0,.35)';c.stroke();
   if(on){c.fillStyle='#fff';c.fillRect(x0,BLK0+BLKH/2-10,3,20);c.fillRect(x1-3,BLK0+BLKH/2-10,3,20)}
-  c.save();c.beginPath();c.rect(x0+6,BLK0,Math.max(0,x1-x0-12),BLKH);c.clip();c.fillStyle=lum(bc)>0.6?'#1a1224':'#fff';c.direction='rtl';c.textAlign='right';c.font='600 14px Rubik, Arial';c.fillText(P.lines[l.i].text,x1-8,BLK0+20);c.font='11px Rubik, Arial';c.globalAlpha=0.8;c.fillText((l.i+1)+(l.sec?' · '+l.sec:'')+(low?' · ⚠':''),x1-8,BLK0+40);c.restore();c.direction='ltr'}
+  c.save();c.beginPath();c.rect(x0+6,BLK0,Math.max(0,x1-x0-12),BLKH);c.clip();c.fillStyle=lum(bc)>0.6?'#1a1224':'#fff';c.direction='rtl';c.textAlign='right';c.font='600 14px Rubik, Arial';c.fillText(P.lines[l.i].text,x1-8,BLK0+(BLKH>=44?20:BLKH/2+5));c.font='11px Rubik, Arial';c.globalAlpha=BLKH>=44?0.8:0;c.fillText((l.i+1)+(l.sec?' · '+l.sec:'')+(low?' · ⚠':''),x1-8,BLK0+40);c.restore();c.direction='ltr'}
  // playhead
  const px=t2x(audio.currentTime||0);if(px>=0&&px<=W){c.fillStyle='#ff4d6d';c.fillRect(Math.round(px)-1,0,2,TLH);c.beginPath();c.moveTo(px-6,0);c.lineTo(px+6,0);c.lineTo(px,8);c.fill()}
  $('clock').textContent=fmt(audio.currentTime,true)+' / '+fmt(durA())}

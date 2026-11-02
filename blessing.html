@@ -324,6 +324,7 @@ $('gps').addEventListener('input',e=>{const t=e.target;if(!t.dataset.s)return;GP
 // ---------- who blesses ----------
 function fromOptions(){const m=mode();const n2=$('name2').value.trim()||'החתן',n1=$('name').value.trim()||'הכלה';
  if(m==='child'){const [l1,l2]=parentLabels();const o=[];if(l2)o.push(['parents',l1+' ו'+l2]);o.push(['p1',l1]);if(l2)o.push(['p2',l2+(l1===l2?' (השני/ה)':'')]);
+  o.unshift(['self',cgOf()==='m'?'החוגג בעצמו – דרשה / נאום':'החוגגת בעצמה – דרשה / נאום']);
   o.push(['grand','סבא וסבתא'],['grandma','סבתא'],['grandpa','סבא'],['sib','אח או אחות'],['sibs','כל האחים'],['friends','החברים'],['family','כל המשפחה']);return o}
  if(m==='adult')return [['spouse',$('spouse').value.trim()?'בן/בת הזוג ('+$('spouse').value.trim()+')':'בן/בת הזוג'],['kids','הילדים'],['kid','ילד או ילדה'],['grandkids','הנכדים'],['asib','אח או אחות'],['friends','החברים'],['family','כל המשפחה']];
  return [['w1','ההורים של '+n1],['w2','ההורים של '+n2],['wsibs','האחים'],['grand','סבא וסבתא'],['friends','החברים'],['family','כל המשפחה']]}
@@ -433,6 +434,8 @@ function ctx(){
  if(rel==='sib'||from==='sib'){rel='sib';const ca=celebAge();const r=spk&&spk.a!=null&&ca!=null?(spk.a>ca?'older':spk.a<ca?'younger':'same'):'same';if(spk)spk.rel=r;
   const word=sg==='f'?'אחותך':'אחיך';const adj=r==='older'?(sg==='f'?' הגדולה':' הגדול'):r==='younger'?(sg==='f'?' הקטנה':' הקטן'):'';sign=spk?`${word}${adj} ${spk.n}`:word}
  if(from==='friends')sign='החברים שלך';if(from==='family')sign='כל המשפחה';
+ if(from==='self'){sg=cg;rel='self';sign=''}
+ const selfData=from==='self'?{par:parentLabels(),pn:[$('p1').value.trim(),$('p2').value.trim()],sibs:LISTS.sibs.filter(s=>s.n).map(s=>({n:s.n,g:s.g,a:s.a}))}:null;
  const md=m==='adult'?'adult':m==='wed'?'wed':'kid';
  return {ev,m,md,cg,sg,from,rel,spk,open,signAuto:sign,name:(ev==='wed'||ev==='hina')&&name2?name+' ו'+name2:name,age:$('age').value,
   sibsMention,sibsG:typeof sibsG!=='undefined'?sibsG:null,alive,late,traits:checked('traits').map(i=>TRAITS[i]),
@@ -440,13 +443,75 @@ function ctx(){
   tog:[...checked('together').map(i=>TOG[md][i]),...$('togetherFree').value.split(/,|\n/).map(s=>s.trim()).filter(Boolean)],
   memory:$('memory').value.trim(),how:$('wHow').value.trim(),grandkids:$('grandkids').value.trim(),
   thanks:checked('thanks').map(i=>THANKS[i][0]),thanksFree:$('thanksFree').value.trim(),
-  style:val('style'),tone:val('tone'),secs:+val('len'),sign:$('sign').value.trim(),hd:hebInfo($('evDate').value),fl:val('style')==='mod'?'':(val('fl')||'')}
+  style:val('style'),tone:val('tone'),secs:+val('len'),sign:$('sign').value.trim(),hd:hebInfo($('evDate').value),selfData,fl:val('style')==='mod'?'':(val('fl')||'')}
 }
 function G(str,c){return str.replace(/\[(c|s):([^\]]*)\]/g,(_,k,body)=>{const p=body.split('|');const g=k==='c'?c.cg:c.sg;return p[{f:0,m:1,p:2}[g]]??p[0]}).replace(/ {2,}/g,' ').replace(/ ([,.:])/g,'$1')}
 function evName(c){return {bat:'בת מצווה',bar:'בר מצווה',bd:'יום הולדת '+(c.age||''),wed:'חתונה',hina:'חינה'}[c.ev]}
 
 // ---------- generator: returns paragraphs, each with alternatives ----------
+
+// ---------- the celebrant's own speech (דרשה / נאום) ----------
+const PL={'בראשית':'גם אני מתחיל[s:ה|] היום פרק חדש, ואני רוצה שיהיה טוב, כמו ״וירא אלוקים כי טוב״.','נח':'גם אני רוצה לשמור על המשפחה שלי ועל מי שחשוב לי, כמו שנח שמר על כולם.','לך לך':'גם אני יוצא[s:ת|] היום לדרך חדשה, ואני מקווה להיות ברכה לכל מי שסביבי.','וירא':'גם אני רוצה שהלב והבית שלי יהיו תמיד פתוחים לאחרים, כמו האוהל של אברהם.','חיי שרה':'מרבקה אני לומד[s:ת|] שחסד וטוב לב שווים יותר מכל דבר אחר.','תולדות':'אני רוצה לשמור על כל מה שקיבלתי מהבית, ולמצוא גם את הדרך שלי.','ויצא':'מותר לחלום בגדול, עד השמיים.','וישלח':'גם כשיש קשיים, אפשר להתמודד ולצאת מהם [s:חזקה|חזק] יותר.','וישב':'אסור להפסיק לחלום ולהאמין, גם כשקשה.','מקץ':'חלומות יכולים להתגשם, אם מאמינים ועובדים בשבילם.','ויגש':'אין דבר חשוב יותר ממשפחה מאוחדת, ואני מודה על המשפחה שלי.','ויחי':'לכל אחד יש ברכה משלו, ואני מרגיש[s:ה|] [s:בת|בר] מזל על המשפחה שמברכת אותי.','שמות':'גם אני רוצה לדעת לומר ״הנני״, ולהיות שם בשביל מי שצריך.','וארא':'כל אחד יכול לצמוח ולהשתחרר מפחדים, צעד אחרי צעד.','בא':'גם אני רוצה להביא אור לכל מקום שאני מגיע[s:ה|] אליו.','בשלח':'אחרי כל קושי מגיעות שירה ושמחה.','יתרו':'מהיום גם אני מקבל[s:ת|] על עצמי את התורה והמצוות, באהבה.','משפטים':'לפעמים צריך קודם לעשות, ולהבין תוך כדי: ״נעשה ונשמע״.','תרומה':'כל אחד יכול לתרום משהו מהלב, וגם אני רוצה לתת.','תצווה':'גם אני רוצה שהאור שלי ידלק תמיד, כמו הנר התמיד.','כי תשא':'יש ערכים שחרוטים בלב, ואת שלי קיבלתי מהבית.','ויקהל':'כשכולם עושים יחד, אפשר לבנות דברים גדולים.','פקודי':'כל מה שבונים באהבה מתמלא בברכה.','ויקרא':'צריך להקשיב לקול הפנימי שקורא לנו.','צו':'האש והשמחה שבתוכנו לא צריכות לכבות לעולם.','שמיני':'כל התחלה חדשה צריכה להיות מתוך שמחה.','תזריע':'כל אחד יכול להביא חיים ושמחה לכל מקום.','מצורע':'למילים יש כוח גדול, ואני רוצה שהמילים שלי יהיו תמיד טובות.','אחרי מות':'המצוות נועדו כדי שנחיה חיים טובים ושמחים.','קדשים':'״ואהבת לרעך כמוך״ הוא הכלל הכי חשוב, ואני רוצה לחיות לפיו.','אמור':'יש בחיים זמנים מיוחדים, והיום הוא אחד מהם.','בהר':'צריך לדעת לעצור, להודות ולשמוח במה שיש.','בחוקותי':'כשהולכים בדרך הנכונה, הברכה מגיעה.','במדבר':'כל אחד ואחת חשובים, ולכל אחד יש מקום משלו.','נשא':'הברכה הכי גדולה היא ברכה של שלום.','בהעלותך':'כל אחד יכול להדליק את האור שבתוכו ולהאיר לאחרים.','שלח לך':'חשוב לראות את הטוב, ולא לפחד.','קורח':'כל אחד יכול לפרוח, אם רק נותנים לו זמן.','חוקת':'תמיד יש מקור של כוח ושמחה, רק צריך לדעת לחפש.','בלק':'אפשר להפוך כל דבר לברכה.','פינחס':'צריך לעמוד על מה שחשוב, באומץ ובכבוד.','מטות':'המילה שלנו חשובה, וצריך לעמוד בהבטחות.','מסעי':'החיים הם מסע, וכל תחנה בו חשובה.','דברים':'הכי חשוב לדבר מהלב.','ואתחנן':'אהבה ואמונה הן הבסיס של הכל.','עקב':'צריך לדעת להודות על כל מה שיש לנו.','ראה':'בכל יום אפשר לבחור בברכה.','שופטים':'צריך ללכת תמיד בדרך הישר.','כי תצא':'צריך לראות את מי שצריך עזרה, ולתת יד.','כי תבוא':'צריך לשמוח בכל הטוב שיש לנו.','נצבים':'תמיד אפשר לבחור, וכדאי לבחור בחיים ובטוב.','וילך':'צריך להיות חזקים ואמיצים, במיוחד כשמשהו חדש מתחיל.','האזינו':'החיים יכולים להיות שיר יפה, אם יודעים להקשיב.','וזאת הברכה':'לכל אחד יש ברכה משלו, ואני מודה על שלי.'};
+function buildSelf(c){
+ const S=[];const add=(order,pri,...v)=>{v=v.filter(Boolean);if(!v.length)return;const alts=v.map(x=>G(x,c));S.push({order,pri,alts,i:Math.floor(rnd()*alts.length)})};
+ const f=c.cg==='f',g=(a,b)=>f?a:b,REL=c.style==='rel',TRAD=c.style==='trad',SF=c.fl==='sf',fun=c.tone==='fun',short=c.secs<=40;
+ const mitz=c.ev==='bar'||c.ev==='bat',ev=evName(c),sd=c.selfData||{par:['אמא','אבא'],pn:['',''],sibs:[]};
+ const [l1,l2]=sd.par||['אמא','אבא'];
+ // opening
+ if(REL)S.push({order:-1,pri:0,alts:[SF?'ב״ה':'בס״ד'],i:0});
+ add(0,0,`ערב טוב לכולם,`,`ערב טוב למשפחה, לחברים ולכל האורחים היקרים,`,`שלום לכולם,`,`משפחה יקרה, חברים ואורחים,`,SF?`ברוכים הבאים לכולם, ובסימן טוב!`:null);
+ add(1,0,`תודה שבאתם לחגוג איתי את ${mitz?(f?'בת המצווה':'בר המצווה'):'יום ההולדת'} שלי. ממש מרגש אותי לראות את כולכם כאן.`,`אני כל כך שמח[s:ה|] שכולכם כאן איתי היום. תודה שבאתם.`,`לא תיארתי לעצמי כמה מרגש יהיה לעמוד פה מולכם. תודה שבאתם לשמוח איתי.`);
+ // what this day means
+ if(mitz)add(2,1,REL?`היום אני ${g('בת מצווה','בר מצווה')}. מהיום אני ${g('מחויבת','מחויב')} במצוות, ${g('אחראית','אחראי')} על המעשים שלי, ו${g('מצטרפת','מצטרף')} לשרשרת הדורות של עם ישראל.`:null,
+   REL?null:`היום אני ${g('בת מצווה','בר מצווה')}. זה אומר שמהיום אני קצת יותר ${g('גדולה','גדול')}, ${g('אחראית','אחראי')} על המעשים שלי, ושההחלטות שלי הן שלי.`,
+   fun&&!REL?`היום אני ${g('בת מצווה','בר מצווה')}, וזה אומר שמהיום אין לי יותר תירוצים. אם החדר לא מסודר, זה עליי.`:null,
+   `${g('בת מצווה','בר מצווה')} זה לא רק מסיבה. זה הרגע שבו אני ${g('מתחילה','מתחיל')} לבחור בעצמי מי אני רוצה להיות.`);
+ else add(2,1,`עוד שנה עברה, ואני מרגיש[s:ה|] שגדלתי בה הרבה.`,fun?`עוד שנה עברה, ועדיין לא מצאתי מה אני רוצה להיות כשאגדל. אבל יש זמן.`:null);
+ // Torah portion
+ const pt=c.hd&&c.hd.par?(PL[c.hd.par]||PL[c.hd.par.split('־')[0]]):null;const ptd=c.hd&&c.hd.par?parTheme(c.hd.par):null;
+ if(pt&&ptd)add(3,REL?1:TRAD?2:4,`השבוע קוראים בתורה את פרשת ${c.hd.par}, ${ptd[0]}. ומה שאני לוקח[s:ת|] מהפרשה הוא פשוט: ${pt}`,
+   `${mitz?(f?'בת המצווה':'בר המצווה'):'יום ההולדת'} שלי ${mitz?'חלה':'חל'} בשבוע של פרשת ${c.hd.par}, ${ptd[0]}. כשהתכוננתי, הבנתי ש${pt}`);
+ // about me
+ if(c.traits.length||c.hob.length){const tr=joinHe(c.traits.slice(0,3).map(t=>t[f?0:1]));const hb=joinHe(c.hob.slice(0,2));
+  add(4,3,tr?`אומרים עליי שאני ${tr}. אני מקווה להמשיך להיות ${g('כזאת','כזה')}.`:null,
+   hb?`מי שמכיר אותי יודע שאני הכי אוהב[s:ת|] ${hb}, ואני מבטיח[s:ה|] להמשיך לעשות את מה שאני אוהב[s:ת|].`:null)}
+ if(c.memory)add(4.5,4,`אני תמיד נזכר[s:ת|] ב${c.memory.replace(/^ב/,'').replace(/[.!]+$/,'')}, ומחייך[s:ת|] כל פעם מחדש.`);
+ // parents
+ const pp=l2?`${l1} ו${l2}`:l1;const both=!!l2,pl=both;
+ add(5,0,`${pp}, תודה על כל מה ש${pl?'אתם עושים':(l1==='אמא'?'את עושה':'אתה עושה')} בשבילי: על האהבה, על הסבלנות ועל זה ש${pl?'אתם':(l1==='אמא'?'את':'אתה')} תמיד שם בשבילי. בלעדי${pl?'כם':(l1==='אמא'?'ך':'ך')} לא הייתי מי שאני היום.`,
+   `${pp}, אין מילים שיספיקו כדי להגיד לכם תודה.`.replace('לכם',pl?'לכם':(l1==='אמא'?'לך':'לך'))+` ${pl?'אתם':(l1==='אמא'?'את':'אתה')} ${pl?'ההורים הכי טובים':(l1==='אמא'?'האמא הכי טובה':'האבא הכי טוב')} שיש, ו${pl?'הכנתם':(l1==='אמא'?'הכנת':'הכנת')} את כל היום הזה באהבה גדולה.`);
+ if(both&&!short){const one=(lbl,nm)=>lbl==='אמא'?`${lbl}, תודה על החיבוקים, על הסבלנות ועל זה שאת תמיד מקשיבה לי.`:`${lbl}, תודה שאתה תמיד מאמין בי ודוחף אותי קדימה.`;
+  if(l1!==l2)add(5.5,2,`${one(l1)} ${one(l2)}`,`${l1==='אמא'?'אמא, את הלב של הבית':'אבא, אתה הכוח של הבית'}, ו${l2==='אמא'?'אמא, את הלב של הבית':'אבא, אתה הכוח של הבית'}. אני אוהב[s:ת|] אתכם.`);}
+ if(fun)add(5.7,5,`ותודה שסבלתם אותי גם כשלא סידרתי את החדר.`.replace('סבלתם',pl?'סבלתם':(l1==='אמא'?'סבלת':'סבלת')));
+ // siblings
+ const sb=sd.sibs||[];if(sb.length){const names=joinHe(sb.map(s=>s.n));const many=sb.length>1;
+  add(6,1,many?`לאחים שלי, ${names}: תודה שאתם תמיד איתי, גם כשאנחנו רבים. אני אוהב[s:ת|] אתכם מאוד.`:`${sb[0].g==='f'?'לאחותי':'לאחי'} ${names}: תודה ש${sb[0].g==='f'?'את':'אתה'} תמיד ${sb[0].g==='f'?'איתי':'איתי'}, גם כשאנחנו רבים. אני ${f?'אוהבת':'אוהב'} ${sb[0].g==='f'?'אותך':'אותך'} מאוד.`,
+   many?`${names}, אתם האחים הכי טובים שיש. גם כשאתם מעצבנים, אני לא ${f?'מוותרת':'מוותר'} עליכם.`:`${names}, ${sb[0].g==='f'?'את האחות הכי טובה':'אתה האח הכי טוב'} שיש. גם כש${sb[0].g==='f'?'את מעצבנת':'אתה מעצבן'}, אני לא ${f?'מוותרת':'מוותר'} ${sb[0].g==='f'?'עלייך':'עליך'}.`)}
+ // grandparents
+ if(c.alive.length){const A=joinHe(c.alive);const one=c.alive.length===1,fe=/^סבתא/.test(c.alive[0]);
+  add(7,1,`ל${A}: תודה על כל האהבה, על הפינוקים ועל זה ש${one?(fe?'את תמיד שם':'אתה תמיד שם'):'אתם תמיד שם'} בשבילי. אני ${f?'אוהבת':'אוהב'} ${one?'אותך':'אתכם'}.`,`${A}, ${one?(fe?'את':'אתה'):'אתם'} ${one?(fe?'הסבתא הכי טובה':'הסבא הכי טוב'):'הסבים הכי טובים'} בעולם. תודה על כל מה ש${one?(fe?'את נותנת':'אתה נותן'):'אתם נותנים'} לי.`)}
+ else add(7,4,`ולסבים ולסבתות שלי: תודה על כל האהבה והפינוקים.`);
+ if(c.late.length){const L=joinHe(c.late.map(x=>x+' ז״ל'));const one=c.late.length===1,fe=/^סבתא/.test(c.late[0]);
+  add(7.5,1,`ול${L}, ${one?(fe?'שלא זכתה':'שלא זכה'):'שלא זכו'} להיות כאן היום: אני יודע[s:ת|] ש${one?(fe?'את מסתכלת':'אתה מסתכל'):'אתם מסתכלים'} עליי מלמעלה ו${one?(fe?'שמחה':'שמח'):'שמחים'} איתנו.`,`אני רוצה להזכיר גם את ${L}. ${one?(fe?'היא':'הוא'):'הם'} ${one?(fe?'חסרה':'חסר'):'חסרים'} לי היום מאוד, ואני בטוח[s:ה|] ש${one?(fe?'היא':'הוא'):'הם'} איתנו בלב.`)}
+ // family, friends
+ add(8,2,`לכל המשפחה, לדודים, לדודות ולבני הדודים: תודה שאתם כאן. כיף שיש לי משפחה כמו שלכם.`,`לכל המשפחה הקרובה והרחוקה: תודה שבאתם, ושאתם תמיד חלק מהחיים שלי.`);
+ add(8.5,2,`ולחברים שלי: תודה שאתם תמיד שם, בכיתה, בהפסקות ובכל השטויות. אתם הכי טובים.`,`ולחברים ולחברות שלי: בלעדיכם זה לא היה אותו דבר. תודה שאתם איתי.`);
+ // thanks list
+ const T={idf:'ותודה גדולה לחיילי צה״ל, ששומרים עלינו ובזכותם אנחנו יכולים לחגוג.',guests:null,teachers:'תודה למורים ולצוות של בית הספר, שמלווים אותי ומלמדים אותי כל יום.',staff:'ותודה לצוות האולם על ערב מושלם.'};
+ c.thanks.forEach((k,i)=>{if(T[k])add(9+i/10,k==='idf'?2:4,T[k])});
+ if(c.thanksFree)S.push({order:9.8,pri:3,alts:['ותודה מיוחדת ל'+c.thanksFree.replace(/^ל/,'').replace(/[.]+$/,'')+'.'],i:0});
+ // promise / wish for myself
+ if(!short)add(10,3,REL?`אני מתפלל[s:ת|] שאזכה לקיים את המצוות באהבה ובשמחה, ולהביא לכם הרבה נחת.`:null,TRAD?`אני מבטיח[s:ה|] להמשיך להביא לכם נחת, ולשמור על כל מה שלימדתם אותי.`:null,`אני מבטיח[s:ה|] להמשיך להיות מי שאני, ולגדול להיות אדם טוב.`);
+ // closing
+ add(11,0,`ועכשיו, בואו נחגוג! תודה רבה לכולם.`,`תהנו מהערב, ותודה רבה שבאתם.`,fun?`ועכשיו, כולם לרחבה!`:null,SF?`בסימן טוב ובמזל טוב לכולנו, ועכשיו בואו נשמח!`:null);
+ // fit to time
+ const budget=c.secs*2;let used=0;const keep=new Set();
+ S.filter(s=>s.pri===0).forEach(s=>{keep.add(s);used+=words(s.alts[s.i])});
+ S.filter(s=>s.pri>0).sort((a,b)=>a.pri-b.pri||a.order-b.order).forEach(s=>{const w=words(s.alts[s.i]);if(used+w<=budget*1.08){keep.add(s);used+=w}});
+ return [...keep].sort((a,b)=>a.order-b.order).map(s=>({alts:s.alts,i:s.i,t:null,sign:false,pri:s.pri}));
+}
 function build(c){
+ if(c.from==='self')return buildSelf(c);
  const S=[];const add=(order,pri,...v)=>{v=v.filter(Boolean);if(!v.length)return;const alts=v.map(x=>G(x,c));const i=Math.floor(rnd()*alts.length);S.push({order,pri,alts,i})};
  const shuf=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
  const short=c.secs<=40,isGrand=['grand','grandma','grandpa'].includes(c.from),fam=['parent','grand','grandma','grandpa','sib','sibs','family','kids','kid','grandkids','spouse','wparent'].includes(c.rel)||isGrand;
@@ -660,7 +725,7 @@ function draw(){const box=$('blocks');box.innerHTML='';
  if(!paras.length)box.innerHTML='<p class="note">כל המשפטים נמחקו. אפשר ללחוץ "ביטול" או ליצור ברכה מחדש.</p>';
  meta()}
 function focusBlk(i){const b=$('blocks').children[i];if(b)b.querySelector('.tx').focus()}
-function meta(){const t=fullText();const w=words(t);$('words').textContent=w+' מילים';const s=Math.round(w/2/5)*5;$('mins').textContent='כ-'+(s>=60?Math.floor(s/60)+':'+String(s%60).padStart(2,'0')+' דקות':s+' שניות')+' קריאה';$('wa').href='https://wa.me/?text='+encodeURIComponent(t);try{const c=ctx();$('leadWa').href='https://wa.me/972555170280?text='+encodeURIComponent('היי, יצרתי ברכה במחולל הברכות באתר ואשמח להקליט אותה באולפן.\nאירוע: '+evName(c)+' של '+c.name+'\nמברכים: '+($('sign').value||'')+'\n\nהברכה:\n'+t)}catch(e){}saveSoon()}
+function meta(){const t=fullText();const w=words(t);$('words').textContent=w+' מילים';const s=Math.round(w/2/5)*5;$('mins').textContent='כ-'+(s>=60?Math.floor(s/60)+':'+String(s%60).padStart(2,'0')+' דקות':s+' שניות')+' קריאה';$('wa').href='https://wa.me/?text='+encodeURIComponent(t);try{const c=ctx();$('leadWa').href='https://wa.me/972555170280?text='+encodeURIComponent('היי, יצרתי ברכה במחולל הברכות באתר ואשמח להקליט אותה באולפן.\nאירוע: '+evName(c)+' של '+c.name+'\nמברכים: '+($('sign').value||($('from').value==='self'?$('name').value+' (דרשה)':''))+'\n\nהברכה:\n'+t)}catch(e){}saveSoon()}
 let baseSeed=7;function render(fresh){if(fresh)baseSeed=Math.floor(Math.random()*1e6)+1;seed=baseSeed;paras=build(ctx());selIdx=-1;draw();snap()}
 document.addEventListener('keydown',e=>{if(!(e.ctrlKey||e.metaKey))return;const inForm=e.target.closest&&e.target.closest('form');if(inForm)return;const k=e.key.toLowerCase();
  if(k==='z'&&!e.shiftKey){e.preventDefault();clearTimeout(typeT);snap();if(hi>0)restore(hi-1)}else if(k==='y'||(k==='z'&&e.shiftKey)){e.preventDefault();if(hi<hist.length-1)restore(hi+1)}});
@@ -676,7 +741,7 @@ function syncForm(){const ev=val('ev'),m=mode(),cg=cgOf();
  const md=m==='adult'?'adult':m==='wed'?'wed':'kid';
  if(syncForm.md!==md){syncForm.md=md;chips('hobbies',HOB[md],'hb',[]);chips('together',TOG[md],'tg',[]);
   const th=THANKS.filter(t=>md==='kid'||t[2]!=='kid');chips('thanks',THANKS,'th',[]);document.querySelectorAll('#thanks input').forEach((inp,i)=>{const hide=THANKS[i][2]==='kid'&&md!=='kid';inp.hidden=hide;inp.nextElementSibling.hidden=hide;if(hide)inp.checked=false})}
- const f=$('from').value;$('togetherBox').hidden=f==='friends';$('hobBox').hidden=false;
+ const f=$('from').value;$('togetherBox').hidden=f==='friends'||f==='self';$('hobBox').hidden=false;
  $('togetherLbl').textContent=f==='spouse'?'מה אתם אוהבים לעשות יחד':'מה אוהבים לעשות יחד'}
 function refresh(full=true){syncForm();if(full&&mode()==='child')renderGps();renderFrom();syncForm();if(!signTouched)$('sign').value=ctx().signAuto;if(generated)render();else{draw();fitFrame()}}
 $('f').addEventListener('change',e=>{const t=e.target;if(t.dataset.l||t.dataset.s)return;if(['from','side','pick'].includes(t.id)||['pc','ev','cg','spg'].includes(t.name))signTouched=false;refresh(t.name==='pc'||t.name==='ev')});

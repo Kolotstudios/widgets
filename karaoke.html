@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>קריוקי משפחתי – אולפני קולות</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;600;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;600;800&family=Secular+One&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#f6f2fa;--paper:#fff;--ink:#22172e;--muted:#6d6278;--line:#e5dcef;--accent:#6b2fb3;--accent-ink:#fff;--soft:#efe5fa;--ok:#1f8a4c;--warn:#b5402a;--gold:#f2b635;color-scheme:light}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#15101b;--paper:#1f1828;--ink:#f1ebf7;--muted:#a99cb8;--line:#372c45;--accent:#b78bf0;--accent-ink:#1a1224;--soft:#2b2139;color-scheme:dark}}
@@ -39,6 +39,7 @@ button:disabled{opacity:.45;cursor:default}
 .lines{display:grid;gap:6px;max-height:60vh;overflow:auto;padding:2px}
 .ln{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--bg);cursor:pointer}
 .ln .tx{font-size:18px}
+.sechdr{font-size:13px;font-weight:800;color:var(--accent);margin:8px 4px 0;letter-spacing:.02em}
 .ln .sec{font-size:12px;color:var(--muted)}
 .ln.cur{border-color:var(--accent);background:var(--soft)}
 .ln.chorus .tx::after{content:" · פזמון";font-size:12px;color:var(--muted)}
@@ -121,15 +122,17 @@ button:disabled{opacity:.45;cursor:default}
     <h2>מי שר?</h2>
     <p class="hint">כותבים את השמות של כל מי שישיר, אחד אחרי השני. כל משתתף מקבל צבע משלו בסרטון.</p>
     <div class="row"><input type="text" id="pName" placeholder="שם, למשל: סבתא רחל" style="flex:1;min-width:180px"><button class="primary" id="pAdd">+ הוספה</button></div>
+    <label class="row small" style="font-weight:400;margin:0"><input type="checkbox" id="pGroup"> זו קבוצה ששרה יחד (למשל: ההורים, הנכדים) – מתאים רק לקטע קצר</label>
     <div class="people" id="peopleList"></div>
   </section>
 
   <!-- CLIENT 2: split -->
   <section class="card" data-step="split" hidden>
     <h2>מי שר מה?</h2>
-    <p class="hint">בוחרים משתתף למעלה, ואז לוחצים על השורות שלו. לחיצה נוספת מורידה אותו מהשורה. אפשר כמה משתתפים באותה שורה.</p>
+    <p class="hint">הכנו לכם חלוקה מומלצת: כל משתתף שר כמה שורות ברצף, והפזמון של כולם. אפשר לשנות: בוחרים משתתף למעלה ולוחצים על השורות שלו.</p>
     <div class="row" id="pickChips"></div>
-    <div class="row small"><span>חלוקה מהירה:</span><button id="autoStanza" class="small">כל בית למשתתף אחר</button><button id="autoLine" class="small">כל שורה למשתתף אחר</button><button id="autoChorus" class="small">פזמון – כולם יחד</button><button id="clearSplit" class="small">ניקוי</button></div>
+    <div class="row small"><button id="autoSplit" class="small primary">✦ חלוקה מומלצת</button><button id="clearSplit" class="small">ניקוי</button></div>
+    <div id="rules" class="card" style="padding:12px 14px;gap:6px"></div>
     <div class="lines" id="splitList"></div>
   </section>
 
@@ -177,24 +180,32 @@ let audioBuf=null,audioBlob=null,audioURL='';
 const audio=new Audio();audio.preload='auto';
 
 // ---------- lyrics parsing ----------
-const HDR=/^\s*[\[\(]?\s*(פזמון(?:\s+חוזר)?|בית(?:\s+\S+)?|גשר|מעבר|פתיחה|סיום|קודה|סולו|chorus|verse\s*\d*|bridge|intro|outro)\s*\d*\s*[\]\)]?\s*[:：]?\s*$/i;
-const CHMARK=/^\s*[\[\(]?\s*(?:פזמון(?:\s+חוזר)?|חוזר(?:ים)? על הפזמון|chorus)\s*(?:[x×*]\s*(\d+)|(\d+)\s*[x×*])?\s*[\]\)]?\s*[:：]?\s*$/i;
+const KW=[[/^(פזמון|פיזמון|רפרן|chorus|refrain)$/i,'פזמון'],[/^(בית|verse)$/i,'בית'],[/^(גשר|bridge)$/i,'גשר'],[/^(מעבר|interlude)$/i,'מעבר'],[/^(פתיחה|אינטרו|intro)$/i,'פתיחה'],[/^(סיום|קודה|אאוטרו|outro|coda)$/i,'סיום'],[/^(סולו|solo)$/i,'סולו']];
+const ORD={'ראשון':1,'שני':2,'שלישי':3,'רביעי':4,'חמישי':5,'שישי':6,'א':1,'ב':2,'ג':3,'ד':4,'ה':5,'ו':6};
+const REPW=/^(?:[x×*]\d+|\d+[x×*]|פעמיים|שלוש|פעמים|חוזר|חוזרת|שוב|ע"ע|על|הפזמון)$/i;
+// "פזמון", "[פזמון חוזר]", "בית ראשון -", "בית א'", "פזמון x2", "פזמון: שורה..." -> {label, num, rep, isRepeat, rest}
+function header(line){const m=line.match(/^\s*[\[\(\{]?\s*([^\s:：\-–—\]\)\}]+)((?:[\s\-–—]+[^\s:：\]\)\}]+){0,3})\s*[\]\)\}]?\s*(?:[:：\-–—]\s*(.*))?$/);if(!m)return null;
+ const kw=KW.find(k=>k[0].test(m[1].replace(/[\[\]\(\)'"׳״.]/g,'')));if(!kw)return null;
+ const toks=(m[2]||'').replace(/[\[\]\(\)'"׳״.]/g,' ').split(/[\s\-–—]+/).filter(Boolean);let num=0,rep=1,isRepeat=false;
+ for(const t of toks){if(/^\d+$/.test(t)){num=+t;continue}if(ORD[t]){num=ORD[t];continue}const r=t.match(/^[x×*](\d+)$|^(\d+)[x×*]$/i);if(r){rep=+(r[1]||r[2]);isRepeat=true;continue}if(t==='פעמיים'){rep=2;isRepeat=true;continue}if(REPW.test(t)){isRepeat=true;continue}return null}
+ return {label:kw[1],num,rep:Math.min(rep,6),isRepeat,rest:(m[3]||'').trim()}}
 const REP=/\s*[\(\[]?\s*(?:[x×*]\s*(\d+)|(\d+)\s*[x×*])\s*[\)\]]?\s*$/i;
 function parseLyrics(raw){
  const stanzas=String(raw||'').replace(/\r/g,'').split(/\n\s*\n/).map(s=>s.split('\n').map(l=>l.trim()).filter(Boolean)).filter(s=>s.length);
- let chorus=null;const out=[];const pending=[];let warn='';
- // first pass: find chorus definition
- for(const st of stanzas){const h=st[0].match(HDR);if(h&&/פזמון|chorus/i.test(h[1])&&st.length>1&&!chorus)chorus=st.slice(1)}
- let sIdx=0;
- for(const st of stanzas){
-  let label='',body=st;const h=st[0].match(HDR);
-  if(h&&!(CHMARK.test(st[0])&&st.length===1)){label=h[1].replace(/[:：]$/,'');body=st.slice(1)}
-  const isCh=/פזמון|chorus/i.test(label);
-  const push=(text,ch)=>{let n=1;const m=text.match(REP);if(m&&text.replace(REP,'').trim()){n=+(m[1]||m[2]);text=text.replace(REP,'').trim()}for(let k=0;k<Math.min(n,8);k++)out.push({text,t:null,chorus:!!ch,st:sIdx,sec:ch?'פזמון':label})};
-  for(const l of body){const cm=l.match(CHMARK);
-   if(cm){const n=+(cm[1]||cm[2]||1);if(chorus){sIdx++;for(let k=0;k<Math.min(n,6);k++){chorus.forEach(c=>push(c,true));sIdx++}}else warn='כתוב "פזמון" אבל לא מצאתי איפה הפזמון מוגדר. הוסיפו בתחילת הפזמון שורה "פזמון:".';continue}
-   push(l,isCh)}
-  if(!body.length&&CHMARK.test(st[0])){const cm=st[0].match(CHMARK);const n=+(cm[1]||cm[2]||1);if(chorus){sIdx++;for(let k=0;k<Math.min(n,6);k++){chorus.forEach(c=>push(c,true));sIdx++}}else warn='כתוב "פזמון" אבל לא מצאתי איפה הפזמון מוגדר. הוסיפו בתחילת הפזמון שורה "פזמון:".'}
+ let chorus=null,warn='';
+ for(const st of stanzas){const hd=header(st[0]);if(hd&&hd.label==='פזמון'){const body=(hd.rest?[hd.rest]:[]).concat(st.slice(1).filter(l=>!header(l)));if(body.length&&!chorus)chorus=body}}
+ const out=[];let sIdx=0,verseNo=0;
+ const push=(text,label,ch)=>{let n=1;const m=text.match(REP);if(m&&text.replace(REP,'').trim()){n=+(m[1]||m[2]);text=text.replace(REP,'').trim()}for(let k=0;k<Math.min(n,8);k++)out.push({text,t:null,chorus:!!ch,st:sIdx,sec:label})};
+ const putChorus=n=>{if(!chorus){warn='כתוב "פזמון" אבל לא מצאתי איפה הפזמון מוגדר. הוסיפו בתחילת הפזמון שורה "פזמון:".';return}for(let k=0;k<n;k++){sIdx++;chorus.forEach(c=>push(c,'פזמון',true))}sIdx++};
+ let chorusDefined=false;
+ for(const st of stanzas){let label='',lines=st;const hd=header(st[0]);
+  if(hd){lines=(hd.rest?[hd.rest]:[]).concat(st.slice(1));
+   if(hd.label==='פזמון'){const body=lines.filter(l=>!header(l));
+    if(!body.length||hd.isRepeat&&chorusDefined||(chorusDefined&&body.join('|')===chorus.join('|'))){putChorus(hd.rep);continue}
+    chorusDefined=true;sIdx++;body.forEach(l=>push(l,'פזמון',true));for(let k=1;k<hd.rep;k++){sIdx++;body.forEach(l=>push(l,'פזמון',true))}sIdx++;continue}
+   label=hd.label==='בית'?'בית '+(hd.num||++verseNo):hd.label;if(hd.label==='בית'&&hd.num)verseNo=hd.num}
+  else label='בית '+(++verseNo);
+  for(const l of lines){const h2=header(l);if(h2&&(h2.label==='פזמון'||/[:：\[\(]/.test(l))){if(h2.label==='פזמון'){putChorus(h2.rep)}else{label=h2.label==='בית'?'בית '+(h2.num||++verseNo):h2.label}continue}push(l,label,false)}
   sIdx++}
  return {lines:out,warn,hasChorus:!!chorus}}
 
@@ -221,21 +232,52 @@ let saveT=null;const save=()=>{clearTimeout(saveT);saveT=setTimeout(()=>DB.put('
 
 // ---------- people & split ----------
 const pById=id=>P.people.find(p=>p.id===id);
-function addPerson(name){name=name.trim();if(!name)return;const id='p'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);P.people.push({id,name,color:COLORS[P.people.length%COLORS.length]});if(!pick)pick=id;save();renderPeople();renderSplit()}
+function addPerson(name,group){name=name.trim();if(!name)return;const id='p'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);P.people.push({id,name,group:!!group,color:COLORS[P.people.length%COLORS.length]});if(!pick)pick=id;save();renderPeople();renderSplit()}
 let pick=null;
 function whoOf(i){const a=P.assign[i]||[];if(a.includes('ALL'))return {label:'כולם יחד',color:'#ffd166',all:true,ids:['ALL']};const ps=a.map(pById).filter(Boolean);if(!ps.length)return null;return {label:ps.map(p=>p.name).join(' + '),color:ps[0].color,colors:ps.map(p=>p.color),ids:a}}
-function renderPeople(){$('peopleList').innerHTML=P.people.map((p,i)=>`<div class="person"><span class="dot" style="background:${p.color}"></span><span class="nm">${esc(p.name)}</span><button class="x" data-del="${p.id}" aria-label="הסרה">×</button></div>`).join('')||'<p class="hint">עדיין לא הוספתם משתתפים.</p>'}
+function renderPeople(){$('peopleList').innerHTML=P.people.map((p,i)=>`<div class="person"><span class="dot" style="background:${p.color}"></span><span class="nm">${esc(p.name)}${p.group?' <span class="hint small">(קבוצה)</span>':''}</span><button class="x" data-del="${p.id}" aria-label="הסרה">×</button></div>`).join('')||'<p class="hint">עדיין לא הוספתם משתתפים.</p>'}
 $('peopleList').addEventListener('click',e=>{const id=e.target.dataset.del;if(!id)return;P.people=P.people.filter(p=>p.id!==id);Object.keys(P.assign).forEach(k=>P.assign[k]=P.assign[k].filter(x=>x!==id));if(pick===id)pick=P.people[0]?.id||null;save();renderPeople()});
-$('pAdd').onclick=()=>{addPerson($('pName').value);$('pName').value='';$('pName').focus()};
+$('pAdd').onclick=()=>{addPerson($('pName').value,$('pGroup').checked);$('pName').value='';$('pGroup').checked=false;$('pName').focus()};
 $('pName').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('pAdd').click()}});
-function renderSplit(){
+function renderSplit(){setTimeout(renderRules,0);
  $('pickChips').innerHTML=P.people.map(p=>`<span class="chip${pick===p.id?' on':''}" data-pick="${p.id}"><span class="dot" style="background:${p.color}"></span>${esc(p.name)}</span>`).join('')+`<span class="chip${pick==='ALL'?' on':''}" data-pick="ALL"><span class="dot" style="background:linear-gradient(90deg,${COLORS.slice(0,4).join(',')})"></span>כולם יחד</span>`;
- $('splitList').innerHTML=P.lines.map((l,i)=>{const w=whoOf(i);return `<div class="ln${l.chorus?' chorus':''}" data-i="${i}"><span class="sec">${i+1}</span><span class="tx">${esc(l.text)}</span><span class="who">${w?(w.all?'<span class="mini" style="background:#ffd166;color:#1a1224">כולם</span>':w.ids.map(id=>{const p=pById(id);return p?`<span class="mini" style="background:${p.color}">${esc(p.name)}</span>`:''}).join('')):'<span class="hint small">—</span>'}</span></div>`}).join('')}
+ $('splitList').innerHTML=P.lines.map((l,i)=>{const w=whoOf(i);const hd=(i===0||P.lines[i-1].st!==l.st||P.lines[i-1].sec!==l.sec)?`<div class="sechdr">${esc(l.sec||'')}</div>`:'';return hd+`<div class="ln${l.chorus?' chorus':''}" data-i="${i}"><span class="sec">${i+1}</span><span class="tx">${esc(l.text)}</span><span class="who">${w?(w.all?'<span class="mini" style="background:#ffd166;color:#1a1224">כולם</span>':w.ids.map(id=>{const p=pById(id);return p?`<span class="mini" style="background:${p.color}">${esc(p.name)}</span>`:''}).join('')):'<span class="hint small">—</span>'}</span></div>`}).join('')}
 $('pickChips').addEventListener('click',e=>{const c=e.target.closest('[data-pick]');if(!c)return;pick=c.dataset.pick;renderSplit()});
-$('splitList').addEventListener('click',e=>{const r=e.target.closest('.ln');if(!r||!pick)return;const i=+r.dataset.i;let a=P.assign[i]||[];if(pick==='ALL')a=a.includes('ALL')?[]:['ALL'];else{a=a.filter(x=>x!=='ALL');a=a.includes(pick)?a.filter(x=>x!==pick):[...a,pick]}P.assign[i]=a;save();renderSplit()});
-$('autoStanza').onclick=()=>{if(!P.people.length)return toast('קודם מוסיפים משתתפים');let k=-1,last=-1;P.lines.forEach((l,i)=>{if(l.chorus){P.assign[i]=['ALL'];return}if(l.st!==last){k++;last=l.st}P.assign[i]=[P.people[k%P.people.length].id]});save();renderSplit()};
-$('autoLine').onclick=()=>{if(!P.people.length)return toast('קודם מוסיפים משתתפים');let k=0;P.lines.forEach((l,i)=>{P.assign[i]=[P.people[k++%P.people.length].id]});save();renderSplit()};
-$('autoChorus').onclick=()=>{P.lines.forEach((l,i)=>{if(l.chorus)P.assign[i]=['ALL']});save();renderSplit()};
+$('splitList').addEventListener('click',e=>{const r=e.target.closest('.ln');if(!r||!pick)return;const i=+r.dataset.i;let a=P.assign[i]||[];if(pick==='ALL')a=a.includes('ALL')?[]:['ALL'];else{a=a.filter(x=>x!=='ALL');a=a.includes(pick)?a.filter(x=>x!==pick):[...a,pick]}if(a.length>2&&!P.lines[i].chorus&&!isBridge(P.lines[i]))toast('מומלץ עד זוג בשורה');P.assign[i]=a;save();renderSplit()});
+
+// ---- recording-friendly split: solos in consecutive lines, chorus = everyone, at most a pair per line ----
+const POLICY='בדרך כלל מקליטים עד זוג בשורה, וכל משתתף שר כמה שורות ברצף. חלוקה של יותר משניים בשורה, שורות לא צמודות או צמדים שמתחלפים מאריכה משמעותית את זמן ההפקה ועלולה לגרור עלויות נוספות, ולכן אנחנו לא ממליצים עליה. זה אפשרי בקטע מעבר קצר של עד שתי שורות, או בפזמון שבו כולם שרים, אבל לא בבתים.';
+const isBridge=l=>/גשר|מעבר|bridge/i.test(l.sec||'');
+function verseRuns(){const runs=[];let cur=null;P.lines.forEach((l,i)=>{if(l.chorus){cur=null;return}if(!cur){cur=[];runs.push(cur)}cur.push(i)});return runs}
+function autoSplit(){const solo=P.people.filter(p=>!p.group);if(!solo.length&&!P.people.length)return toast('קודם מוסיפים משתתפים');const ppl=solo.length?solo:P.people;
+ P.assign={};P.lines.forEach((l,i)=>{if(l.chorus)P.assign[i]=['ALL']});
+ const vIdx=P.lines.map((l,i)=>i).filter(i=>!P.lines[i].chorus);const V=vIdx.length,N=ppl.length;if(!V){save();renderSplit();return}
+ if(N<=V){ // contiguous blocks, cut near stanza boundaries, prefer blocks of 2+ lines
+  const cuts=[0];for(let k=1;k<N;k++){let target=Math.round(V*k/N);let best=target,bd=9;for(let d=-1;d<=1;d++){const c=target+d;if(c<=cuts[cuts.length-1]||c>=V)continue;const i=vIdx[c],prev=vIdx[c-1];const boundary=P.lines[i].st!==P.lines[prev].st||i!==prev+1;const sc=Math.abs(d)-(boundary?1.5:0);if(sc<bd){bd=sc;best=c}}cuts.push(best)}cuts.push(V);
+  for(let k=0;k<N;k++)for(let c=cuts[k];c<cuts[k+1];c++)P.assign[vIdx[c]]=[ppl[k].id]}
+ else{ // more people than lines: pairs, each pair on consecutive lines
+  const pairs=Math.min(V,Math.ceil(N/2));let k=0;const groups=[];for(let g=0;g<pairs;g++){const a=ppl[k++],b=ppl[k++];groups.push([a,b].filter(Boolean).map(p=>p.id))}
+  for(let c=0;c<V;c++)P.assign[vIdx[c]]=groups[Math.floor(c*groups.length/V)];
+  if(N>2*V)toast('יש יותר משתתפים מאשר שורות בבתים. חלק ישירו רק בפזמון.')}
+ save();renderSplit()}
+function checkSplit(){const issues=[];const runs=verseRuns();
+ P.lines.forEach((l,i)=>{const a=(P.assign[i]||[]);if(l.chorus)return;const short=isBridge(l);
+  if(a.includes('ALL')&&!short)issues.push(`שורה ${i+1}: "כולם יחד" בבית – מומלץ רק בפזמון או בקטע מעבר קצר.`);
+  else if(a.length>2&&!short)issues.push(`שורה ${i+1}: ${a.length} משתתפים באותה שורה – מומלץ עד זוג.`);
+  a.map(pById).filter(p=>p&&p.group).forEach(p=>{if(!short)issues.push(`שורה ${i+1}: הקבוצה "${p.name}" שרה בבית – קבוצות מתאימות רק לקטע מעבר קצר.`)})});
+ // each person sings one consecutive block (outside the chorus)
+ P.people.forEach(p=>{const mine=P.lines.map((l,i)=>i).filter(i=>!P.lines[i].chorus&&(P.assign[i]||[]).includes(p.id));if(mine.length<2)return;
+  let blocks=1;for(let k=1;k<mine.length;k++){const a=mine[k-1],b=mine[k];const between=P.lines.slice(a+1,b);if(between.some(l=>!l.chorus))blocks++}
+  if(blocks>1)issues.push(`${p.name}: שורות בכמה מקומות לא צמודים בבתים – מומלץ רצף אחד של שורות.`)});
+ // a person should keep the same partner
+ P.people.forEach(p=>{const partners=new Set();P.lines.forEach((l,i)=>{if(l.chorus)return;const a=P.assign[i]||[];if(a.includes(p.id)&&a.length===2)partners.add(a.find(x=>x!==p.id))});if(partners.size>1)issues.push(`${p.name}: צמדים שמתחלפים – מומלץ אותו בן או בת זוג לאורך כל השורות.`)});
+ const empty=P.lines.filter((l,i)=>!(P.assign[i]||[]).length).length;
+ return {issues:[...new Set(issues)],empty}}
+function renderRules(){const r=checkSplit();const box=$('rules');
+ if(!r.issues.length){box.style.background='';box.innerHTML=`<div class="ok">✓ החלוקה מתאימה להקלטה: סולואים ברצף, והפזמון של כולם.</div>${r.empty?`<div class="hint small">${r.empty} שורות עדיין בלי משתתף.</div>`:''}`;return}
+ box.style.background='var(--soft)';box.innerHTML=`<div class="warn">שימו לב: החלוקה הזאת מסובכת להקלטה</div><div class="small">${esc(POLICY)}</div><ul class="small" style="margin:4px 0 0;padding-inline-start:18px">${r.issues.slice(0,6).map(x=>`<li>${esc(x)}</li>`).join('')}</ul><button class="small" id="fixSplit">✦ להחזיר לחלוקה המומלצת</button>`;
+ $('fixSplit').onclick=autoSplit}
+$('autoSplit').onclick=autoSplit;
 $('clearSplit').onclick=()=>{P.assign={};save();renderSplit()};
 
 // ---------- backgrounds ----------
@@ -267,7 +309,7 @@ document.querySelectorAll('input[name=ratio]').forEach(r=>r.onchange=()=>{P.rati
 function timeline(){const L=P.lines.map((l,i)=>({...l,i})).filter(l=>l.t!=null).sort((a,b)=>a.t-b.t);
  const dur=audioBuf?audioBuf.duration:(L.length?L[L.length-1].t+8:0);
  L.forEach((l,k)=>{const nx=L[k+1];const words=l.text.split(/\s+/).length;const est=Math.max(1.6,words*(beatLen()||0.5)*0.9+0.6);l.end=nx?Math.min(nx.t,l.t+Math.max(est,Math.min(nx.t-l.t,est*1.6))):Math.min(dur,l.t+est+1.5)});return {L,dur}}
-let FONT='Rubik, "Segoe UI", Arial, sans-serif';
+let FONT='Rubik, "Segoe UI", Arial, sans-serif';const LF='"Secular One", Rubik, "Segoe UI", Arial, sans-serif';
 function wrap(c,text,maxW){const words=text.split(/\s+/);const lines=[];let cur='';for(const w of words){const t=cur?cur+' '+w:w;if(c.measureText(t).width>maxW&&cur){lines.push(cur);cur=w}else cur=t}if(cur)lines.push(cur);return lines}
 function pill(c,x,y,text,color,size,align){c.font=`700 ${size}px ${FONT}`;const w=c.measureText(text).width+size*1.2,h=size*1.6;const x0=align==='center'?x-w/2:x-w;c.fillStyle=color;roundRect(c,x0,y-h/2,w,h,h/2);c.fill();c.fillStyle=lum(color)>0.6?'#1a1224':'#fff';c.textAlign='center';c.textBaseline='middle';c.fillText(text,x0+w/2,y+size*0.05);return w}
 function roundRect(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath()}
@@ -278,35 +320,38 @@ function drawFrame(c,W,H,t,TL){
  const beat=beatLen()||0.6;
  // intro / title
  if(!cur||(cur&&t>cur.end&&nxt&&nxt.t-t>beat*6)){
-  if(!cur){c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';c.font=`800 ${S*0.085}px ${FONT}`;const tl=wrap(c,P.title||'קריוקי משפחתי',W*0.85);tl.forEach((s,i)=>c.fillText(s,W/2,H*0.36+(i-(tl.length-1)/2)*S*0.1));
+  if(!cur){c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';c.font=`${S*0.1}px ${LF}`;const tl=wrap(c,P.title||'קריוקי משפחתי',W*0.85);tl.forEach((s,i)=>c.fillText(s,W/2,H*0.36+(i-(tl.length-1)/2)*S*0.1));
    c.font=`600 ${S*0.032}px ${FONT}`;c.globalAlpha=0.85;const names=P.people.map(p=>p.name).join(' · ');if(names)wrap(c,names,W*0.85).slice(0,2).forEach((s,i)=>c.fillText(s,W/2,H*0.47+i*S*0.045));c.globalAlpha=1}
   else{c.fillStyle='rgba(255,255,255,.8)';c.textAlign='center';c.font=`600 ${S*0.045}px ${FONT}`;c.fillText('♪ מעבר מוזיקלי ♪',W/2,H*0.4)}
+  if(nxt)secLabel(c,W,H,S,(cur?'בקרוב: ':'')+(nxt.sec||''),!!cur);
   if(nxt){const left=nxt.t-t;const bars=P.bpm?Math.ceil(left/(beat*4)):0;if(left>beat*4.5){c.font=`600 ${S*0.034}px ${FONT}`;c.fillStyle='rgba(255,255,255,.75)';c.fillText(bars?`מתחילים בעוד ${bars} ${bars===1?'תיבה':'תיבות'}`:`מתחילים בעוד ${Math.ceil(left)} שניות`,W/2,H*(vert?0.62:0.66))}
    drawUpNext(c,W,H,t,nxt,S,beat,true)}
   brand(c,W,H,S,t,dur,L.length?L[L.length-1].end:0);return}
  // current line
+ secLabel(c,W,H,S,cur.sec||'');
  const w=whoOf(cur.i);const col=w?w.color:'#ffffff';
- const fs=S*(vert?0.075:0.085);c.font=`800 ${fs}px ${FONT}`;const rows=wrap(c,cur.text,W*0.86);const lh=fs*1.25;const y0=H*(vert?0.42:0.45)-(rows.length-1)*lh/2;
- if(w)pill(c,W/2,y0-fs*1.25,w.label,w.color,S*0.034,'center');
- c.font=`800 ${fs}px ${FONT}`;
+ let fs=S*(vert?0.088:0.11);c.font=`${fs}px ${LF}`;let rows=wrap(c,cur.text,W*0.9);if(rows.length>2){fs*=0.82;c.font=`${fs}px ${LF}`;rows=wrap(c,cur.text,W*0.9)}const lh=fs*1.22;const y0=H*(vert?0.42:0.45)-(rows.length-1)*lh/2;
+ if(w){c.save();c.shadowColor=w.color;c.shadowBlur=S*0.035;pill(c,W/2,y0-fs*1.18,'🎤 '+w.label,w.color,S*0.052,'center');c.restore()}
+ c.font=`${fs}px ${LF}`;
  const p=Math.max(0,Math.min(1,(t-cur.t)/Math.max(0.5,(cur.end-cur.t)*0.92)));const total=rows.reduce((a,r)=>a+c.measureText(r).width,0);let acc=0;
- rows.forEach((r,i)=>{const y=y0+i*lh;const rw=c.measureText(r).width;c.textAlign='center';c.textBaseline='middle';c.font=`800 ${fs}px ${FONT}`;
-  c.lineWidth=fs*0.12;c.strokeStyle='rgba(0,0,0,.55)';c.lineJoin='round';c.strokeText(r,W/2,y);c.fillStyle='rgba(255,255,255,.55)';c.fillText(r,W/2,y);
+ rows.forEach((r,i)=>{const y=y0+i*lh;const rw=c.measureText(r).width;c.textAlign='center';c.textBaseline='middle';c.font=`${fs}px ${LF}`;
+  c.lineWidth=fs*0.16;c.strokeStyle='rgba(0,0,0,.55)';c.lineJoin='round';c.strokeText(r,W/2,y);c.fillStyle='rgba(255,255,255,.55)';c.fillText(r,W/2,y);
   const part=Math.max(0,Math.min(1,(p*total-acc)/rw));acc+=rw;if(part>0){c.save();const xr=W/2+rw/2;c.beginPath();c.rect(xr-rw*part-2,y-fs,rw*part+4,fs*2);c.clip();c.fillStyle=col;c.fillText(r,W/2,y);c.restore()}});
  // after the line is sung and a long gap follows
  if(t>cur.end&&nxt&&nxt.t-t>beat*4.5){c.textAlign='center';c.font=`600 ${S*0.03}px ${FONT}`;c.fillStyle='rgba(255,255,255,.7)';const bars=P.bpm?Math.ceil((nxt.t-t)/(beat*4)):0;c.fillText(bars?`♪ עוד ${bars} ${bars===1?'תיבה':'תיבות'} ♪`:'♪',W/2,y0+rows.length*lh+S*0.02)}
  if(nxt)drawUpNext(c,W,H,t,nxt,S,beat,false,w);
  brand(c,W,H,S,t,dur,L.length?L[L.length-1].end:0)}
 function drawUpNext(c,W,H,t,nxt,S,beat,intro,curW){
- const nw=whoOf(nxt.i);const yb=H*(H>W?0.74:0.8);const fs=S*0.038;
- c.font=`600 ${fs}px ${FONT}`;c.textAlign='center';c.textBaseline='middle';const r=wrap(c,nxt.text,W*0.8)[0]+(wrap(c,nxt.text,W*0.8).length>1?'…':'');c.fillStyle='rgba(255,255,255,.62)';c.fillText(r,W/2,yb);
+ const nw=whoOf(nxt.i);const yb=H*(H>W?0.76:0.82);const fs=S*0.046;
+ c.font=`${fs}px ${LF}`;c.textAlign='center';c.textBaseline='middle';const r=wrap(c,nxt.text,W*0.8)[0]+(wrap(c,nxt.text,W*0.8).length>1?'…':'');c.fillStyle='rgba(255,255,255,.62)';c.fillText(r,W/2,yb);
  const same=curW&&nw&&curW.ids.join()===nw.ids.join();
- if(nw&&!same){pill(c,W/2,yb-fs*1.5,'הבא בתור: '+nw.label,nw.color,S*0.026,'center')}
+ if(nw&&!same){pill(c,W/2,yb-fs*1.45,'הבא בתור: '+nw.label,nw.color,S*0.034,'center')}
  const left=nxt.t-t;const nb=Math.ceil(left/beat);
  if(left>0&&left<=beat*4+0.02&&(!same||intro)){const cx=W/2,cy=H*(H>W?0.585:0.615),R=S*0.05;const frac=1-((left/beat)%1);
   c.save();c.globalAlpha=0.95;c.lineWidth=S*0.01;c.strokeStyle='rgba(255,255,255,.25)';c.beginPath();c.arc(cx,intro?H*0.6:cy,R,0,7);c.stroke();
   c.strokeStyle=nw?nw.color:'#fff';c.beginPath();c.arc(cx,intro?H*0.6:cy,R,-Math.PI/2,-Math.PI/2+Math.PI*2*frac);c.stroke();
   c.fillStyle='#fff';c.font=`800 ${R*1.1*(1+0.15*(1-frac))}px ${FONT}`;c.fillText(String(Math.max(1,nb)),cx,(intro?H*0.6:cy)+R*0.05);c.restore()}}
+function secLabel(c,W,H,S,text,dim){if(!text)return;c.save();c.font=`700 ${S*0.034}px ${FONT}`;c.textAlign='center';c.textBaseline='middle';const w=c.measureText(text).width+S*0.05,hh=S*0.058;c.globalAlpha=dim?0.6:0.9;c.fillStyle='rgba(0,0,0,.35)';roundRect(c,W/2-w/2,H*0.075-hh/2,w,hh,hh/2);c.fill();c.strokeStyle='rgba(255,255,255,.35)';c.lineWidth=S*0.003;c.stroke();c.fillStyle='#fff';c.fillText(text,W/2,H*0.075+S*0.002);c.restore()}
 function brand(c,W,H,S,t,dur,lastEnd){c.textAlign='left';c.textBaseline='bottom';c.font=`600 ${S*0.024}px ${FONT}`;c.fillStyle='rgba(255,255,255,.55)';c.direction='ltr';c.fillText('Kolot · אולפני קולות',S*0.03,H-S*0.025);c.direction='rtl';
  const os=Math.max(dur-4,(lastEnd||0)+0.3);if(dur&&t>os){const a=Math.min(1,(t-os)/1.0);c.fillStyle=`rgba(10,4,20,${0.88*a})`;c.fillRect(0,0,W,H);c.globalAlpha=a;c.textAlign='center';c.textBaseline='middle';c.fillStyle='#fff';c.font=`800 ${S*0.06}px ${FONT}`;c.fillText('הופק באולפני קולות',W/2,H*0.45);c.font=`600 ${S*0.034}px ${FONT}`;c.fillText('kolot-studios.com',W/2,H*0.55);c.globalAlpha=1}}
 
@@ -355,7 +400,7 @@ function reparse(){P.title=$('title').value.trim();P.lyrics=$('lyrics').value;co
  const old=new Map();P.lines.forEach(l=>{if(!old.has(l.text))old.set(l.text,[]);old.get(l.text).push(l.t)});
  P.lines=r.lines.map(l=>{const a=old.get(l.text);return {...l,t:a&&a.length?a.shift():null}});
  $('parseMsg').innerHTML=r.lines.length?`<span class="ok">${r.lines.length} שורות</span>${r.hasChorus?' · הפזמון הודבק בכל מקום שכתוב "פזמון"':''}${r.warn?` · <span class="warn">${esc(r.warn)}</span>`:''}`:'';
- $('parsePreview').innerHTML=P.lines.map((l,i)=>`<div class="ln${l.chorus?' chorus':''}"><span class="sec">${i+1}</span><span class="tx">${esc(l.text)}</span><span class="sec">${esc(l.sec||'')}</span></div>`).join('');
+ $('parsePreview').innerHTML=P.lines.map((l,i)=>((i===0||P.lines[i-1].st!==l.st||P.lines[i-1].sec!==l.sec)?`<div class="sechdr">${esc(l.sec||'')}</div>`:'')+`<div class="ln${l.chorus?' chorus':''}"><span class="sec">${i+1}</span><span class="tx">${esc(l.text)}</span><span class="sec">${esc(l.sec||'')}</span></div>`).join('');
  $('hTitle').textContent=P.title||'קריוקי משפחתי';save()}
 $('title').addEventListener('input',reparse);$('lyrics').addEventListener('input',()=>{clearTimeout(reparse.t);reparse.t=setTimeout(reparse,300)});
 $('drop').onclick=()=>$('audioFile').click();$('drop').onkeydown=e=>{if(e.key==='Enter')$('audioFile').click()};
@@ -396,14 +441,14 @@ function show(i){const F=flow();step=Math.max(0,Math.min(F.length-1,i));const ke
  $('steps').innerHTML=F.map(([k,n],j)=>`<button data-go="${j}" class="${j===step?'on':j<step?'done':''}">${n}</button>`).join('');
  $('prev').style.visibility=step?'visible':'hidden';$('next').hidden=step===F.length-1;
  if(key!=='sync'&&key!=='video'){audio.pause()}
- if(key==='sync')renderSync();if(key==='people')renderPeople();if(key==='split')renderSplit();if(key==='look')renderThemes();if(key==='video'){sizePreview();audio.currentTime=0;drawPreview()}
+ if(key==='sync')renderSync();if(key==='people')renderPeople();if(key==='split'){if(P.people.length&&!Object.values(P.assign).some(a=>a&&a.length))autoSplit();else renderSplit()}if(key==='look')renderThemes();if(key==='video'){sizePreview();audio.currentTime=0;drawPreview()}
  window.scrollTo({top:0,behavior:'smooth'})}
 $('steps').addEventListener('click',e=>{const g=e.target.dataset.go;if(g!=null)show(+g)});
 $('prev').onclick=()=>show(step-1);
 $('next').onclick=()=>{const key=flow()[step][0];
  if(key==='song'&&!P.lines.length)return toast('קודם מדביקים את מילות השיר');
  if(key==='people'&&!P.people.length)return toast('מוסיפים לפחות משתתף אחד');
- if(key==='split'&&P.lines.some((l,i)=>!(P.assign[i]||[]).length)&&!confirm('יש שורות שלא שייכתם לאף אחד. להמשיך בכל זאת?'))return;
+ if(key==='split'){const r=checkSplit();if(r.issues.length&&!confirm(POLICY+'\n\nלהמשיך עם החלוקה הזאת בכל זאת?'))return;if(r.empty&&!confirm('יש '+r.empty+' שורות שלא שייכתם לאף אחד. להמשיך בכל זאת?'))return}
  show(step+1)};
 document.querySelectorAll('input[name=mode]').forEach(r=>r.onchange=()=>{mode=r.value;show(0)});
 
@@ -412,7 +457,7 @@ try{if(window.frameElement){document.documentElement.classList.add('embedded');c
 // ---------- boot ----------
 (async()=>{
  $('modeSeg').hidden=false; // stage 1: both views visible (stage 2: by personal link / admin)
- try{await document.fonts.load(`800 40px Rubik`);await document.fonts.load(`600 40px Rubik`)}catch(e){}
+ try{await Promise.all([document.fonts.load(`800 40px Rubik`),document.fonts.load(`600 40px Rubik`),document.fonts.load(`40px "Secular One"`)])}catch(e){}
  const saved=await DB.get('proj');if(saved&&saved.P){Object.assign(P,saved.P);P.img=saved.img||null;await loadImg()}
  const ab=await DB.get('audio');if(ab)await setAudio(ab,false);
  $('title').value=P.title;$('lyrics').value=P.lyrics;if(P.lyrics)reparse();if(P.ratio==='v')$('r-v').checked=true;

@@ -127,6 +127,7 @@ html.embedded .wrap{padding-block:12px 16px}
           <input type="radio" name="ev" id="ev-bar" value="bar"><label for="ev-bar">בר מצווה</label>
           <input type="radio" name="ev" id="ev-bd" value="bd"><label for="ev-bd">יום הולדת</label>
           <input type="radio" name="ev" id="ev-wed" value="wed"><label for="ev-wed">חתונה</label>
+          <input type="radio" name="ev" id="ev-hina" value="hina"><label for="ev-hina">חינה</label>
         </div>
         <div class="two">
           <div><label for="name" id="nameLbl">שם החוגגת</label><input type="text" id="name" placeholder="למשל: נועה"></div>
@@ -227,6 +228,11 @@ html.embedded .wrap{padding-block:12px 16px}
           <input type="radio" name="style" id="st-trad" value="trad"><label for="st-trad">מסורתי</label>
           <input type="radio" name="style" id="st-rel" value="rel"><label for="st-rel">דתי</label>
         </div>
+        <div id="flBox"><span class="lbl">ניחוח <span class="hint">(לא חובה)</span></span><div class="seg">
+          <input type="radio" name="fl" id="fl-none" value="" checked><label for="fl-none">בלי</label>
+          <input type="radio" name="fl" id="fl-sf" value="sf"><label for="fl-sf">מזרחי־ספרדי</label>
+          <input type="radio" name="fl" id="fl-ash" value="ash"><label for="fl-ash">אשכנזי</label>
+        </div></div>
         <p class="note" id="styleNote">מודרני: בלי ניסוחים דתיים. מסורתי: ניסוחים מוכרים מהבית, פרשת השבוע והחודש העברי. דתי: שפה דתית, ובברכת הורים או סבים גם ״ישימך״ וברכת הכוהנים.</p>
         <div class="seg">
           <input type="radio" name="tone" id="tn-warm" value="warm" checked><label for="tn-warm">מרגש</label>
@@ -296,8 +302,8 @@ function chips(box,arr,name,def){$(box).innerHTML=arr.map((t,i)=>`<input type="c
 const checked=box=>[...document.querySelectorAll('#'+box+' input:checked')].map(i=>+i.value);
 
 // ---------- mode ----------
-function mode(){const ev=val('ev');if(ev==='wed')return 'wed';if(ev==='bd'&&(+$('age').value||0)>=18)return 'adult';return 'child'}
-function cgOf(){const ev=val('ev');return ev==='bat'?'f':ev==='bar'?'m':ev==='wed'?'p':val('cg')}
+function mode(){const ev=val('ev');if(ev==='wed'||ev==='hina')return 'wed';if(ev==='bd'&&(+$('age').value||0)>=18)return 'adult';return 'child'}
+function cgOf(){const ev=val('ev');return ev==='bat'?'f':ev==='bar'?'m':(ev==='wed'||ev==='hina')?'p':val('cg')}
 function celebAge(){const ev=val('ev');return ev==='bat'?12:ev==='bar'?13:ev==='bd'?(+$('age').value||null):null}
 
 // ---------- lists ----------
@@ -428,16 +434,16 @@ function ctx(){
   const word=sg==='f'?'אחותך':'אחיך';const adj=r==='older'?(sg==='f'?' הגדולה':' הגדול'):r==='younger'?(sg==='f'?' הקטנה':' הקטן'):'';sign=spk?`${word}${adj} ${spk.n}`:word}
  if(from==='friends')sign='החברים שלך';if(from==='family')sign='כל המשפחה';
  const md=m==='adult'?'adult':m==='wed'?'wed':'kid';
- return {ev,m,md,cg,sg,from,rel,spk,open,signAuto:sign,name:ev==='wed'&&name2?name+' ו'+name2:name,age:$('age').value,
+ return {ev,m,md,cg,sg,from,rel,spk,open,signAuto:sign,name:(ev==='wed'||ev==='hina')&&name2?name+' ו'+name2:name,age:$('age').value,
   sibsMention,sibsG:typeof sibsG!=='undefined'?sibsG:null,alive,late,traits:checked('traits').map(i=>TRAITS[i]),
   hob:[...checked('hobbies').map(i=>HOB[md][i]),...$('hobbyFree').value.split(/,|\n/).map(s=>s.trim()).filter(Boolean)],
   tog:[...checked('together').map(i=>TOG[md][i]),...$('togetherFree').value.split(/,|\n/).map(s=>s.trim()).filter(Boolean)],
   memory:$('memory').value.trim(),how:$('wHow').value.trim(),grandkids:$('grandkids').value.trim(),
   thanks:checked('thanks').map(i=>THANKS[i][0]),thanksFree:$('thanksFree').value.trim(),
-  style:val('style'),tone:val('tone'),secs:+val('len'),sign:$('sign').value.trim(),hd:hebInfo($('evDate').value)}
+  style:val('style'),tone:val('tone'),secs:+val('len'),sign:$('sign').value.trim(),hd:hebInfo($('evDate').value),fl:val('style')==='mod'?'':(val('fl')||'')}
 }
 function G(str,c){return str.replace(/\[(c|s):([^\]]*)\]/g,(_,k,body)=>{const p=body.split('|');const g=k==='c'?c.cg:c.sg;return p[{f:0,m:1,p:2}[g]]??p[0]}).replace(/ {2,}/g,' ').replace(/ ([,.:])/g,'$1')}
-function evName(c){return {bat:'בת מצווה',bar:'בר מצווה',bd:'יום הולדת '+(c.age||''),wed:'חתונה'}[c.ev]}
+function evName(c){return {bat:'בת מצווה',bar:'בר מצווה',bd:'יום הולדת '+(c.age||''),wed:'חתונה',hina:'חינה'}[c.ev]}
 
 // ---------- generator: returns paragraphs, each with alternatives ----------
 function build(c){
@@ -446,16 +452,18 @@ function build(c){
  const short=c.secs<=40,isGrand=['grand','grandma','grandpa'].includes(c.from),fam=['parent','grand','grandma','grandpa','sib','sibs','family','kids','kid','grandkids','spouse','wparent'].includes(c.rel)||isGrand;
  const elder=c.rel==='parent'||isGrand||c.from==='family';
  const n=c.name,ev=evName(c),mitz=c.ev==='bar'||c.ev==='bat',child=c.m==='child';
- const REL=c.style==='rel',TRAD=c.style==='trad',parentV=c.rel==='parent'||isGrand;
+ const REL=c.style==='rel',TRAD=c.style==='trad',parentV=c.rel==='parent'||isGrand,SF=c.fl==='sf',ASH=c.fl==='ash',hina=c.ev==='hina';
  // shorthands: c = celebrant (f|m|plural), s = speaker (f|m|plural)
  const you='[c:את|אתה|אתם]',acc='[c:אותך|אותך|אתכם]',inY='[c:בך|בך|בכם]',toY='[c:לך|לך|לכם]',yours='[c:שלך|שלך|שלכם]',onY='[c:עלייך|עליך|עליכם]',withY='[c:איתך|איתך|איתכם]';
  const my='[s:שלי|שלי|שלנו]',me='[s:אותי|אותי|אותנו]',toMe='[s:לי|לי|לנו]',withMe='[s:איתי|איתי|איתנו]',proud='[s:גאה|גאה|גאים]',wish='[s:אני מאחלת|אני מאחל|אנחנו מאחלים]',celebrates='[c:את חוגגת|אתה חוגג|אתם חוגגים]';
  // ----- opening -----
- if(REL)S.push({order:-1,pri:0,alts:['בס״ד'],i:0});
+ if(REL)S.push({order:-1,pri:0,alts:SF?['בס״ד','ב״ה']:['בס״ד'],i:SF?Math.floor(rnd()*2):0});
+ if(SF&&!short)add(0.5,0,`בסימן טוב ובמזל טוב!`,REL?`ברוך השם, איזה יום של שמחה!`:`איזה יום של שמחה!`);
  if(c.open)add(0,0,c.rel==='spouse'?`${n}, ${c.open},`:`${c.open} [c:יקרה ואהובה|יקר ואהוב|],`,c.rel==='spouse'?`${c.open}, ${n},`:`${c.open} [c:היקרה|היקר|] ${my},`,c.rel==='spouse'?`${n} [c:שלי|שלי|], ${c.open},`:`${c.open} [c:אהובה|אהוב|] ${my},`,c.rel==='spouse'?null:`${c.open}, [c:האחת והיחידה|האחד והיחיד|],`);
- else add(0,0,`${n} [c:היקרה|היקר|היקרים] ${my},`,`${n} [c:אהובה|אהוב|אהובים] ${my},`,`${n}, [c:היקרה|היקר|היקרים] מכל,`,`${n} [c:האהובה|האהוב|האהובים],`,`ל${n} [c:היקרה|היקר|היקרים] ${my},`,`${n} ${my},`,c.tone==='fun'?`${n}, [c:כוכבת|כוכב|כוכבים] ${my},`:null,TRAD&&child?`${n} [c:המתוקה|המתוק|] ${my},`:null,TRAD?`${n} [c:היקרה והאהובה|היקר והאהוב|היקרים והאהובים],`:null);
+ else add(0,0,`${n} [c:היקרה|היקר|היקרים] ${my},`,`${n} [c:אהובה|אהוב|אהובים] ${my},`,`${n}, [c:היקרה|היקר|היקרים] מכל,`,`${n} [c:האהובה|האהוב|האהובים],`,`ל${n} [c:היקרה|היקר|היקרים] ${my},`,`${n} ${my},`,c.tone==='fun'?`${n}, [c:כוכבת|כוכב|כוכבים] ${my},`:null,TRAD&&child?`${n} [c:המתוקה|המתוק|] ${my},`:null,TRAD?`${n} [c:היקרה והאהובה|היקר והאהוב|היקרים והאהובים],`:null,SF?`${n}, [c:הנשמה|הנשמה|הנשמות] ${my},`:null,SF?`${n}, כפרה [c:עלייך|עליך|עליכם],`:null);
  // ----- the moment -----
  const relMoment=()=>{if(!REL||['sib','sibs'].includes(c.rel)||c.from==='friends')return false;
+  if(hina){add(1,0,`בשעה טובה ומוצלחת, הערב אנחנו חוגגים את החינה שלכם, ובעזרת ה׳ בקרוב תעמדו יחד מתחת לחופה.`,`ברוך ה׳, [s:זכיתי|זכיתי|זכינו] להגיע לערב החינה שלכם.`,`[s:אני מודה|אני מודה|אנחנו מודים] לקב״ה [s:שזכיתי|שזכיתי|שזכינו] לשמוח איתכם הערב, ערב החינה, רגע לפני החופה.`);return true}
   if(c.m==='wed'){add(1,0,`בשעה טובה ומוצלחת, אתם נכנסים היום לחופה ובונים בית נאמן בישראל.`,`ברוך ה׳, [s:זכיתי|זכיתי|זכינו] להגיע ליום הזה ולראות אתכם יחד תחת החופה.`,`[s:אני מודה|אני מודה|אנחנו מודים] לקב״ה [s:שזכיתי|שזכיתי|שזכינו] לשמוח היום בשמחתכם, שמחת חתן וכלה.`);
    if(c.how)add(2,3,`הכרתם ${c.how}, וברור לכולם שזה היה בהשגחה פרטית.`,`הכרתם ${c.how}, ומשמיים כבר ידעו שנועדתם זה לזה.`);return true}
   if(c.m==='adult'){add(1,0,c.rel==='spouse'?`${c.age} שנים, ו[s:אני מודה|אני מודה|] לקב״ה כל יום [s:שזכיתי|שזכיתי|] ללכת לצדך.`:`ברוך ה׳, [c:את חוגגת|אתה חוגג|] היום ${c.age}, ו[s:אני מודה|אני מודה|אנחנו מודים] לקב״ה על כל שנה ושנה.`,
@@ -467,6 +475,9 @@ function build(c){
   else add(1,0,`ברוך ה׳, [s:זכיתי|זכיתי|זכינו] לחגוג [c:איתך|איתך|] היום ${ev}.`,`בשעה טובה, [c:את חוגגת|אתה חוגג|] היום ${ev}, ו[s:אני מודה|אני מודה|אנחנו מודים] לקב״ה על כל יום [c:איתך|איתך|].`);
   return true};
  if(relMoment()){}
+ else if(hina){
+  add(1,0,`הערב אנחנו חוגגים את החינה שלכם, ו[s:הלב שלי מלא|הלב שלי מלא|הלב שלנו מלא] שמחה.`,`איזה ערב! עוד רגע חופה, והערב חוגגים חינה כמו שצריך, עם כל המשפחה.`,`[s:חיכיתי|חיכיתי|חיכינו] לערב הזה הרבה זמן: החינה שלכם, רגע לפני החופה.`,`ערב החינה הוא ערב של משפחה, של מסורת ושל הרבה אהבה, ו[s:אני כל כך שמחה|אני כל כך שמח|אנחנו כל כך שמחים] לחגוג אותו איתכם.`);
+  if(c.how)add(2,3,`הכרתם ${c.how}, ומאז ברור לכולם שנועדתם זה לזה.`,`הכרתם ${c.how}, ומשם הכל כבר היסטוריה.`)}
  else if(c.m==='wed'){
   add(1,0,`היום אתם מתחתנים, ו[s:הלב שלי מלא|הלב שלי מלא|הלב שלנו מלא] עד הסוף.`,`הרגע שבו אתם עומדים יחד מתחת לחופה הוא רגע ש[s:חיכיתי|חיכיתי|חיכינו] לו הרבה זמן.`,
    `[s:חיכיתי|חיכיתי|חיכינו] לרגע הזה הרבה זמן, ועכשיו כשהוא כאן, [s:אני מתרגשת|אני מתרגש|אנחנו מתרגשים] יותר ממה שמילים יכולות להגיד.`,
@@ -520,6 +531,7 @@ function build(c){
   if(c.m==='wed')add(2.6,2,`[s:אני מודה|אני מודה|אנחנו מודים] לה׳ על הזכות לראות אתכם מקימים בית, ומתפלל[s:ת||ים] שה׳ יהיה תמיד שותף שלישי בבית שלכם.`);
   else if(child)add(2.6,2,`[s:אני מודה|אני מודה|אנחנו מודים] לקב״ה בכל יום על המתנה הגדולה [c:שאת|שאתה|] [s:בשבילי|בשבילי|בשבילנו].`,`כל יום [c:איתך|איתך|] הוא מתנה מהקב״ה, ו[s:אני יודעת|אני יודע|אנחנו יודעים] להודות עליה.`);
   else add(2.6,2,`[s:אני מודה|אני מודה|אנחנו מודים] לה׳ על [c:אישה|איש|] כמוך בחיים [s:שלי|שלי|שלנו].`)}
+ if(hina)add(2.2,1,`החינה היא סימן של ברכה, של מזל ושל שמחה, כמו שחגגו הסבתות שלנו, ולפניהן הסבתות שלהן.`,`שהברכה תידבק בכם כמו החינה בכפות הידיים, ותישאר איתכם לאורך כל הדרך.`,`כמו שהחינה צובעת את כפות הידיים, כך שהאהבה שלכם תצבע כל יום בחיים שלכם.`);
  // ----- middle paragraphs, in random order -----
  const mid=shuf([3,4,5,6]);
  if(c.traits.length){const forms=c.traits.map(t=>t[{f:0,m:1,p:2}[c.cg]]);const tl=joinHe(short?forms.slice(0,2):forms.slice(0,4));
@@ -553,7 +565,8 @@ function build(c){
    `[s:ואני בטוחה|ואני בטוח|ואנחנו בטוחים] ש${L} ${g('רואים','רואה','רואה')} ${acc} מלמעלה ו${g('גאים','גאה','גאה')} ${inY}.`,
    `${L} ${g('חסרים','חסרה','חסר')} ${toMe} היום מאוד, אבל [s:אני יודעת|אני יודע|אנחנו יודעים] ש${g('הם','היא','הוא')} כאן איתנו, בלב.`)}
  // ----- looking ahead -----
- if(!short){if(c.m==='wed')add(10.5,4,`מהיום, כל החלומות כבר לא רק שלו או שלה. הם שלכם.`,`אתם מתחילים היום דרך חדשה, וכל המשפחה הולכת איתכם.`,`הבית שתבנו יחד יהיה המקום הכי חם בעולם, [s:אני בטוחה|אני בטוח|אנחנו בטוחים] בזה.`);
+ if(!short){if(hina)add(10.5,4,`בקרוב תעמדו יחד מתחת לחופה, ו[s:אני כבר מחכה|אני כבר מחכה|אנחנו כבר מחכים] לרגע הזה.`,`עוד כמה ימים ותתחילו יחד את הפרק הכי יפה בחיים, וכל המשפחה הולכת איתכם.`);
+  else if(c.m==='wed')add(10.5,4,`מהיום, כל החלומות כבר לא רק שלו או שלה. הם שלכם.`,`אתם מתחילים היום דרך חדשה, וכל המשפחה הולכת איתכם.`,`הבית שתבנו יחד יהיה המקום הכי חם בעולם, [s:אני בטוחה|אני בטוח|אנחנו בטוחים] בזה.`);
   else if(c.m==='adult')add(10.5,4,`[s:ואני בטוחה|ואני בטוח|ואנחנו בטוחים] שהשנים הכי טובות עוד [c:לפנייך|לפניך|].`,`וזו רק עוד תחנה בדרך, הכי יפה שיש.`);
   else add(10.5,4,`[s:אני לא יודעת|אני לא יודע|אנחנו לא יודעים] לאן החיים ייקחו ${acc}, אבל [s:אני בטוחה|אני בטוח|אנחנו בטוחים] שזה יהיה למקום טוב.`,`הדרך ${yours} רק מתחילה, ו[s:אני כאן|אני כאן|אנחנו כאן] בשבילך, בכל צעד.`,
    `מהיום והלאה ${you} [c:כותבת|כותב|כותבים] את הסיפור ${yours}, ו[s:אני מחכה|אני מחכה|אנחנו מחכים] לכל פרק.`)}
@@ -586,12 +599,16 @@ function build(c){
  if(child&&c.style==='rel')W.push(`[c:שתזכי|שתזכה|] לגדול לתורה, לחופה ולמעשים טובים, מתוך שמחה ובריאות.`,`[c:ישימך אלוקים כשרה, רבקה, רחל ולאה.|ישימך אלוקים כאפרים וכמנשה.|]`);
  const birkat=REL&&child&&parentV;if(birkat){for(let k=W.length-1;k>=0;k--)if(/ישימך|יברכ\[/.test(W[k]))W.splice(k,1)}
  if(REL){W.push(`שה׳ ישמור ${onY} מכל רע, וימלא את כל משאלות לב[c:ך|ך|כם] לטובה.`,`[c:שתזכי|שתזכה|שתזכו] לאריכות ימים ושנים, בבריאות, בשמחה ובנחת.`);if(child)W.push(`[c:שתהיי בת תורה|שתהיה בן תורה|], [c:שתלכי|שתלך|] בדרכי ה׳ [c:ותביאי|ותביא|] נחת לכל המשפחה.`)}
+ const W0=W.length;
+ if(SF){W.push(`ושה׳ ייתן ${toY} בריאות, אושר ועושר, וימלא את כל משאלות לב[c:ך|ך|כם] לטובה. אמן.`,`[c:שתזכי|שתזכה|שתזכו], בעזרת השם, לכל הברכות שבעולם. אמן.`);if(child)W.push(`[c:שתזכי|שתזכה|] לתורה, לחופה ולמעשים טובים, ושנזכה לשמוח [c:בשמחתך|בשמחתך|] תמיד.`);if(c.m==='wed')W.push(`שתזכו לבנים ובני בנים, ולבית מלא בשמחה ובברכה. אמן.`)}
+ const FW=new Set(W.slice(W0).map(x=>G(x,c)));
+ if(ASH){W.push(`[c:שתביאי|שתביא|שתביאו] רק נחת, נחת ועוד נחת.`,`ועד מאה ועשרים, או כמו שאומרים אצלנו: ביז הונדערט און צוואנציק!`);if(REL&&child)W.push(`[c:שתהיי בת תורה ויראת שמיים|שתהיה בן תורה וירא שמיים|], [c:ותביאי|ותביא|] הרבה נחת לכל המשפחה.`);W.slice(W0).forEach(x=>FW.add(G(x,c)))}
  if(TRAD){W.push(`ושתמיד [c:תהיי בריאה ומאושרת|תהיה בריא ומאושר|תהיו בריאים ומאושרים], עד מאה ועשרים.`,`[c:שתביאי|שתביא|שתביאו] לכולנו רק נחת ושמחות.`)}
  if(mitz&&c.style!=='mod')W.push(`[c:שתזכי|שתזכה|] לקיים מצוות מתוך שמחה, ושכל צעד בדרך יהיה מלא בברכה.`);
  if(c.m==='adult'){W.push(`${wish} [c:לך|לך|] בריאות, הרבה נחת ועוד שנים רבות של שמחה, עד 120.`,`${wish} [c:לך|לך|] שנה של בריאות, של שקט ושל רגעים טובים עם כל מי [c:שאת אוהבת|שאתה אוהב|].`);W.unshift(`עד 120, בבריאות ובשמחה, [c:מוקפת|מוקף|] באהבה של כל המשפחה.`,`עוד הרבה שנים טובות, מלאות בנחת ובשמחה.`)}
  if(c.m==='wed'&&REL)W.unshift(`שתזכו לבנות בית נאמן בישראל, בית של תורה, של חסד ושל שלום.`,`ויקוים בכם ״עוד ישמע בערי יהודה ובחוצות ירושלים, קול ששון וקול שמחה, קול חתן וקול כלה״.`);
  if(c.m==='wed')W.unshift(`${wish} לכם בית מלא באהבה, בצחוק ובשקט, ושתמיד תמצאו אחד בשני את הבית.`,`שתבנו יחד בית נאמן, שמח ומלא אהבה, ושכל יום יהיה טוב יותר מקודמו.`,`שתמיד תדעו לצחוק יחד, לסלוח אחד לשני ולבחור זה בזו מחדש בכל יום.`,`שהאהבה שלכם רק תלך ותגדל, ושהבית שלכם יהיה תמיד פתוח ומלא בשמחה.`,`${wish} לכם שותפות אמיתית, סבלנות, הרבה הומור ובית חם ומלא באהבה.`);
- const WA=W.map(x=>G(x,c)).filter(x=>x.trim());const order=shuf([...WA.keys()]);
+ const WA=W.map(x=>G(x,c)).filter(x=>x.trim());const order=shuf([...WA.keys()]);{const k=order.findIndex(j=>FW.has(WA[j]));if(k>0)[order[0],order[k]]=[order[k],order[0]]}
  S.push({order:11,pri:0,alts:WA,i:order[0]});S.push({order:12,pri:5,alts:WA,i:order[1]});S.push({order:13,pri:7,alts:WA,i:order[2]});
  // ----- thanks -----
  const T={idf:['ותודה גדולה לחיילי צה״ל ששומרים עלינו, ושבזכותם אנחנו יכולים לשמוח היום.','ושולחים חיבוק גדול לחיילי צה״ל, ששומרים עלינו כדי שנוכל לחגוג.','וחיבוק גדול לחיילי צה״ל ולכוחות הביטחון, שבזכותם אנחנו כאן היום.'],
@@ -604,7 +621,9 @@ function build(c){
   S.push({order:15.6,pri:0,alts:[G(`[s:ואסיים|ואסיים|ונסיים] בברכה [s:שאני מברכת|שאני מברך|שאנחנו מברכים] [c:אותך|אותך|] בכל ליל שבת: ${boy?'״ישימך אלוקים כאפרים וכמנשה״.':'״ישימך אלוקים כשרה, רבקה, רחל ולאה״.'}`,c),G(`[s:ואני מניחה|ואני מניח|ואנחנו מניחים] ידיים על ראש[c:ך|ך|] ו[s:מברכת|מברך|מברכים]: ${boy?'״ישימך אלוקים כאפרים וכמנשה״.':'״ישימך אלוקים כשרה, רבקה, רחל ולאה״.'}`,c)],i:Math.floor(rnd()*2)});
   S.push({order:15.7,pri:0,alts:[boy?'״יברכך ה׳ וישמרך. יאר ה׳ פניו אליך ויחנך. ישא ה׳ פניו אליך וישם לך שלום״.':'״יברכך ה׳ וישמרך. יאר ה׳ פניו אלייך ויחונך. ישא ה׳ פניו אלייך וישם לך שלום״.'],i:0})}
  // ----- closing + sign -----
- if(REL)add(16,0,`בברכת מזל טוב ובשורות טובות,`,`באהבה ובברכה,`,`[s:המברכת|המברך|המברכים] באהבה,`,`בברכה ובאהבה גדולה,`);
+ if(SF)add(16,0,`בסימן טוב ובמזל טוב,`,`[s:אוהבת|אוהב|אוהבים] ${acc}, כפרה [c:עלייך|עליך|עליכם],`,`באהבה גדולה, ובעזרת השם רק שמחות,`,REL?`בברכת מזל טוב ובשורות טובות,`:`מזל טוב מכל הלב,`);
+ else if(ASH)add(16,0,`מזל טוב, וביז הונדערט און צוואנציק!`,`באהבה ובנחת,`,`בברכת מזל טוב,`,REL?`בברכת מזל טוב ובשורות טובות,`:`עם כל האהבה שבעולם,`);
+ else if(REL)add(16,0,`בברכת מזל טוב ובשורות טובות,`,`באהבה ובברכה,`,`[s:המברכת|המברך|המברכים] באהבה,`,`בברכה ובאהבה גדולה,`);
  else if(TRAD)add(16,0,`בברכת מזל טוב,`,`מזל טוב, ועד מאה ועשרים!`,`[s:אוהבת|אוהב|אוהבים] ${acc} עד השמיים,`,`מזל טוב מכל הלב,`,`עם כל האהבה שבעולם,`);
  else add(16,0,`[s:אוהבת|אוהב|אוהבים] ${acc} עד השמיים,`,`מזל טוב, [s:ואוהבת|ואוהב|ואוהבים] ${acc} תמיד,`,`[s:אוהבת|אוהב|אוהבים] ${acc} בלי סוף,`,`מזל טוב, [c:יקרה|יקר|יקרים] ${my},`,`באהבה גדולה,`,
   `[s:אוהבת|אוהב|אוהבים] ו[s:גאה|גאה|גאים] ${inY} תמיד,`,`עם כל האהבה שבעולם,`,`מזל טוב מכל הלב,`);
@@ -651,7 +670,7 @@ $('redo').onclick=()=>{if(hi<hist.length-1)restore(hi+1)};
 // ---------- form sync ----------
 function syncForm(){const ev=val('ev'),m=mode(),cg=cgOf();
  document.querySelectorAll('[data-show]').forEach(el=>{const s=el.dataset.show;el.hidden=!(s===ev||s===m)});
- $('nameLbl').textContent=ev==='wed'?'שם הכלה':cg==='m'?'שם החוגג':'שם החוגגת';$('aboutLbl').textContent=ev==='wed'?'על הזוג':cg==='m'?'על החוגג':'על החוגגת';$('story').placeholder=ev==='wed'?'למשל: זוג מצחיק ונדיב, אוהבים לטייל ולארח חברים':cg==='m'?'למשל: מצחיק ורגיש, אוהב כדורגל ולנגן בגיטרה, ותמיד דואג לאחים הקטנים':'למשל: מצחיקה ורגישה, אוהבת לרקוד ולצייר, ותמיד דואגת לאחים הקטנים';
+ const W2=ev==='wed'||ev==='hina';$('flBox').hidden=val('style')==='mod';$('nameLbl').textContent=W2?'שם הכלה':cg==='m'?'שם החוגג':'שם החוגגת';$('aboutLbl').textContent=W2?'על הזוג':cg==='m'?'על החוגג':'על החוגגת';$('story').placeholder=W2?'למשל: זוג מצחיק ונדיב, אוהבים לטייל ולארח חברים':cg==='m'?'למשל: מצחיק ורגיש, אוהב כדורגל ולנגן בגיטרה, ותמיד דואג לאחים הקטנים':'למשל: מצחיקה ורגישה, אוהבת לרקוד ולצייר, ותמיד דואגת לאחים הקטנים';
  $('w1t').textContent='הצד של '+($('name').value.trim()||'הכלה');$('w2t').textContent='הצד של '+($('name2').value.trim()||'החתן');
  const [l1,l2]=parentLabels();$('p1Lbl').textContent='שם ה'+l1;$('p2Box').hidden=!l2;if(l2)$('p2Lbl').textContent='שם ה'+l2+(l1===l2?' השני/ה':'');
  const md=m==='adult'?'adult':m==='wed'?'wed':'kid';

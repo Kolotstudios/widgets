@@ -1,4 +1,4 @@
-<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base target="_blank"><title>מחולל הברכות של קולות</title>
+<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base target="_blank"><title>מחולל ברכות – אולפני קולות</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700&family=Assistant:wght@400;600;700&display=swap">
@@ -76,32 +76,41 @@ button.small{padding:5px 12px;font-size:14px;justify-self:start}
 .toast.show{opacity:1}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
 
-/* embed mode: fixed-height app, panes scroll inside */
-html,body{height:100%}
-body{overflow:hidden}
-.wrap{height:100%;grid-template-rows:auto auto 1fr;padding-block:10px;gap:10px}
-header h1{font-size:clamp(22px,4vw,30px)}
-header p{font-size:14px}
-.grid{min-height:0;height:100%}
-form,.result{height:100%;min-height:0;overflow:auto}
-.result{position:static;align-content:start;padding-bottom:16px}
-.tabs{display:none;gap:6px}
-.tabs button{flex:1}
-.tabs button[aria-selected=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
-@media (max-width:840px){.tabs{display:flex}.grid[data-tab=form] .result{display:none}.grid[data-tab=res] form{display:none}header p{display:none}}
-header{display:none!important}</style></head><body>
+/* wizard */
+.steps{display:flex;gap:6px;flex-wrap:wrap;counter-reset:st}
+.steps button{flex:1 1 0;min-width:0;padding:6px 4px;font-size:13px;border-radius:999px;background:var(--bg);color:var(--muted);border:1.5px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.steps button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.steps button.done{color:var(--ink);border-color:var(--accent)}
+.stepHidden{display:none!important}
+.nav{display:flex;gap:8px;align-items:center;border-top:1px solid var(--line);padding-top:12px}
+.nav .sp,.bar .sp{flex:1}
+.mobileOnly{display:none}
+.grid:not(.gen) .result .bar,.grid:not(.gen) .meta,.grid:not(.gen) .result .row,.grid:not(.gen) .result>.note{display:none}
+.placeholder{color:var(--muted);text-align:center;padding:40px 10px;font-family:var(--f-body)}
+.result{position:static}
+@media (max-width:840px){
+  .bar button{padding:6px 10px;font-size:13px}
+  .mobileOnly{display:inline-block;justify-self:start}
+  .grid[data-view=form] .result{display:none}
+  .grid[data-view=result] form{display:none}
+}
+
+header{display:none!important}
+html.embedded,html.embedded body{overflow:hidden;background:transparent}
+html.embedded .wrap{padding-block:12px 16px}
+</style></head><body>
 
 <div class="wrap">
   <header>
     <div class="brand">אולפני קולות</div>
-    <h1>מחולל הברכות של קולות</h1>
+    <h1>מחולל ברכות</h1>
     <p>ממלאים כמה פרטים ומקבלים טיוטה של ברכה להקלטה באולפן. לוחצים על משפט כדי לערוך אותו, לבקש ניסוח אחר או למחוק. כשמוכן, שולחים לנו.</p>
   </header>
 
-  <div class="tabs" role="tablist"><button type="button" id="tabForm" aria-selected="true">1. הפרטים</button><button type="button" id="tabRes" aria-selected="false">2. הברכה</button></div>
-  <div class="grid" id="grid" data-tab="form">
+  <div class="grid" id="grid" data-view="form">
     <form id="f" autocomplete="off">
-      <fieldset>
+      <div class="steps" id="steps"></div>
+      <fieldset data-step="1">
         <legend>האירוע</legend>
         <div class="seg">
           <input type="radio" name="ev" id="ev-bat" value="bat" checked><label for="ev-bat">בת מצווה</label>
@@ -110,19 +119,18 @@ header{display:none!important}</style></head><body>
           <input type="radio" name="ev" id="ev-wed" value="wed"><label for="ev-wed">חתונה</label>
         </div>
         <div class="two">
-          <div><label for="name" id="nameLbl">שם החוגגת</label><input type="text" id="name" value="נועה"></div>
-          <div data-show="bd"><label for="age">גיל</label><input type="number" id="age" min="1" max="120" value="60"></div>
-          <div data-show="wed"><label for="name2">שם החתן</label><input type="text" id="name2" value="יואב"></div>
+          <div><label for="name" id="nameLbl">שם החוגגת</label><input type="text" id="name" placeholder="למשל: נועה"></div>
+          <div data-show="bd"><label for="age">גיל</label><input type="number" id="age" min="1" max="120" placeholder="למשל: 40"></div>
+          <div data-show="wed"><label for="name2">שם החתן</label><input type="text" id="name2" placeholder="למשל: יואב"></div>
         </div>
         <div data-show="bd" class="seg">
           <input type="radio" name="cg" id="cg-f" value="f" checked><label for="cg-f">חוגגת</label>
           <input type="radio" name="cg" id="cg-m" value="m"><label for="cg-m">חוגג</label>
         </div>
       </fieldset>
-      <div class="sep"></div>
 
       <!-- family: child (bat/bar/young birthday) -->
-      <fieldset data-show="child">
+      <fieldset data-step="2" data-show="child">
         <legend>המשפחה</legend>
         <div><span class="lbl">ההורים</span>
           <div class="seg">
@@ -134,8 +142,8 @@ header{display:none!important}</style></head><body>
           </div>
         </div>
         <div class="two">
-          <div><label for="p1" id="p1Lbl">שם האמא</label><input type="text" id="p1" value="מיכל"></div>
-          <div id="p2Box"><label for="p2" id="p2Lbl">שם האבא</label><input type="text" id="p2" value="אבי"></div>
+          <div><label for="p1" id="p1Lbl">שם האמא</label><input type="text" id="p1" placeholder="למשל: מיכל"></div>
+          <div id="p2Box"><label for="p2" id="p2Lbl">שם האבא</label><input type="text" id="p2" placeholder="למשל: אבי"></div>
         </div>
         <div><span class="lbl">אחים ואחיות</span><div class="lst" id="sibs"></div>
           <button type="button" class="small" data-add="sibs" style="margin-top:6px">+ הוספת אח או אחות</button></div>
@@ -143,67 +151,63 @@ header{display:none!important}</style></head><body>
       </fieldset>
 
       <!-- family: adult birthday -->
-      <fieldset data-show="adult">
+      <fieldset data-step="2" data-show="adult">
         <legend>המשפחה</legend>
         <div class="two">
-          <div><label for="spouse">בן/בת הזוג</label><input type="text" id="spouse" value="דוד"></div>
+          <div><label for="spouse">בן/בת הזוג</label><input type="text" id="spouse" placeholder="למשל: דוד"></div>
           <div><span class="lbl">&nbsp;</span><div class="seg"><input type="radio" name="spg" id="spg-m" value="m" checked><label for="spg-m">בעל</label><input type="radio" name="spg" id="spg-f" value="f"><label for="spg-f">אישה</label></div></div>
         </div>
         <div><span class="lbl">ילדים</span><div class="lst" id="kids"></div>
           <button type="button" class="small" data-add="kids" style="margin-top:6px">+ הוספת ילד או ילדה</button></div>
-        <div><label for="grandkids">נכדים ונכדות <span class="hint">(שמות, מופרדים בפסיק)</span></label><input type="text" id="grandkids" value="אורי, מאיה"></div>
+        <div><label for="grandkids">נכדים ונכדות <span class="hint">(שמות, מופרדים בפסיק)</span></label><input type="text" id="grandkids" placeholder="למשל: אורי, מאיה"></div>
         <div><span class="lbl">אחים ואחיות</span><div class="lst" id="asibs"></div>
           <button type="button" class="small" data-add="asibs" style="margin-top:6px">+ הוספת אח או אחות</button></div>
         <div class="box"><div class="t">ההורים של החוגג/ת</div>
-          <div class="pair"><span>אמא</span><input type="text" id="amom" value="אסתר"><label class="late"><input type="checkbox" id="amomLate"> ז״ל</label></div>
-          <div class="pair"><span>אבא</span><input type="text" id="adad" value="שמעון"><label class="late"><input type="checkbox" id="adadLate" checked> ז״ל</label></div>
+          <div class="pair"><span>אמא</span><input type="text" id="amom" placeholder="למשל: אסתר"><label class="late"><input type="checkbox" id="amomLate"> ז״ל</label></div>
+          <div class="pair"><span>אבא</span><input type="text" id="adad" placeholder="למשל: שמעון"><label class="late"><input type="checkbox" id="adadLate"> ז״ל</label></div>
         </div>
       </fieldset>
 
       <!-- family: wedding -->
-      <fieldset data-show="wed">
+      <fieldset data-step="2" data-show="wed">
         <legend>המשפחות</legend>
         <div class="box"><div class="t" id="w1t">הצד של הכלה</div>
-          <div class="pair"><span>אמא</span><input type="text" id="w1m" value="מיכל"><label class="late"><input type="checkbox" id="w1mL"> ז״ל</label></div>
-          <div class="pair"><span>אבא</span><input type="text" id="w1d" value="אבי"><label class="late"><input type="checkbox" id="w1dL"> ז״ל</label></div>
+          <div class="pair"><span>אמא</span><input type="text" id="w1m" placeholder="למשל: מיכל"><label class="late"><input type="checkbox" id="w1mL"> ז״ל</label></div>
+          <div class="pair"><span>אבא</span><input type="text" id="w1d" placeholder="למשל: אבי"><label class="late"><input type="checkbox" id="w1dL"> ז״ל</label></div>
         </div>
         <div class="box"><div class="t" id="w2t">הצד של החתן</div>
-          <div class="pair"><span>אמא</span><input type="text" id="w2m" value="רונית"><label class="late"><input type="checkbox" id="w2mL"> ז״ל</label></div>
-          <div class="pair"><span>אבא</span><input type="text" id="w2d" value="יוסי"><label class="late"><input type="checkbox" id="w2dL"> ז״ל</label></div>
+          <div class="pair"><span>אמא</span><input type="text" id="w2m" placeholder="למשל: רונית"><label class="late"><input type="checkbox" id="w2mL"> ז״ל</label></div>
+          <div class="pair"><span>אבא</span><input type="text" id="w2d" placeholder="למשל: יוסי"><label class="late"><input type="checkbox" id="w2dL"> ז״ל</label></div>
         </div>
         <div><label for="wlate">סבים וסבתות שכבר אינם <span class="hint">(לא חובה)</span></label><input type="text" id="wlate" placeholder="למשל: סבתא לאה, סבא חיים"></div>
-        <div><label for="wHow">איך הכירו <span class="hint">(משפט קצר, לא חובה)</span></label><input type="text" id="wHow" value="בטיול אחרי הצבא"></div>
+        <div><label for="wHow">איך הכירו <span class="hint">(משפט קצר, לא חובה)</span></label><input type="text" id="wHow" placeholder="למשל: בטיול אחרי הצבא"></div>
       </fieldset>
-      <div class="sep"></div>
 
-      <fieldset>
+      <fieldset data-step="3">
         <legend>מי מברך</legend>
         <select id="from"></select>
         <div id="sideBox" hidden><label for="side">מאיזה צד</label><select id="side"></select></div>
         <div id="pickBox" hidden><label for="pick" id="pickLbl">מי</label><select id="pick"></select><p class="warn" id="pickWarn" hidden>מוסיפים קודם את השמות בחלק "המשפחה".</p></div>
         <div><label for="sign">חתימה <span class="hint">(מתמלאת לבד, אפשר לשנות)</span></label><input type="text" id="sign"></div>
       </fieldset>
-      <div class="sep"></div>
 
-      <fieldset>
+      <fieldset data-step="4">
         <legend id="aboutLbl">על החוגגת</legend>
         <div><span class="lbl">תכונות</span><div class="seg" id="traits"></div></div>
         <div id="hobBox"><span class="lbl">תחביבים</span><div class="seg" id="hobbies"></div>
           <input type="text" id="hobbyFree" placeholder="עוד משהו? למשל: לרכוב על סוסים" style="margin-top:6px"></div>
         <div id="togetherBox"><span class="lbl" id="togetherLbl">מה אוהבים לעשות יחד</span><div class="seg" id="together"></div>
           <input type="text" id="togetherFree" placeholder="עוד משהו שלכם, למשל: ארוחת בוקר בשבת" style="margin-top:6px"></div>
-        <div><label for="memory">רגע או זיכרון קטן <span class="hint">(משפט אחד, לא חובה)</span></label><textarea id="memory">כשהיית בת חמש עלית על הבמה בגן ולא הסכמת לרדת</textarea></div>
+        <div><label for="memory">רגע או זיכרון קטן <span class="hint">(משפט אחד, לא חובה)</span></label><textarea id="memory" placeholder="למשל: כשהיית בת חמש עלית על הבמה בגן ולא הסכמת לרדת"></textarea></div>
       </fieldset>
-      <div class="sep"></div>
 
-      <fieldset>
+      <fieldset data-step="5">
         <legend>תודות</legend>
         <div class="seg" id="thanks"></div>
         <input type="text" id="thanksFree" placeholder="תודה למישהו מיוחד, למשל: למורה דינה">
       </fieldset>
-      <div class="sep"></div>
 
-      <fieldset>
+      <fieldset data-step="5">
         <legend>סגנון ואורך</legend>
         <div class="seg">
           <input type="radio" name="style" id="st-mod" value="mod" checked><label for="st-mod">מודרני</label>
@@ -222,14 +226,17 @@ header{display:none!important}</style></head><body>
           <input type="radio" name="len" id="ln-120" value="120"><label for="ln-120">2 דקות</label>
         </div>
       </fieldset>
-      <div class="row"><button class="primary" type="submit">יצירת ברכה</button><button type="button" id="again">גרסה אחרת לכל הברכה</button></div>
+      <p class="warn" id="formWarn" hidden></p>
+      <div class="nav"><button type="button" id="prev">→ הקודם</button><span class="sp"></span><button type="button" class="primary" id="next">הבא ←</button><button class="primary" type="submit" id="go">יצירת ברכה ✦</button></div>
     </form>
 
     <div class="result">
+      <button type="button" id="backEdit" class="mobileOnly">→ חזרה לעריכת הפרטים</button>
       <div class="bar">
         <button id="undo" title="ביטול (Ctrl+Z)">↶ ביטול</button>
         <button id="redo" title="חזרה (Ctrl+Y)">↷ חזרה</button>
         <span class="sp"></span>
+        <button id="again">גרסה אחרת</button>
         <button id="shorter">קיצור</button>
       </div>
       <div class="card"><div class="orn">✦ ✦ ✦</div><div id="blocks"></div></div>
@@ -273,12 +280,12 @@ function cgOf(){const ev=val('ev');return ev==='bat'?'f':ev==='bar'?'m':ev==='we
 function celebAge(){const ev=val('ev');return ev==='bat'?12:ev==='bar'?13:ev==='bd'?(+$('age').value||null):null}
 
 // ---------- lists ----------
-const LISTS={sibs:[{n:'יואב',g:'m',a:15},{n:'תמר',g:'f',a:8}],kids:[{n:'שירה',g:'f',a:34},{n:'רועי',g:'m',a:30}],asibs:[{n:'רינה',g:'f',a:63}]};
+const LISTS={sibs:[],kids:[],asibs:[]};
 const LBL={sibs:['אח','אחות'],asibs:['אח','אחות'],kids:['בן','בת']};
 function renderList(k){$(k).innerHTML=LISTS[k].map((s,i)=>`<div class="it"><input type="text" data-l="${k}" data-i="${i}" data-k="n" value="${esc(s.n)}" placeholder="שם" aria-label="שם"><select data-l="${k}" data-i="${i}" data-k="g" aria-label="סוג"><option value="m"${s.g==='m'?' selected':''}>${LBL[k][0]}</option><option value="f"${s.g==='f'?' selected':''}>${LBL[k][1]}</option></select><input type="number" data-l="${k}" data-i="${i}" data-k="a" value="${s.a??''}" min="0" max="120" placeholder="גיל" aria-label="גיל"><button type="button" class="x" data-l="${k}" data-del="${i}" aria-label="הסרה">×</button></div>`).join('')||'<p class="note">אין שמות ברשימה.</p>'}
 document.addEventListener('input',e=>{const t=e.target;if(!t.dataset.l||t.dataset.i==null)return;const s=LISTS[t.dataset.l][+t.dataset.i];s[t.dataset.k]=t.dataset.k==='a'?(t.value===''?null:+t.value):t.value;refresh()});
 document.addEventListener('click',e=>{const t=e.target;if(t.dataset.del!=null&&t.dataset.l){LISTS[t.dataset.l].splice(+t.dataset.del,1);renderList(t.dataset.l);refresh()}if(t.dataset.add){LISTS[t.dataset.add].push({n:'',g:'f',a:null});renderList(t.dataset.add);$(t.dataset.add).querySelector('.it:last-child input').focus()}});
-const GP={s1:{gpa:'משה',gpaLate:false,gma:'רחל',gmaLate:false},s2:{gpa:'יוסף',gpaLate:true,gma:'שרה',gmaLate:false}};
+const GP={s1:{gpa:'',gpaLate:false,gma:'',gmaLate:false},s2:{gpa:'',gpaLate:false,gma:'',gmaLate:false}};
 function parentLabels(){return {mf:['אמא','אבא'],ff:['אמא','אמא'],mm:['אבא','אבא'],f:['אמא',null],m:['אבא',null]}[val('pc')]}
 function renderGps(){const [l1,l2]=parentLabels();const p1=$('p1').value.trim(),p2=$('p2').value.trim();
  const side=(k,lbl,nm)=>`<div class="box"><div class="t">הצד של ${esc(lbl)}${nm?' '+esc(nm):''}</div>
@@ -314,7 +321,7 @@ function ctx(){
   else if(from==='sib'){spk=LISTS.sibs[+$('pick').value]||LISTS.sibs.find(s=>s.n)||null;sg=spk?spk.g:'f'}
   else if(from==='sibs'){const ns=LISTS.sibs.map(s=>s.n).filter(Boolean);sign=ns.length?'האחים שלך, '+joinHe(ns):'האחים שלך'}
   [['s1'],l2?['s2']:null].filter(Boolean).forEach(([k])=>{const g=GP[k];if(g.gpa)(g.gpaLate?late:alive).push('סבא '+g.gpa);if(g.gma)(g.gmaLate?late:alive).push('סבתא '+g.gma)});
-  sibsMention=LISTS.sibs.filter(s=>s.n&&s!==spk).map(s=>s.n)}
+  sibsMention=LISTS.sibs.filter(s=>s.n&&s!==spk).map(s=>s.n);var sibsG=(LISTS.sibs.find(s=>s.n&&s!==spk)||{}).g}
  else if(m==='adult'){
   if(from==='spouse'){sg=val('spg');sign=$('spouse').value.trim()||(sg==='f'?'אשתך':'בעלך');open=cg==='f'?'אהובתי':'אהובי'}
   else if(from==='kids'){const ns=LISTS.kids.map(s=>s.n).filter(Boolean);sign=ns.length?'הילדים שלך, '+joinHe(ns):'הילדים שלך';open=cg==='f'?'אמא':'אבא'}
@@ -335,7 +342,7 @@ function ctx(){
  if(from==='friends')sign='החברים שלך';if(from==='family')sign='כל המשפחה';
  const md=m==='adult'?'adult':m==='wed'?'wed':'kid';
  return {ev,m,md,cg,sg,from,rel,spk,open,signAuto:sign,name:ev==='wed'&&name2?name+' ו'+name2:name,age:$('age').value,
-  sibsMention,alive,late,traits:checked('traits').map(i=>TRAITS[i]),
+  sibsMention,sibsG:typeof sibsG!=='undefined'?sibsG:null,alive,late,traits:checked('traits').map(i=>TRAITS[i]),
   hob:[...checked('hobbies').map(i=>HOB[md][i]),...$('hobbyFree').value.split(/,|\n/).map(s=>s.trim()).filter(Boolean)],
   tog:[...checked('together').map(i=>TOG[md][i]),...$('togetherFree').value.split(/,|\n/).map(s=>s.trim()).filter(Boolean)],
   memory:$('memory').value.trim(),how:$('wHow').value.trim(),grandkids:$('grandkids').value.trim(),
@@ -380,7 +387,7 @@ function build(c){
  if(c.hob.length)add(6,4,`[c:וכשאת עסוקה|וכשאתה עסוק|וכשאתם עסוקים] במה ש[c:את אוהבת|אתה אוהב|אתם אוהבים], ${joinHe(c.hob.slice(0,3))}, רואים כמה אור יש [c:בך|בך|בכם].`,`[c:את אוהבת|אתה אוהב|אתם אוהבים] ${joinHe(c.hob.slice(0,3))}, [c:ותמשיכי|ותמשיך|ותמשיכו] לעשות את מה שמשמח [c:אותך|אותך|אתכם].`);
  if(c.tone==='fun')add(7,5,c.m==='kid'||c.m==='child'?`ותודה על כל הפעמים ש[c:הרמת|הרמת|הרמתם] את הבית, גם כשביקשנו קצת שקט.`:null,`ואם [s:הייתי צריכה|הייתי צריך|היינו צריכים] לסכם [c:אותך|אותך|אתכם] במילה אחת, היא הייתה "אנרגיה".`);
  // family mentions
- if(c.m==='child'&&c.sibsMention.length&&(['parent','family'].includes(c.rel)||['grand','grandma','grandpa'].includes(c.from)))add(8,5,`[c:לאחים|לאחים|] שלך, ${joinHe(c.sibsMention)}, יש [c:אחות|אח|] שאפשר להסתכל [c:עליה|עליו|] בגאווה.`);
+ if(c.m==='child'&&c.sibsMention.length&&(['parent','family'].includes(c.rel)||['grand','grandma','grandpa'].includes(c.from)))add(8,5,`${c.sibsMention.length>1?'לאחים':(c.sibsG==='f'?'לאחות':'לאח')} שלך, ${joinHe(c.sibsMention)}, יש [c:אחות|אח|] שאפשר להסתכל [c:עליה|עליו|] בגאווה.`);
  if(c.m==='child'&&c.alive.length&&!['grand','grandma','grandpa','friends'].includes(c.from))add(9,5,`ול${joinHe(c.alive)}, שמלווים [c:אותך|אותך|אתכם] באהבה מהיום הראשון, תודה על השורשים החזקים.`,`${joinHe(c.alive)} גאים [c:בך|בך|בכם] היום יותר מתמיד.`);
  if(c.m==='adult'&&c.grandkids&&!['grandkids','friends'].includes(c.from))add(9,5,`ו${joinHe(c.grandkids.split(',').map(s=>s.trim()))}, הנכדים, יודעים שאין [c:סבתא|סבא|] כמוך.`);
  if(c.late.length&&c.from!=='friends'){const L=joinHe(c.late);const pl=c.late.length>1;
@@ -429,6 +436,7 @@ function draw(){const box=$('blocks');box.innerHTML='';
    if(a==='del'){paras.splice(i,1);selIdx=-1;snap();draw()}
    if(a==='ai')aiOne(i,e.target)});
   box.appendChild(d)});
+ if(!generated){box.innerHTML='<p class="placeholder">כאן תופיע הברכה.<br>ממלאים את הפרטים בשלבים ולוחצים "יצירת ברכה".</p>';meta();return}
  if(!paras.length)box.innerHTML='<p class="note">כל המשפטים נמחקו. אפשר ללחוץ "ביטול" או ליצור ברכה מחדש.</p>';
  meta()}
 function focusBlk(i){const b=$('blocks').children[i];if(b)b.querySelector('.tx').focus()}
@@ -446,16 +454,15 @@ function syncForm(){const ev=val('ev'),m=mode(),cg=cgOf();
  $('w1t').textContent='הצד של '+($('name').value.trim()||'הכלה');$('w2t').textContent='הצד של '+($('name2').value.trim()||'החתן');
  const [l1,l2]=parentLabels();$('p1Lbl').textContent='שם ה'+l1;$('p2Box').hidden=!l2;if(l2)$('p2Lbl').textContent='שם ה'+l2+(l1===l2?' השני/ה':'');
  const md=m==='adult'?'adult':m==='wed'?'wed':'kid';
- if(syncForm.md!==md){syncForm.md=md;chips('hobbies',HOB[md],'hb',md==='kid'?[0,2]:[0,1]);chips('together',TOG[md],'tg',[0,1]);
-  $('memory').value=md==='kid'?'כשהיית בת חמש עלית על הבמה בגן ולא הסכמת לרדת':md==='adult'?'':'';
-  const th=THANKS.filter(t=>md==='kid'||t[2]!=='kid');chips('thanks',THANKS,'th',[0]);document.querySelectorAll('#thanks input').forEach((inp,i)=>{const hide=THANKS[i][2]==='kid'&&md!=='kid';inp.hidden=hide;inp.nextElementSibling.hidden=hide;if(hide)inp.checked=false})}
+ if(syncForm.md!==md){syncForm.md=md;chips('hobbies',HOB[md],'hb',[]);chips('together',TOG[md],'tg',[]);
+  const th=THANKS.filter(t=>md==='kid'||t[2]!=='kid');chips('thanks',THANKS,'th',[]);document.querySelectorAll('#thanks input').forEach((inp,i)=>{const hide=THANKS[i][2]==='kid'&&md!=='kid';inp.hidden=hide;inp.nextElementSibling.hidden=hide;if(hide)inp.checked=false})}
  const f=$('from').value;$('togetherBox').hidden=f==='friends';$('hobBox').hidden=false;
  $('togetherLbl').textContent=f==='spouse'?'מה אתם אוהבים לעשות יחד':'מה אוהבים לעשות יחד'}
-function refresh(full=true){syncForm();if(full&&mode()==='child')renderGps();renderFrom();syncForm();if(!signTouched)$('sign').value=ctx().signAuto;render()}
+function refresh(full=true){syncForm();if(full&&mode()==='child')renderGps();renderFrom();syncForm();if(!signTouched)$('sign').value=ctx().signAuto;if(generated)render();else{draw();fitFrame()}}
 $('f').addEventListener('change',e=>{const t=e.target;if(t.dataset.l||t.dataset.s)return;if(['from','side','pick'].includes(t.id)||['pc','ev','cg','spg'].includes(t.name))signTouched=false;refresh(t.name==='pc'||t.name==='ev')});
 ['name','name2','age','p1','p2','memory','hobbyFree','togetherFree','thanksFree','spouse','grandkids','amom','adad','w1m','w1d','w2m','w2d','wlate','wHow'].forEach(id=>$(id).addEventListener('input',()=>refresh(id==='p1'||id==='p2')));
-$('f').addEventListener('submit',e=>{e.preventDefault();render(true)});
-$('again').onclick=()=>render(true);
+$('f').addEventListener('submit',e=>{e.preventDefault();if(!$('name').value.trim()){showStep(1);$('formWarn').textContent='כותבים קודם את השם.';$('formWarn').hidden=false;$('name').focus();return}generated=true;$('grid').classList.add('gen');render(true);setView('result')});
+$('again').onclick=()=>{if(generated)render(true)};
 $('shorter').onclick=()=>{const order=['20','40','60','80','120'];const i=order.indexOf(val('len'));if(i<=0){toast('זו כבר הגרסה הקצרה ביותר');return}$('ln-'+order[i-1]).checked=true;render();toast('קיצרנו')};
 $('copy').onclick=async()=>{try{await navigator.clipboard.writeText(fullText());toast('הועתק')}catch(e){const r=document.createRange();r.selectNodeContents($('blocks'));const s=getSelection();s.removeAllRanges();s.addRange(r);toast('סמנו והעתיקו ידנית')}};
 (async()=>{try{const d=await window.claude?.use?.('downloads');if(d){const b=$('dl');b.hidden=false;b.onclick=async()=>{try{await d.save({filename:'ברכה - '+($('name').value||'')+'.txt',data:new Blob([fullText()],{type:'text/plain;charset=utf-8'})})}catch(e){if(e&&e.code!=='declined')toast('לא ניתן להוריד כאן, אפשר להעתיק')}}}}catch(e){}})();
@@ -468,9 +475,21 @@ async function aiOne(i,btn){const c=ctx();const p=paras[i];btn.disabled=true;btn
  const prompt=`אתה כותב ברכות בעברית לאולפן הקלטות. לפניך טיוטת ברכה ל${evName(c)} של ${c.name}, מאת: ${$('sign').value}. שפר אותה כך שתישמע טבעית, חמה ואישית, בעברית תקנית עם התאמת מין נכונה. שמור על כל השמות והפרטים, אל תמציא עובדות, ואל תעבור את ${w} המילים. בלי אימוג'י. החזר רק את הברכה, פסקה קצרה בכל שורה, עם שורה ריקה בין פסקאות.\n\nהטיוטה:\n${fullText()}`;
  try{const r=await s(prompt);paras=r.text.trim().split(/\n\s*\n/).map(t=>({alts:[t.trim()],i:0,t:null,sign:false,pri:0}));selIdx=-1;snap();draw()}catch(e){if(e&&e.code==='not_granted'){b.hidden=true;aiOK=false;draw()}else toast('הליטוש לא זמין כרגע')}finally{b.disabled=false;b.textContent=old}}}catch(e){}})();
 
-function showTab(t){$('grid').dataset.tab=t;$('tabForm').setAttribute('aria-selected',t==='form');$('tabRes').setAttribute('aria-selected',t==='res')}
-$('tabForm').onclick=()=>showTab('form');$('tabRes').onclick=()=>showTab('res');
-$('f').addEventListener('submit',()=>showTab('res'));
-chips('traits',TRAITS,'tr',[0,1,9]);['sibs','kids','asibs'].forEach(renderList);refresh();
+// ---------- wizard ----------
+const STEP_NAMES=['אירוע','משפחה','מברכים','החוגג/ת','סגנון'];let step=1,generated=false;
+function showStep(n){step=Math.max(1,Math.min(5,n));
+ document.querySelectorAll('[data-step]').forEach(el=>el.classList.toggle('stepHidden',+el.dataset.step!==step));
+ $('steps').innerHTML=STEP_NAMES.map((t,i)=>`<button type="button" data-go="${i+1}" class="${i+1===step?'on':(i+1<step?'done':'')}">${i+1}. ${t}</button>`).join('');
+ $('prev').style.visibility=step===1?'hidden':'visible';$('next').hidden=step===5;$('go').hidden=step!==5;$('formWarn').hidden=true;fitFrame()}
+$('steps').addEventListener('click',e=>{const g=e.target.dataset.go;if(g)showStep(+g)});
+$('prev').onclick=()=>showStep(step-1);
+$('next').onclick=()=>{if(step===1&&!$('name').value.trim()){$('formWarn').textContent='כותבים קודם את השם.';$('formWarn').hidden=false;$('name').focus();return}showStep(step+1);topOfWidget()};
+function setView(v){$('grid').dataset.view=v;fitFrame();topOfWidget()}
+$('backEdit').onclick=()=>setView('form');
+function topOfWidget(){try{if(window.frameElement&&window.innerWidth<=840){const r=window.frameElement.getBoundingClientRect();if(r.top<0||r.top>window.parent.innerHeight*0.5)window.frameElement.scrollIntoView({behavior:'smooth',block:'start'})}}catch(e){}}
+// auto-height when embedded on a site (same-origin srcdoc frame)
+function fitFrame(){try{const fe=window.frameElement;if(!fe)return;var w=document.querySelector('.wrap');fe.style.height=Math.ceil(w.getBoundingClientRect().height)+18+'px'}catch(e){}}
+try{if(window.frameElement){document.documentElement.classList.add('embedded');new ResizeObserver(fitFrame).observe(document.body)}}catch(e){}
+chips('traits',TRAITS,'tr',[]);['sibs','kids','asibs'].forEach(renderList);refresh();showStep(1);
 </script>
 </body></html>

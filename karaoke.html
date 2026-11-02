@@ -120,7 +120,15 @@ details.tap[open]{display:grid;gap:10px}
   <section class="card" data-step="sync" hidden>
     <h2>מיקום השורות על הגייד</h2>
     <p class="hint">לוחצים "זיהוי אוטומטי", והמערכת מאתרת לבד איפה כל שורה מתחילה ונגמרת. אחר כך מתקנים בציר הזמן, כמו בתוכנת כתוביות: גוררים שורה כדי להזיז אותה, מושכים את הקצה כדי להאריך או לקצר, ולחיצה על מקום ריק קופצת לשם.</p>
-    <div class="row"><button class="primary" id="autoBtn">🪄 זיהוי אוטומטי</button><span class="hint" id="autoMsg"></span></div>
+    <div class="row"><button class="primary" id="autoBtn">🪄 זיהוי אוטומטי</button><span class="hint" id="autoMsg"></span><span class="sp"></span><button class="small" id="setupOpen" style="border:none;background:none;color:var(--muted);font-weight:400">⚙ הגדרת הזיהוי</button></div>
+    <div id="setupBox" hidden style="border:1.5px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:10px;background:var(--bg)">
+      <b>הגדרת הזיהוי האוטומטי (פעם אחת)</b>
+      <p class="hint">המפתח והסיסמה נשלחים ישר לסקריפט של אולפני קולות בגוגל ונשמרים רק שם. אחרי השמירה הם לא מוצגים יותר.</p>
+      <div><label for="suKey">מפתח OpenAI (מתחיל ב־sk-)</label><input type="password" id="suKey" autocomplete="off" spellcheck="false" style="direction:ltr" placeholder="sk-..."></div>
+      <div><label for="suPass">סיסמת צוות חדשה (6 תווים לפחות)</label><input type="password" id="suPass" autocomplete="new-password" style="direction:ltr"></div>
+      <div id="suOldRow" hidden><label for="suOld">הסיסמה הנוכחית (לשינוי)</label><input type="password" id="suOld" autocomplete="off" style="direction:ltr"></div>
+      <div class="row"><button class="primary" id="suSave">שמירה</button><button id="suCancel">סגירה</button><span class="hint" id="suMsg"></span></div>
+    </div>
     <div class="tlbar small"><button id="tlPlay" class="small">▶ ניגון</button><span id="clock" class="tm" style="direction:ltr;font-variant-numeric:tabular-nums">0:00.0</span><span class="sp"></span>
       <button id="zOut" class="small" aria-label="הקטנה">−</button><span class="hint small">זום</span><button id="zIn" class="small" aria-label="הגדלה">+</button>
       <label class="row small" style="font-weight:400;margin:0"><input type="checkbox" id="snap" checked> הצמדה לקצב</label><span class="hint small">קצב: <b id="bpmTxt">—</b></span><button id="bpmDetect" class="small">זיהוי קצב</button></div>
@@ -572,7 +580,7 @@ let autoBusy=false;
 async function autoAlign(){if(autoBusy)return;if(!audioBuf)return toast('קודם מעלים גייד');if(!P.lines.length)return toast('קודם מדביקים מילים');
  if(!API||API.indexOf('http')!==0)return toast('הזיהוי האוטומטי עוד לא חובר');
  if(P.lines.some(l=>l.t!=null)&&!confirm('הזיהוי יחליף את המיקומים הקיימים של כל השורות. להמשיך?'))return;
- let pass=lsGet('kk_pass');if(!pass){pass=(prompt('סיסמת צוות:')||'').trim();if(!pass)return}
+ let pass=lsGet('kk_pass');if(!pass){try{const pg=await api({action:'ping'});if(!pg.admin||!pg.whisper){openSetup();return toast('קודם מגדירים את הזיהוי (פעם אחת)')}}catch(e){}pass=(prompt('סיסמת צוות:')||'').trim();if(!pass)return}
  const msg=s=>$('autoMsg').textContent=s;autoBusy=true;$('autoBtn').disabled=true;
  try{msg('מכין את השמע…');const wav=await voiceWav(audioBuf);if(wav.size>24e6)throw new Error('הגייד ארוך מדי לזיהוי (מעל 12 דקות)');
   msg('מזהה את השירה… (בערך חצי דקה)');const r=await api({action:'transcribe',pass,audio:await b64(wav),mime:'audio/wav',name:(P.title||'guide')+'.wav',prompt:whisperPrompt()});
@@ -584,6 +592,12 @@ async function autoAlign(){if(autoBusy)return;if(!audioBuf)return toast('קוד�
  catch(e){msg('✗ '+(e.message||e))}
  finally{autoBusy=false;$('autoBtn').disabled=false}}
 $('autoBtn').onclick=autoAlign;
+async function openSetup(){$('setupBox').hidden=false;$('suMsg').textContent='בודק…';try{const r=await api({action:'ping'});$('suOldRow').hidden=!r.admin;$('suMsg').textContent=r.admin&&r.whisper?'הזיהוי כבר מוגדר. אפשר לעדכן מפתח או סיסמה.':''}catch(e){$('suMsg').textContent=''}}
+$('setupOpen').onclick=openSetup;$('suCancel').onclick=()=>{$('setupBox').hidden=true};
+$('suSave').onclick=async()=>{const key=$('suKey').value.trim(),np=$('suPass').value.trim();if(key&&!/^sk-/.test(key))return $('suMsg').textContent='המפתח צריך להתחיל ב־sk-';if(np.length<6)return $('suMsg').textContent='סיסמה של 6 תווים לפחות';
+ $('suSave').disabled=true;$('suMsg').textContent='שומר ובודק את המפתח מול OpenAI…';
+ try{const r=await api({action:'setup',key,newPass:np,pass:$('suOld').value.trim()});if(!r.ok)throw new Error(r.error||'שגיאה');lsSet('kk_pass',np);$('suKey').value='';$('suPass').value='';$('suOld').value='';$('suMsg').textContent='✓ נשמר. אפשר ללחוץ "זיהוי אוטומטי"';setTimeout(()=>{$('setupBox').hidden=true},2500)}
+ catch(e){$('suMsg').textContent='✗ '+(e.message||e)}finally{$('suSave').disabled=false}};
 
 $('tapTempo').onclick=()=>{const now=performance.now()/1000;tapTimes=tapTimes.filter(x=>now-x<3).concat(now);if(tapTimes.length>=4){const d=(tapTimes[tapTimes.length-1]-tapTimes[0])/(tapTimes.length-1);P.bpm=Math.round(60/d);if(!audio.paused)P.beat0=(audio.currentTime-LAT)%d;save();renderSync()}else toast('ממשיכים להקיש בקצב…')};
 

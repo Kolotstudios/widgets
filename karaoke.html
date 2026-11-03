@@ -901,7 +901,7 @@ function clientCanExport(){if(!K)return true;const g=verseGaps();if(!P.people.le
 var UPK='';
 function hashU(){let h='';try{h=window.frameElement?window.parent.location.hash:location.hash}catch(e){h=location.hash}const m=h.match(/[#&]u=([a-f0-9]{20,40})/);return m?m[1]:''}
 async function upBoot(){mode='staff';document.querySelectorAll('[data-step],.steps,.nav,#gate').forEach(e=>e.hidden=true);$('upCard').hidden=false;$('hTitle').textContent='העלאת גייד';
- try{const r=await api({action:'kk_u_check',u:UPK});if(!r.ok)throw new Error(r.error);$('upHello').textContent=`שלום ${r.name} 😊 ממלאים את הפרטים, מצרפים את הגייד ולוחצים "שליחה". המערכת מזהה את הלקוח/ה לפי הטלפון, מסנכרנת את המילים ושולחת לו/ה לינק לחלוקה.`}
+ try{const r=await api({action:'kk_u_check',u:UPK});if(!r.ok)throw new Error(r.error);$('upHello').innerHTML='כאן מעלים גייד שהוקלט ללקוח/ה, יחד עם המילים. ממלאים את הטלפון של הלקוח/ה (כמו שמופיע בהזמנה), מדביקים את המילים בדיוק כמו שאושרו, מצרפים את קובץ הגייד ולוחצים "שליחה".<br>המערכת מזהה את ההזמנה לפי הטלפון, מסנכרנת את המילים לגייד ושולחת ללקוח/ה לינק לחלוקת השורות. אם משהו לא ברור (לא נמצאה הזמנה, שורות שלא זוהו), שום דבר לא נשלח ללקוח והצוות מקבל התראה לבדיקה.'}
  catch(e){$('upHello').textContent='✗ '+(e.message||e);$('uGo').disabled=true}}
 $('uGo').onclick=async()=>{const say=s=>{$('uMsg').textContent=s};const phone=$('uPhone').value.trim(),name=$('uName').value.trim(),ly=$('uLyrics').value.trim(),f=$('uAudio').files[0];
  if(phone.replace(/\D/g,'').length<9)return say('חסר טלפון תקין');if(!name)return say('חסר שם');if(!ly)return say('חסרות מילים');if(!f)return say('חסר קובץ גייד');
@@ -913,17 +913,17 @@ $('uGo').onclick=async()=>{const say=s=>{$('uMsg').textContent=s};const phone=$(
   const low=await autoAlign({silent:true,u:UPK,onMsg:s=>say(s)});if(low)review.push(low+' שורות לא זוהו בוודאות');if(!P.lines.every(l=>l.t!=null))review.push('יש שורות שלא מוקמו');
   say('שומר…');const s=await api({action:'kk_u_save',u:UPK,meta:{name:o.found===1&&o.name?o.name:name,phone,orderId:o.orderId||'',recDate:o.date||'',product:o.product||'',maxP:o.maxP||0,minP:o.minP||0,review:review.join(' · ')},project:projData(),audio:await b64(audioBlob),mime:audioBlob.type||'audio/mpeg'});
   if(!s.ok)throw new Error(s.error);
-  if(review.length){say(`✓ הגייד נקלט.\nהלינק ללקוח/ה עוד לא נשלח: ${review.join(', ')}.\nאורן יבדוק וישלח.`);return}
+  if(review.length){say(`✓ הגייד נקלט.\nהלינק ללקוח/ה עוד לא נשלח: ${review.join(', ')}.\nהצוות קיבל התראה ויבדוק.`);return}
   say('שולח ללקוח/ה…');const t=await api({action:'kk_u_send',u:UPK,k:s.k});
-  say(t.ok?`✓ הכול מוכן! הלינק לחלוקה נשלח ל${o.name||name} בוואטסאפ.`:`✓ הגייד נקלט והלינק נוצר.\nהשליחה לא בוצעה: ${t.error||''}\nאורן יקבל עדכון.`);
+  say(t.ok?`✓ הכול מוכן! הלינק לחלוקה נשלח ל${o.name||name} בוואטסאפ.`:`✓ הגייד נקלט והלינק נוצר.\nהשליחה לא בוצעה: ${t.error||''}\nהצוות קיבל התראה.`);
   $('uPhone').value='';$('uName').value='';$('uTitle').value='';$('uLyrics').value='';$('uAudio').value=''}
- catch(e){say('✗ '+(e.message||e)+'\nאפשר לנסות שוב, ואם זה חוזר – לשלוח לאורן.')}finally{$('uGo').disabled=false}};
+ catch(e){say('✗ '+(e.message||e)+'\nאפשר לנסות שוב, ואם זה חוזר – לפנות לאולפני קולות.')}finally{$('uGo').disabled=false}};
 // staff: manage upload links
 $('upMgr').onclick=async()=>{showPanel('<b>לינקים להעלאת גייד</b><p class="hint">טוען…</p>');try{const r=await staffApi({action:'kk_up_list'});if(!r.ok)throw new Error(r.error);renderUps(r.items)}catch(e){showPanel(`<b>לינקים להעלאה</b><p class="warn">✗ ${esc(e.message||e)}</p><button id="cX">סגירה</button>`);$('cX').onclick=hidePanel}};
 function upLink(key){return pageURL()+'#u='+key}
 function renderUps(items){showPanel(`<div class="row"><b>לינקים להעלאת גייד</b><span class="sp"></span><button class="small" id="cX">סגירה</button></div><p class="hint">מי שמקבל לינק כזה יכול רק להעלות גייד + מילים + טלפון של לקוח. הוא לא רואה שירים או לקוחות אחרים. אפשר להשבית בכל רגע.</p>`+
  items.map(it=>`<div class="cl" data-key="${it.key}"><div><b>${esc(it.name)}</b> <span class="tag ${it.active?'open':'lock'}">${it.active?'פעיל':'מושבת'}</span> <span class="hint small">${it.count||0} העלאות</span></div><div class="acts"><button class="small" data-u="copy">🔗 העתקה</button><button class="small" data-u="${it.active?'off':'on'}">${it.active?'השבתה':'הפעלה'}</button></div></div>`).join('')+
- `<div class="row" style="margin-top:8px"><input type="text" id="upNew" placeholder="שם (למשל: ליאור)" style="flex:1"><button class="small primary" id="upAdd">➕ יצירת לינק</button></div>`);
+ `<div class="row" style="margin-top:8px"><input type="text" id="upNew" placeholder="שם הלינק (למשל: מקליטי גיידים)" style="flex:1"><button class="small primary" id="upAdd">➕ יצירת לינק</button></div>`);
  $('cX').onclick=hidePanel;
  $('upAdd').onclick=async()=>{const n=$('upNew').value.trim();if(!n)return;try{const r=await staffApi({action:'kk_up_create',name:n});if(!r.ok)throw new Error(r.error);const l=await staffApi({action:'kk_up_list'});renderUps(l.items);copyText(upLink(r.key))}catch(e){toast('✗ '+(e.message||e))}};
  $('panelBox').onclick=async e=>{const b=e.target.closest('[data-u]');if(!b)return;const key=b.closest('[data-key]').dataset.key;if(b.dataset.u==='copy')return copyText(upLink(key));

@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>ניהול מקליט הברכות</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700&family=Assistant:wght@400;600;700&display=swap">
+<style>
+/* Layout: one working column — login, new-link form, then the list of projects. */
+:root{
+  --bg:#f7f3f8;--paper:#ffffff;--ink:#251b2e;--muted:#6f6479;--line:#e6dcea;--accent:#6b2fb3;--accent-ink:#ffffff;--soft:#efe6f8;--gold:#a0782a;
+  --ok:#2c8553;--warn:#a85a14;--bad:#b3263b;
+  --f-display:"Frank Ruhl Libre","David Libre",Georgia,serif;--f-body:"Assistant",system-ui,"Segoe UI",Arial,sans-serif;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#16111c;--paper:#201929;--ink:#f0eaf5;--muted:#a99db6;--line:#382d45;--accent:#b78bf0;--accent-ink:#1b1325;--soft:#2d2340;--gold:#d6b066;--ok:#5cc58a;--warn:#e39a52;--bad:#ff7a8c;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#16111c;--paper:#201929;--ink:#f0eaf5;--muted:#a99db6;--line:#382d45;--accent:#b78bf0;--accent-ink:#1b1325;--soft:#2d2340;--gold:#d6b066;--ok:#5cc58a;--warn:#e39a52;--bad:#ff7a8c;color-scheme:dark}
+[hidden]{display:none!important}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--f-body);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+.brand{font-size:13px;letter-spacing:.08em;color:var(--gold);font-weight:700}
+h1{font-family:var(--f-display);font-size:30px;margin:0}
+h2{font-family:var(--f-display);font-size:21px;margin:0}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+label{font-weight:600;font-size:14px;display:grid;gap:4px}
+input,select{font:16px var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 11px;width:100%}
+.btn{border:1px solid var(--line);background:var(--paper);color:var(--ink);font:600 14px var(--f-body);padding:8px 13px;border-radius:10px;cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn:disabled{opacity:.45}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.note{font-size:13px;color:var(--muted);margin:0}
+.status{font-size:14px;min-height:1.3em;color:var(--muted)}
+.link{direction:ltr;unicode-bidi:isolate;font-size:13px;background:var(--soft);padding:8px 10px;border-radius:8px;word-break:break-all;user-select:all}
+.item{border-top:1px solid var(--line);padding:12px 0;display:grid;gap:8px}
+.item:first-child{border-top:0}
+.item .top{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.name{font-weight:700}
+.meta{font-size:13px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap}
+.chip{font-size:12px;font-weight:700;padding:1px 9px;border-radius:99px;border:1px solid currentColor}
+.s-open{color:var(--accent)}.s-submitted{color:var(--warn)}.s-done{color:var(--ok)}.s-expired{color:var(--muted)}
+audio{width:100%}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><div class="brand">אולפני קולות</div><h1>ניהול מקליט הברכות</h1></header>
+
+  <section class="card" id="login">
+    <h2 id="loginTitle">כניסה</h2>
+    <label>סיסמה<input type="password" id="pass" autocomplete="current-password"></label>
+    <label id="newPassWrap" hidden>סיסמה חדשה (6 תווים לפחות)<input type="password" id="newPass" autocomplete="new-password"></label>
+    <div class="row"><button class="btn primary" id="loginBtn" type="button">כניסה</button></div>
+    <p class="status" id="loginStatus"></p>
+  </section>
+
+  <section class="card" id="create" hidden>
+    <h2>קישור הקלטה חדש</h2>
+    <div class="grid">
+      <label>שם הלקוח<input id="cName" placeholder="למשל: משפחת לוי – בר מצווה של איתי"></label>
+      <label>מספר הזמנה בקאלה<input id="cOrder" inputmode="numeric" placeholder="16588"></label>
+      <label>סוג<select id="cMode"><option value="blessing">ברכה</option><option value="family">ברכות משפחה</option><option value="drasha">דרשה</option></select></label>
+      <label id="cMaxWrap" hidden>עד כמה מברכים<input id="cMax" type="number" min="1" max="5" value="5"></label>
+      <label>תוקף (ימים)<input id="cDays" type="number" min="1" max="120" value="30"></label>
+    </div>
+    <div class="row"><button class="btn primary" id="createBtn" type="button">יצירת קישור</button></div>
+    <div id="created" hidden style="display:grid;gap:8px">
+      <div class="link" id="cLink"></div>
+      <div class="row"><button class="btn" id="copyLink" type="button">העתקת הקישור</button><button class="btn" id="copyMsg" type="button">העתקת הודעה ללקוח</button></div>
+    </div>
+    <p class="status" id="createStatus"></p>
+  </section>
+
+  <section class="card" id="list" hidden>
+    <div class="row" style="justify-content:space-between"><h2>הקלטות</h2><button class="btn" id="refresh" type="button">רענון</button></div>
+    <div id="items"></div>
+    <p class="status" id="listStatus"></p>
+  </section>
+</div>
+<script>
+(function(){
+"use strict";
+var API="";
+var REC=new URL("recorder.html",location.href).href;
+var $=function(s){return document.querySelector(s)};
+var pass="";try{pass=sessionStorage.getItem("kolot_rec_admin")||""}catch(e){}
+var setupMode=false;
+function call(action,data){
+  if(!API) return Promise.reject(new Error("המערכת עוד לא חוברה לשרת."));
+  return fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(Object.assign({action:action,pass:pass},data||{}))}).then(function(r){return r.json()});
+}
+function linkFor(k){return REC+"#k="+k}
+function copy(text,btn){
+  var done=function(){var t=btn.textContent;btn.textContent="הועתק ✓";setTimeout(function(){btn.textContent=t},1500)};
+  if(navigator.clipboard) navigator.clipboard.writeText(text).then(done,function(){prompt("העתקה:",text)});else prompt("העתקה:",text);
+}
+function msgFor(name,k){
+  return "שלום"+(name?" "+name.split(/[–-]/)[0].trim():"")+"! 🎙️\nזה הקישור להקלטת הברכה מהנייד, של אולפני קולות:\n"+linkFor(k)+"\nפותחים אותו בטלפון שממנו מקליטים (הקישור ננעל למכשיר הראשון שפותח אותו), מקליטים משפט אחרי משפט, וכשמסיימים לוחצים \"סיום ושליחה לאולפן\".";
+}
+function boot(){
+  if(!API){$("#loginStatus").textContent="המערכת עוד לא חוברה לשרת.";$("#loginBtn").disabled=true;return}
+  call("ping").then(function(r){
+    setupMode=!r.admin;
+    $("#loginTitle").textContent=setupMode?"הגדרת סיסמה ראשונה":"כניסה";
+    $("#newPassWrap").hidden=!setupMode;$("#pass").parentNode.hidden=setupMode;
+    $("#loginBtn").textContent=setupMode?"שמירת סיסמה":"כניסה";
+    if(pass&&!setupMode) login();
+  }).catch(function(){$("#loginStatus").textContent="אין חיבור לשרת."});
+}
+function login(){
+  call("login").then(function(r){
+    if(!r.ok){$("#loginStatus").textContent=r.error||"סיסמה שגויה";return}
+    try{sessionStorage.setItem("kolot_rec_admin",pass)}catch(e){}
+    $("#login").hidden=true;$("#create").hidden=false;$("#list").hidden=false;load();
+  });
+}
+$("#loginBtn").onclick=function(){
+  if(setupMode){
+    var np=$("#newPass").value.trim();
+    call("setup",{newPass:np}).then(function(r){if(!r.ok){$("#loginStatus").textContent=r.error;return}pass=np;setupMode=false;login()});
+  } else {pass=$("#pass").value;login()}
+};
+$("#pass").addEventListener("keydown",function(e){if(e.key==="Enter") $("#loginBtn").click()});
+$("#cMode").onchange=function(){$("#cMaxWrap").hidden=this.value!=="family"};
+var lastK="",lastName="";
+$("#createBtn").onclick=function(){
+  var b=this;b.disabled=true;$("#createStatus").textContent="יוצרים…";
+  call("rc_create",{name:$("#cName").value,orderId:$("#cOrder").value,mode:$("#cMode").value,maxBlessers:+$("#cMax").value,days:+$("#cDays").value}).then(function(r){
+    b.disabled=false;
+    if(!r.ok){$("#createStatus").textContent=r.error;return}
+    lastK=r.k;lastName=$("#cName").value;$("#cLink").textContent=linkFor(r.k);$("#created").hidden=false;
+    $("#createStatus").textContent="הקישור מוכן. שום דבר לא נשלח ללקוח – מעתיקים ושולחים כשרוצים.";load();
+  }).catch(function(e){b.disabled=false;$("#createStatus").textContent=e.message});
+};
+$("#copyLink").onclick=function(){copy(linkFor(lastK),this)};
+$("#copyMsg").onclick=function(){copy(msgFor(lastName,lastK),this)};
+$("#refresh").onclick=load;
+var MODES={blessing:"ברכה",family:"ברכות משפחה",drasha:"דרשה"};
+function statusOf(it){
+  if(it.state.status==="done") return ["s-done","הושלם"];
+  if(it.state.status==="submitted") return ["s-submitted","הוגש – ממתין לאישור"];
+  if(it.state.expired) return ["s-expired","פג תוקף"];
+  return ["s-open",it.takes?"בהקלטה":"טרם התחיל"];
+}
+function fmtDate(t){return new Date(t).toLocaleDateString("he-IL",{day:"numeric",month:"numeric",hour:"2-digit",minute:"2-digit"})}
+function load(){
+  $("#listStatus").textContent="טוען…";
+  call("rc_list").then(function(r){
+    if(!r.ok){$("#listStatus").textContent=r.error;return}
+    $("#listStatus").textContent=r.items.length?"":"עוד אין קישורים.";
+    var box=$("#items");box.innerHTML="";
+    r.items.forEach(function(it){
+      var el=document.createElement("div");el.className="item";
+      var st=statusOf(it);
+      var top=document.createElement("div");top.className="top";
+      var nm=document.createElement("span");nm.className="name";nm.textContent=it.name||"(ללא שם)";
+      var ch=document.createElement("span");ch.className="chip "+st[0];ch.textContent=st[1];
+      top.append(nm,ch);
+      var meta=document.createElement("div");meta.className="meta";
+      [MODES[it.mode]||it.mode,it.orderId?"הזמנה "+it.orderId:"",it.takes+" משפטים",it.state.device?"נעול למכשיר":"עוד לא נפתח","עודכן "+fmtDate(it.updated),"בתוקף עד "+new Date(it.state.expires).toLocaleDateString("he-IL")]
+        .filter(Boolean).forEach(function(t){var s=document.createElement("span");s.textContent=t;meta.appendChild(s)});
+      var acts=document.createElement("div");acts.className="row";
+      var btn=function(t,fn,cls){var b=document.createElement("button");b.type="button";b.className="btn "+(cls||"");b.textContent=t;b.onclick=function(){fn(b)};acts.appendChild(b);return b};
+      btn("העתקת קישור",function(b){copy(linkFor(it.k),b)});
+      btn("העתקת הודעה",function(b){copy(msgFor(it.name,it.k),b)});
+      if(it.final) btn("▶ הקובץ שהוגש",function(b){
+        b.disabled=true;b.textContent="טוען…";
+        call("rc_final",{k:it.k}).then(function(x){
+          b.remove();if(!x.ok) return;
+          var bin=atob(x.mp3),u=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i);
+          var url=URL.createObjectURL(new Blob([u],{type:"audio/mpeg"}));
+          var au=document.createElement("audio");au.controls=true;au.src=url;
+          var a=document.createElement("a");a.className="btn";a.href=url;a.download=(it.name||it.k)+".mp3";a.textContent="הורדת MP3";
+          el.append(au,a);
+        });
+      });
+      if(it.state.device) btn("איפוס מכשיר",function(){meta_(it.k,{resetDevice:true})});
+      if(it.state.status!=="open") btn("פתיחה מחדש להקלטה",function(){meta_(it.k,{reopen:true})});
+      if(it.state.status==="submitted") btn("סימון כהושלם",function(){meta_(it.k,{done:true})});
+      btn("+14 ימים",function(){meta_(it.k,{extendDays:14})});
+      btn("פתיחת הטקסט לעריכה",function(){meta_(it.k,{unlockText:true})});
+      var del=btn("מחיקה",function(b){
+        if(b.dataset.sure){meta_(it.k,{remove:true});return}
+        b.dataset.sure="1";b.textContent="ללחוץ שוב למחיקה";setTimeout(function(){delete b.dataset.sure;b.textContent="מחיקה"},3000);
+      },"danger");
+      el.append(top,meta,acts);box.appendChild(el);
+    });
+  }).catch(function(e){$("#listStatus").textContent=e.message});
+}
+function meta_(k,data){call("rc_meta",Object.assign({k:k},data)).then(function(r){if(!r.ok) $("#listStatus").textContent=r.error;load()})}
+boot();
+})();
+</script>
+</body>
+</html>

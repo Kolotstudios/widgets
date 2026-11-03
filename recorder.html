@@ -71,6 +71,7 @@ input:focus-visible,textarea:focus-visible,button:focus-visible,select:focus-vis
 .take.missing .txt{color:var(--muted)}
 .pill{font-size:11px;font-weight:700;padding:1px 8px;border-radius:99px;background:var(--soft)}
 .pill.bad{background:transparent;border:1px solid var(--warn);color:var(--warn)}
+.pill.cloud-ok{color:var(--ok)}.pill.cloud-err{color:var(--warn)}
 .pill.miss{background:transparent;border:1px dashed var(--muted);color:var(--muted)}
 .music{display:grid;gap:8px}
 .mopt{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer}
@@ -128,8 +129,15 @@ h3{font:700 15px var(--f-body);margin:0;color:var(--muted);letter-spacing:.02em}
     <span class="brand">אולפני קולות</span>
     <h1>הקלטת ברכה מהנייד</h1>
     <p class="sub">כותבים או מדביקים את הטקסט, מקליטים משפט אחרי משפט מול טלפרומפטר, ומקבלים קובץ ערוך עם מוסיקה.</p>
-    <span class="badge">אב-טיפוס לבדיקה</span>
+    <span class="badge" id="modeBadge">מצב הדגמה: ההקלטות לא נשמרות</span>
   </header>
+
+  <!-- GATE: loading / locked link -->
+  <section id="gate" class="card" hidden>
+    <h2 id="gateTitle">טוענים את ההקלטה שלך…</h2>
+    <p class="sub" id="gateMsg"></p>
+    <p class="note" dir="ltr" id="gateStudio" hidden>WhatsApp: 055-517-0280</p>
+  </section>
 
   <!-- SETUP -->
   <section id="setup" class="wrap" style="gap:18px">
@@ -163,7 +171,7 @@ h3{font:700 15px var(--f-body);margin:0;color:var(--muted);letter-spacing:.02em}
   <!-- REVIEW -->
   <section id="review" class="wrap" style="gap:18px" hidden>
     <div class="row between">
-      <h2>ההקלטות שלך</h2>
+      <div class="row" style="gap:8px"><h2>ההקלטות שלך</h2><span class="pill" id="cloudPill" hidden></span></div>
       <button class="btn small ghost" id="backToText" type="button">→ חזרה לטקסט</button>
     </div>
     <div id="takes" style="display:grid;gap:14px"></div>
@@ -592,19 +600,23 @@ function renderSetup(){
   document.querySelectorAll(".seg button").forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.mode===S.mode))});
   $("#modeNote").textContent=MODE_NOTES[S.mode];
   $("#textTitle").textContent=S.mode==="drasha"?"טקסט הדרשה":(S.mode==="family"?"המברכים":"טקסט הברכה");
-  $("#addBlesser").hidden=!(S.mode==="family"&&S.blessers.length<5);
+  var lockedText=CLOUD.on&&S.textLocked;
+  $("#addBlesser").hidden=lockedText||!(S.mode==="family"&&S.blessers.length<(S.maxBlessers||5));
+  $("#sampleBtn").hidden=lockedText;
+  document.querySelectorAll(".seg button").forEach(function(b){b.disabled=lockedText||(CLOUD.on&&CLOUD.fixedMode&&b.dataset.mode!==S.mode)});
   var box=$("#blessers");box.innerHTML="";
   S.blessers.forEach(function(b,i){
     var d=document.createElement("div");d.className="blesser";
     var head=document.createElement("div");head.className="row between";
     var lab=document.createElement("label");lab.htmlFor="n_"+b.id;lab.textContent=S.mode==="family"?("מברך "+(i+1)):(S.mode==="drasha"?"שם בעל/ת השמחה":"מי מברך?");
     head.appendChild(lab);
-    if(S.mode==="family"&&S.blessers.length>1){var del=document.createElement("button");del.type="button";del.className="btn small ghost";del.textContent="הסרה";del.onclick=function(){S.blessers.splice(i,1);saveText();renderSetup()};head.appendChild(del)}
+    if(!lockedText&&S.mode==="family"&&S.blessers.length>1){var del=document.createElement("button");del.type="button";del.className="btn small ghost";del.textContent="הסרה";del.onclick=function(){S.blessers.splice(i,1);saveText();renderSetup()};head.appendChild(del)}
     var inp=document.createElement("input");inp.type="text";inp.id="n_"+b.id;inp.value=b.name;inp.placeholder=S.mode==="drasha"?"למשל: איתי":"למשל: אבא ואמא";
     inp.oninput=function(){b.name=inp.value;saveText()};
     var ta=document.createElement("textarea");ta.id="t_"+b.id;ta.value=b.text;ta.placeholder="מדביקים כאן את הטקסט. כל שורה חדשה היא פסקה.";
     ta.oninput=function(){b.text=ta.value;saveText();cnt.textContent=countInfo(b.text)};
     var cnt=document.createElement("p");cnt.className="note";cnt.textContent=countInfo(b.text);
+    if(lockedText){inp.readOnly=true;ta.readOnly=true;cnt.textContent="הטקסט ננעל כשההקלטה התחילה. לשינוי פנו לאולפני קולות."}
     d.append(head,inp,ta,cnt);box.appendChild(d);
   });
 }
@@ -622,10 +634,22 @@ $("#toRecord").onclick=function(){
   var ok=S.blessers.filter(function(b){return wc(b.text)>0});
   if(!ok.length){$("#setupStatus").textContent="צריך טקסט לפני שמקליטים. אפשר לטעון טקסט לדוגמה.";return}
   S.blessers=ok;S.blessers.forEach(resplit);
+  if(CLOUD.on&&!S.textLocked){
+    var btn=$("#toRecord");btn.disabled=true;$("#setupStatus").textContent="שומרים את הטקסט…";
+    cloudApi("rc_c_text",{mode:S.mode,blessers:S.blessers.map(function(b){return {name:b.name,text:b.text}})}).then(function(r){
+      btn.disabled=false;
+      if(!r.ok){$("#setupStatus").textContent=r.error||"לא הצלחנו לשמור את הטקסט.";return}
+      $("#setupStatus").textContent="";goRecord();
+    }).catch(function(){btn.disabled=false;$("#setupStatus").textContent="אין חיבור לאינטרנט. בודקים את החיבור ומנסים שוב."});
+    return;
+  }
+  goRecord();
+};
+function goRecord(){
   showReview();
   var first=S.blessers.filter(function(b){return b.takes.some(function(t){return !t})})[0];
   if(first) openStage(first,firstMissing(first),false);
-};
+}
 function firstMissing(b){for(var i=0;i<b.takes.length;i++) if(!b.takes[i]) return i;return 0}
 
 /* ---------- audio capture ---------- */
@@ -810,6 +834,7 @@ function renderFoot(){
 function sbtn(t,cls,fn){var b=document.createElement("button");b.type="button";b.className="sbtn "+cls;b.textContent=t;b.onclick=fn;return b}
 
 function beginSession(){
+  if(CLOUD.on&&CLOUD.submitted){hint("ההקלטה כבר נשלחה לאולפן.",true);return}
   P.state="count";renderFoot();hint("מבקשים גישה למיקרופון…");
   startMic().then(function(){
     requestWake();
@@ -827,6 +852,7 @@ function beginSession(){
       else hint(P.auto?"מקריאים. אחרי הפסקה קצרה עוברים למשפט הבא לבד.":"מקריאים, ולוחצים \"הבא\" בסוף כל משפט.");
       var sr=Rec.ctx.sampleRate;P.sid=uid();P.roomStart=Math.min(Math.round(sr*0.6),Rec.total);
       S.rooms[P.sid]=sliceRec(P.roomStart,Math.max(P.roomStart,Rec.total-Math.round(sr*0.05)));
+      cloudQueue({type:"room",sid:P.sid,sr:sr});
       P.state="rec";P.segStart=Rec.total;renderFoot();markCurrent();
     },800);
   }).catch(function(err){
@@ -855,7 +881,10 @@ function saveSegment(){
   var raw=sliceRec(a,end),pre=P.segStart-a+head,q=quickCheck(raw.subarray(pre),sr);
   if(q.silent) return false;
   var t={raw:raw,pre:pre,sr:sr,sid:P.sid,dur:q.dur,flags:q.flags,cache:{},pending:{}};
-  P.b.takes[P.idx]=t;ensureClean(t);return true;
+  var prev=P.b.takes[P.idx];
+  P.b.takes[P.idx]=t;ensureClean(t);
+  cloudQueue({type:"take",t:t,prev:prev,b:S.blessers.indexOf(P.b),i:P.idx,s:P.b.sentences[P.idx]});
+  return true;
 }
 function advance(){
   if(P.state!=="rec") return;
@@ -950,13 +979,14 @@ bindOut("room",pct);bindOut("hall",pct);bindOut("musicDb",function(v){return v+"
 bindOut("gap",sec);bindOut("fade",sec);bindOut("famGap",sec);
 function settings(){
   return {nrMix:+$("#nrMix").value/100,aiMix:S.aiAvailable?+$("#aiMix").value/100:0,deess:+$("#deess").value,highs:+$("#highs").value,mids:+$("#mids").value,
-    voiceDb:+$("#voiceDb").value,room:+$("#room").value/100,hall:+$("#hall").value/100,musicDb:+$("#musicDb").value};
+    voiceDb:+$("#voiceDb").value,room:+$("#room").value/100,hall:+$("#hall").value/100,musicDb:+$("#musicDb").value,
+    gap:+$("#gap").value,fade:+$("#fade").value,famGap:+$("#famGap").value};
 }
 ["nrMix","aiMix","deess","highs","mids","voiceDb","room","hall","musicDb"].forEach(function(id){
-  $("#"+id).addEventListener("input",function(){if(MIXP.nodes&&MIXP.ctx) applySet(MIXP.nodes,settings(),MIXP.ctx,true)});
+  $("#"+id).addEventListener("input",function(){if(MIXP.nodes&&MIXP.ctx) applySet(MIXP.nodes,settings(),MIXP.ctx,true);cloudSettingsSoon()});
 });
-["gap","fade","famGap"].forEach(function(id){$("#"+id).addEventListener("change",restartIfPlaying)});
-document.querySelectorAll("input[name=music]").forEach(function(r){r.addEventListener("change",restartIfPlaying)});
+["gap","fade","famGap"].forEach(function(id){$("#"+id).addEventListener("change",function(){restartIfPlaying();cloudSettingsSoon()})});
+document.querySelectorAll("input[name=music]").forEach(function(r){r.addEventListener("change",function(){restartIfPlaying();cloudSettingsSoon()})});
 
 /* ---------- music ---------- */
 function mtof(m){return 440*Math.pow(2,(m-69)/12)}
@@ -1228,10 +1258,9 @@ $("#playBtn").onclick=function(){
 };
 
 /* ---------- final file ---------- */
-function exportMix(){
+function renderFinal(st){
   stopLive();
-  var btn=$("#renderBtn"),st=$("#renderStatus");
-  btn.disabled=true;$("#result").hidden=true;st.textContent="מכינים את הקובץ…";
+  st.textContent="מכינים את הקובץ…";
   return prepare(null).then(function(r){
     st.textContent="מרנדרים את המיקס הסופי…";
     var ctx=new OAC(2,Math.ceil(r.T.total*OUT_SR),OUT_SR);
@@ -1241,13 +1270,147 @@ function exportMix(){
     var a=out.getChannelData(0),b=out.getChannelData(1),pk=0,i;
     for(i=0;i<a.length;i++){var x=Math.max(Math.abs(a[i]),Math.abs(b[i]));if(x>pk) pk=x}
     var gn=pk>0?0.89/pk:1;for(i=0;i<a.length;i++){a[i]*=gn;b[i]*=gn}
-    $("#dlWav").href=URL.createObjectURL(encodeWav(a,b,OUT_SR));$("#result").hidden=false;$("#dlMp3").hidden=true;
-    $("#resultNote").textContent="אורך הקובץ: "+fmtDur(out.duration)+". הקובץ נשמע בדיוק כמו ההשמעה למעלה.";
-    st.textContent="";btn.disabled=false;$("#tpState").textContent="המיקס המלא, עם כל ההגדרות";
-    encodeMp3(a,b,OUT_SR).then(function(blob){if(blob){$("#dlMp3").href=URL.createObjectURL(blob);$("#dlMp3").hidden=false}});
+    $("#tpState").textContent="המיקס המלא, עם כל ההגדרות";
+    return {a:a,b:b,duration:out.duration};
+  });
+}
+function exportMix(){
+  var btn=$("#renderBtn"),st=$("#renderStatus");
+  btn.disabled=true;$("#result").hidden=true;
+  return renderFinal(st).then(function(f){
+    $("#dlWav").href=URL.createObjectURL(encodeWav(f.a,f.b,OUT_SR));$("#result").hidden=false;$("#dlMp3").hidden=true;
+    $("#resultNote").textContent="אורך הקובץ: "+fmtDur(f.duration)+". הקובץ נשמע בדיוק כמו ההשמעה למעלה.";
+    st.textContent="";btn.disabled=false;
+    encodeMp3(f.a,f.b,OUT_SR).then(function(blob){if(blob){$("#dlMp3").href=URL.createObjectURL(blob);$("#dlMp3").hidden=false}});
   }).catch(function(err){st.textContent=err&&err.message||"משהו השתבש ביצירת הקובץ.";btn.disabled=false});
 }
-$("#renderBtn").onclick=exportMix;
+function submitMix(){
+  var btn=$("#renderBtn"),st=$("#renderStatus");
+  btn.disabled=true;
+  cloudFlush().then(function(){
+    if(CLOUD.failed) throw new Error("חלק מההקלטות עוד לא נשמרו. בודקים את החיבור ומנסים שוב.");
+    return renderFinal(st);
+  }).then(function(f){
+    st.textContent="מכינים MP3…";
+    return encodeMp3(f.a,f.b,OUT_SR);
+  }).then(function(blob){
+    if(!blob) throw new Error("לא הצלחנו להכין MP3. מנסים שוב.");
+    st.textContent="שולחים לאולפן…";
+    return blobB64(blob).then(function(b64){return cloudApi("rc_c_submit",{mp3:b64,settings:settings(),music:document.querySelector("input[name=music]:checked").value})});
+  }).then(function(r){
+    if(!r.ok) throw new Error(r.error||"השליחה נכשלה.");
+    CLOUD.submitted=true;setSubmittedUI();
+  }).catch(function(err){st.textContent=err&&err.message||"השליחה נכשלה.";btn.disabled=false});
+}
+function setSubmittedUI(){
+  var btn=$("#renderBtn");btn.disabled=true;btn.textContent="נשלח לאולפן ✓";
+  $("#renderStatus").textContent="תודה! ההקלטה הגיעה לאולפני קולות. נעבור עליה ונחזור אליכם עם הקובץ הסופי.";
+  document.querySelectorAll("#takes .btn").forEach(function(b){if(b.textContent!=="▶") b.disabled=true});
+}
+$("#renderBtn").onclick=function(){if(CLOUD.on) submitMix();else exportMix()};
+
+/* ---------- cloud: project link, device lock, uploads ---------- */
+var API="";
+var CLOUD={on:false,k:null,dev:null,q:[],busy:false,failed:0,submitted:false,fixedMode:false,setT:null};
+function devId(){
+  var v=null;try{v=localStorage.getItem("kolot_rec_dev")}catch(e){}
+  if(!v||!/^[a-f0-9]{32}$/.test(v)){var a=new Uint8Array(16);crypto.getRandomValues(a);v=Array.prototype.map.call(a,function(x){return ("0"+x.toString(16)).slice(-2)}).join("");try{localStorage.setItem("kolot_rec_dev",v)}catch(e){}}
+  return v;
+}
+function cloudApi(action,data){
+  return fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(Object.assign({action:action,k:CLOUD.k,dev:CLOUD.dev},data||{}))}).then(function(r){return r.json()});
+}
+function blobB64(blob){return new Promise(function(res,rej){var fr=new FileReader();fr.onload=function(){res(String(fr.result).split(",")[1])};fr.onerror=rej;fr.readAsDataURL(blob)})}
+function wavMono(f,sr){
+  var n=f.length,buf=new ArrayBuffer(44+n*2),v=new DataView(buf);
+  function ws(o,s){for(var i=0;i<s.length;i++) v.setUint8(o+i,s.charCodeAt(i))}
+  ws(0,"RIFF");v.setUint32(4,36+n*2,true);ws(8,"WAVE");ws(12,"fmt ");v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+  v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);ws(36,"data");v.setUint32(40,n*2,true);
+  for(var i=0,o=44;i<n;i++,o+=2) v.setInt16(o,Math.max(-1,Math.min(1,f[i]))*32767,true);
+  return new Blob([buf],{type:"audio/wav"});
+}
+function unwav(b64){
+  var bin=atob(b64),u=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i);
+  var v=new DataView(u.buffer),sr=v.getUint32(24,true),p=12,data=44,len=0;
+  while(p<u.length-8){var id=String.fromCharCode(u[p],u[p+1],u[p+2],u[p+3]),sz=v.getUint32(p+4,true);if(id==="data"){data=p+8;len=sz;break}p+=8+sz}
+  var n=Math.floor(Math.min(len,u.length-data)/2),f=new Float32Array(n);
+  for(i=0;i<n;i++) f[i]=v.getInt16(data+i*2,true)/32768;
+  return {f:f,sr:sr};
+}
+function cloudPill(){
+  var p=$("#cloudPill");if(!CLOUD.on){p.hidden=true;return}
+  p.hidden=false;var n=CLOUD.q.length+(CLOUD.busy?1:0);
+  p.className="pill "+(CLOUD.failed?"cloud-err":(n?"":"cloud-ok"));
+  p.textContent=CLOUD.failed?"☁ לא נשמר, מנסים שוב…":(n?"☁ שומר… ("+n+")":"☁ נשמר");
+}
+function cloudQueue(job){if(!CLOUD.on) return;CLOUD.q.push(job);cloudPill();cloudPump()}
+function cloudPump(){
+  if(CLOUD.busy||!CLOUD.q.length) return;
+  CLOUD.busy=true;var job=CLOUD.q[0];cloudPill();
+  var p;
+  if(job.type==="room") p=blobB64(wavMono(S.rooms[job.sid],job.sr)).then(function(w){return cloudApi("rc_c_room",{sid:job.sid,wav:w})});
+  else p=blobB64(wavMono(job.t.raw,job.t.sr)).then(function(w){return cloudApi("rc_c_take",{b:job.b,i:job.i,sid:job.t.sid,pre:job.t.pre,flags:job.t.flags,s:job.s,wav:w})});
+  p.then(function(r){
+    CLOUD.q.shift();CLOUD.busy=false;CLOUD.failed=0;
+    if(!r.ok){
+      if(job.type==="take"){ // server refused (limit / submitted): keep the previous take
+        var b=S.blessers[job.b];if(b&&b.takes[job.i]===job.t) b.takes[job.i]=job.prev||null;
+        $("#renderStatus").textContent=r.error||"ההקלטה לא נשמרה.";queueReview();
+      }
+      if(r.locked||r.closed||r.submitted) gate(r.error,true);
+    } else if(job.type==="take") job.t.uploaded=true;
+    cloudPill();cloudPump();
+  }).catch(function(){
+    CLOUD.busy=false;CLOUD.failed++;cloudPill();
+    setTimeout(cloudPump,Math.min(30000,2000*CLOUD.failed));
+  });
+}
+function cloudFlush(){
+  return new Promise(function(res){
+    (function wait(n){if((!CLOUD.q.length&&!CLOUD.busy)||n>240) return res();cloudPump();setTimeout(function(){wait(n+1)},500)})(0);
+  });
+}
+function cloudSettingsSoon(){
+  if(!CLOUD.on||CLOUD.submitted) return;clearTimeout(CLOUD.setT);
+  CLOUD.setT=setTimeout(function(){cloudApi("rc_c_settings",{settings:settings(),music:document.querySelector("input[name=music]:checked").value}).catch(function(){})},1500);
+}
+function gate(msg,stop){
+  $("#gate").hidden=false;$("#gateTitle").textContent=stop?"לא אפשר להמשיך מכאן":"טוענים את ההקלטה שלך…";$("#gateMsg").textContent=msg||"";$("#gateStudio").hidden=!stop;
+  if(stop){$("#setup").hidden=true;$("#review").hidden=true;$("#stage").hidden=true;stopMic();stopLive()}
+}
+function applySettings(st,music){
+  if(st) ["nrMix","aiMix","deess","highs","mids","voiceDb","room","hall","musicDb","gap","fade","famGap"].forEach(function(id){
+    var map={nrMix:100,aiMix:100,room:100,hall:100},v=st[id];if(v==null) return;
+    var el=$("#"+id);el.value=map[id]?Math.round(v*map[id]):v;el.dispatchEvent(new Event("input"));
+  });
+  if(music&&music!=="file"){var r=document.querySelector('input[name=music][value="'+music+'"]');if(r) r.checked=true}
+}
+function cloudOpen(){
+  $("#setup").hidden=true;gate("רגע אחד…",false);
+  cloudApi("rc_c_open").then(function(r){
+    if(!r.ok){gate(r.error||"לא הצלחנו לפתוח את הקישור.",true);return}
+    S.mode=r.mode;CLOUD.fixedMode=true;S.maxBlessers=r.maxBlessers;S.textLocked=r.textLocked;
+    S.blessers=(r.blessers&&r.blessers.length?r.blessers:[{name:"",text:""}]).map(function(b){return newBlesser(b.name,b.text)});
+    if(r.state&&r.state.status!=="open") CLOUD.submitted=true;
+    if(r.settings) applySettings(r.settings,r.music);
+    if(!r.takes.length){$("#gate").hidden=true;$("#setup").hidden=false;renderSetup();return}
+    S.blessers.forEach(resplit);
+    var ids=r.takes.map(function(t){return t.f}).concat(Object.keys(r.rooms).map(function(k){return r.rooms[k]}));
+    $("#gateMsg").textContent="מורידים "+r.takes.length+" הקלטות…";
+    var files={},batches=[];for(var i=0;i<ids.length;i+=8) batches.push(ids.slice(i,i+8));
+    return batches.reduce(function(p,bt){return p.then(function(){return cloudApi("rc_c_audio",{ids:bt}).then(function(x){if(x.ok) Object.assign(files,x.files)})})},Promise.resolve()).then(function(){
+      Object.keys(r.rooms).forEach(function(sid){var f=files[r.rooms[sid]];if(f) S.rooms[sid]=unwav(f).f});
+      r.takes.forEach(function(t){
+        var b=S.blessers[t.b],f=files[t.f];if(!b||!f) return;
+        var i=t.i;if(b.sentences[i]!==t.s){var j=b.sentences.indexOf(t.s);if(j>=0) i=j}
+        if(i>=b.sentences.length) return;
+        var w=unwav(f);b.takes[i]={raw:w.f,pre:t.pre,sr:w.sr,sid:t.sid,dur:2,flags:t.flags||[],uploaded:true,n:t.n,pending:null};
+      });
+      $("#gate").hidden=true;showReview();allTakes().forEach(ensureClean);
+      if(CLOUD.submitted) setSubmittedUI();
+    });
+  }).catch(function(){gate("אין חיבור לאינטרנט. בודקים את החיבור ומרעננים את הדף.",true)});
+}
 
 /* ---------- encoders ---------- */
 function encodeWav(L,R,sr){
@@ -1279,12 +1442,17 @@ function encodeMp3(L,R,sr){
   }).catch(function(){return null});
 }
 
-window.addEventListener("beforeunload",function(e){if(S.blessers.some(function(b){return b.takes.some(Boolean)})){e.preventDefault();e.returnValue=""}});
+window.addEventListener("beforeunload",function(e){if(CLOUD.on&&!CLOUD.q.length&&!CLOUD.busy) return;if(S.blessers.some(function(b){return b.takes.some(Boolean)})){e.preventDefault();e.returnValue=""}});
 
-window.__kolotDebug={S:S,quickCheck:quickCheck,ensureClean:ensureClean,DSP:DSP,render:exportMix,startLive:startLive,stopLive:stopLive,MIXP:MIXP,settings:settings,showReview:showReview,renderReview:renderReview,splitText:splitText,resplit:resplit};
+window.__kolotDebug={CLOUD:CLOUD,cloudOpen:cloudOpen,unwav:unwav,wavMono:wavMono,setApi:function(u){API=u},quickCheck:quickCheck,ensureClean:ensureClean,DSP:DSP,render:exportMix,startLive:startLive,stopLive:stopLive,MIXP:MIXP,settings:settings,showReview:showReview,renderReview:renderReview,splitText:splitText,resplit:resplit};
 
 /* ---------- boot ---------- */
-loadText();renderSetup();
+var hk=(location.hash.match(/k=([a-f0-9]{20,40})/)||[])[1];
+if(hk){
+  CLOUD.on=true;CLOUD.k=hk;CLOUD.dev=devId();
+  $("#modeBadge").textContent="ההקלטות נשמרות אוטומטית";$("#renderBtn").textContent="סיום ושליחה לאולפן";
+  if(!API) gate("המערכת עוד לא חוברה לשרת.",true);else cloudOpen();
+} else {loadText();renderSetup()}
 if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){$("#setupStatus").textContent="הדפדפן הזה לא מאפשר הקלטה. כדאי לפתוח את הקישור ב-Chrome או ב-Safari.";$("#toRecord").disabled=true}
 })();
 </script>

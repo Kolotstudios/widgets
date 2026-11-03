@@ -1375,7 +1375,7 @@ function cloudSettingsSoon(){
   CLOUD.setT=setTimeout(function(){cloudApi("rc_c_settings",{settings:settings(),music:document.querySelector("input[name=music]:checked").value}).catch(function(){})},1500);
 }
 function gate(msg,stop){
-  $("#gate").hidden=false;$("#gateTitle").textContent=stop?"לא אפשר להמשיך מכאן":"טוענים את ההקלטה שלך…";$("#gateMsg").textContent=msg||"";$("#gateStudio").hidden=!stop;
+  $("#gate").hidden=false;$("#gateTitle").textContent=stop?"אי אפשר להמשיך מכאן":"טוענים את ההקלטה שלך…";$("#gateMsg").textContent=msg||"";$("#gateStudio").hidden=!stop;
   if(stop){$("#setup").hidden=true;$("#review").hidden=true;$("#stage").hidden=true;stopMic();stopLive()}
 }
 function applySettings(st,music){

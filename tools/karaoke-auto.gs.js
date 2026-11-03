@@ -23,7 +23,7 @@ function kkD9_(x) { return String(x || '').replace(/\D/g, '').slice(-9); }
  *  whose old order lists his number as the second phone). If the phone typed at upload does not match the order's primary phone - nothing is sent. */
 function kkTarget_(e) {
   if (!e.orderId) return { ok: false, error: 'אין מספר הזמנה – אי אפשר לשלוח' };
-  const j = kalaGet_('/api/v1/order/' + e.orderId); const o = (j && (j.payload || (j.id ? j : null))) || null;
+  const j = kalaGet_('/api/v1/order?id=' + encodeURIComponent(e.orderId)); const o = ((j && Array.isArray(j.payload)) ? j.payload : []).filter(x => String(x.id) === String(e.orderId))[0] || null;
   if (!o || !o.id) return { ok: false, error: 'ההזמנה ' + e.orderId + ' לא נמצאה בקאלה' };
   if (o.deleted) return { ok: false, error: 'ההזמנה ' + e.orderId + ' מחוקה בקאלה' };
   const prim = kkD9_(o.phone); if (prim.length < 9) return { ok: false, error: 'בהזמנה ' + e.orderId + ' אין טלפון ראשי' };

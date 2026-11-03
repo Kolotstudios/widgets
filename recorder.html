@@ -85,6 +85,16 @@ audio{width:100%}
 .status{font-size:14px;color:var(--muted);min-height:1.4em}
 .group{display:grid;gap:10px;padding-top:14px;border-top:1px solid var(--line)}
 h3{font:700 15px var(--f-body);margin:0;color:var(--muted);letter-spacing:.02em}
+.presets{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.preset{display:grid;gap:2px;text-align:start;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:12px;padding:10px 12px;cursor:pointer;font:15px var(--f-body)}
+.preset span{font-size:12px;color:var(--muted)}
+.preset[aria-pressed="true"]{border-color:var(--accent);background:var(--soft);box-shadow:inset 0 0 0 1px var(--accent)}
+.chips{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.chips button{border:1px solid var(--line);background:var(--paper);color:var(--ink);font:600 14px var(--f-body);padding:6px 14px;border-radius:99px;cursor:pointer}
+.chips button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.adv{border-top:1px solid var(--line);padding-top:12px}
+.adv summary{cursor:pointer;font-weight:700;color:var(--muted);list-style-position:inside}
+.adv[open] summary{margin-bottom:6px}
 .transport{position:sticky;bottom:0;z-index:20;display:flex;gap:12px;align-items:center;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin-bottom:env(safe-area-inset-bottom,0px);box-shadow:0 -4px 18px rgba(0,0,0,.08)}
 .playbtn{flex:none;width:48px;height:48px;border-radius:50%;border:0;background:var(--accent);color:var(--accent-ink);font-size:18px;cursor:pointer}
 .tp-main{flex:1;min-width:0;display:grid;gap:2px}
@@ -178,26 +188,17 @@ h3{font:700 15px var(--f-body);margin:0;color:var(--muted);letter-spacing:.02em}
     <div id="takes" style="display:grid;gap:14px"></div>
 
     <div class="card" id="mixCard">
-      <div class="row between"><h2>מיקס</h2><span class="note">משנים בזמן ההשמעה ושומעים מיד</span></div>
+      <div class="row between"><h2>הסאונד</h2><span class="note">בוחרים ושומעים מיד בנגן למטה</span></div>
 
       <div class="group">
-        <h3>קול</h3>
-        <div class="sliders">
-          <div class="slider"><label for="nrMix">ניקוי רעשים</label><output id="nrMixOut"></output><input type="range" id="nrMix" min="0" max="100" step="1" value="70"></div>
-          <div class="slider" id="aiWrap" hidden><label for="aiMix">ניקוי AI לרעשים משתנים</label><output id="aiMixOut"></output><input type="range" id="aiMix" min="0" max="100" step="1" value="0"></div>
-          <div class="slider"><label for="deess">דה-אסר (ש/ס)</label><output id="deessOut"></output><input type="range" id="deess" min="0" max="100" step="1" value="60"></div>
-          <div class="slider"><label for="highs">גבוהים <span dir="ltr">8–10K</span></label><output id="highsOut"></output><input type="range" id="highs" min="-6" max="6" step="0.5" value="1"></div>
-          <div class="slider"><label for="mids">מיד <span dir="ltr">450Hz</span></label><output id="midsOut"></output><input type="range" id="mids" min="-6" max="3" step="0.5" value="-2.5"></div>
-          <div class="slider"><label for="voiceDb">עוצמת קול</label><output id="voiceDbOut"></output><input type="range" id="voiceDb" min="-6" max="6" step="0.5" value="0"></div>
+        <h3>סגנון הקול</h3>
+        <div class="presets" id="voicePresets" role="group" aria-label="סגנון הקול">
+          <button type="button" class="preset" data-preset="natural" aria-pressed="true"><b>טבעי</b><span>נקי, חם ומדויק. מתאים לרוב הברכות</span></button>
+          <button type="button" class="preset" data-preset="warm" aria-pressed="false"><b>קרוב ואינטימי</b><span>פחות הד, הקול צמוד ורך</span></button>
+          <button type="button" class="preset" data-preset="hall" aria-pressed="false"><b>אולם חגיגי</b><span>הד ארוך ומרשים, כמו באירוע</span></button>
+          <button type="button" class="preset" data-preset="clean" aria-pressed="false"><b>היה רעש ברקע</b><span>ניקוי רעשים חזק יותר</span></button>
         </div>
-      </div>
-
-      <div class="group">
-        <h3>אפקט הד</h3>
-        <div class="sliders">
-          <div class="slider"><label for="room">חדר (קצר וטבעי)</label><output id="roomOut"></output><input type="range" id="room" min="0" max="40" step="1" value="10"></div>
-          <div class="slider"><label for="hall">אולם (הד ארוך)</label><output id="hallOut"></output><input type="range" id="hall" min="0" max="40" step="1" value="6"></div>
-        </div>
+        <p class="note" id="presetNote" hidden>הגדרות מותאמות אישית</p>
       </div>
 
       <div class="group">
@@ -209,19 +210,49 @@ h3{font:700 15px var(--f-body);margin:0;color:var(--muted);letter-spacing:.02em}
           <label class="mopt"><input type="radio" name="music" value="none"><span>בלי מוסיקה<small>קול בלבד</small></span><span></span></label>
           <input type="file" id="musicFile" accept="audio/*" hidden>
         </div>
-        <div class="sliders">
-          <div class="slider"><label for="musicDb">עוצמת מוסיקה</label><output id="musicDbOut"></output><input type="range" id="musicDb" min="-24" max="0" step="1" value="-10"></div>
+        <div class="chips" id="musicLevels" role="group" aria-label="עוצמת המוסיקה">
+          <span class="note">עוצמה:</span>
+          <button type="button" data-level="soft" aria-pressed="false">שקטה</button>
+          <button type="button" data-level="normal" aria-pressed="true">רגילה</button>
+          <button type="button" data-level="loud" aria-pressed="false">בולטת</button>
         </div>
       </div>
 
-      <div class="group">
-        <h3>תזמון</h3>
+      <details class="adv" id="adv">
+        <summary>הגדרות מתקדמות</summary>
+        <div class="group">
+          <h3>קול</h3>
+        <div class="sliders">
+          <div class="slider"><label for="nrMix">ניקוי רעשים</label><output id="nrMixOut"></output><input type="range" id="nrMix" min="0" max="100" step="1" value="70"></div>
+          <div class="slider" id="aiWrap" hidden><label for="aiMix">ניקוי AI לרעשים משתנים</label><output id="aiMixOut"></output><input type="range" id="aiMix" min="0" max="100" step="1" value="0"></div>
+          <div class="slider"><label for="deess">דה-אסר (ש/ס)</label><output id="deessOut"></output><input type="range" id="deess" min="0" max="100" step="1" value="60"></div>
+          <div class="slider"><label for="highs">גבוהים <span dir="ltr">8–10K</span></label><output id="highsOut"></output><input type="range" id="highs" min="-6" max="6" step="0.5" value="1"></div>
+          <div class="slider"><label for="mids">מיד <span dir="ltr">450Hz</span></label><output id="midsOut"></output><input type="range" id="mids" min="-6" max="3" step="0.5" value="-2.5"></div>
+          <div class="slider"><label for="voiceDb">עוצמת קול</label><output id="voiceDbOut"></output><input type="range" id="voiceDb" min="-6" max="6" step="0.5" value="0"></div>
+        </div>
+        </div>
+        <div class="group">
+          <h3>אפקט הד</h3>
+        <div class="sliders">
+          <div class="slider"><label for="room">חדר (קצר וטבעי)</label><output id="roomOut"></output><input type="range" id="room" min="0" max="40" step="1" value="10"></div>
+          <div class="slider"><label for="hall">אולם (הד ארוך)</label><output id="hallOut"></output><input type="range" id="hall" min="0" max="40" step="1" value="6"></div>
+        </div>
+        </div>
+        <div class="group">
+          <h3>מוסיקה</h3>
+          <div class="sliders">
+          <div class="slider"><label for="musicDb">עוצמת מוסיקה</label><output id="musicDbOut"></output><input type="range" id="musicDb" min="-24" max="0" step="1" value="-10"></div>
+          </div>
+        </div>
+        <div class="group">
+          <h3>תזמון</h3>
         <div class="sliders">
           <div class="slider"><label for="gap">רווח בין משפטים</label><output id="gapOut"></output><input type="range" id="gap" min="0.3" max="1.4" step="0.05" value="0.6"></div>
           <div class="slider"><label for="fade">פייד-אאוט בסוף</label><output id="fadeOut"></output><input type="range" id="fade" min="4" max="25" step="1" value="20"></div>
           <div class="slider" id="famGapWrap" hidden><label for="famGap">רווח בין מברכים</label><output id="famGapOut"></output><input type="range" id="famGap" min="4" max="16" step="1" value="10"></div>
         </div>
-      </div>
+        </div>
+      </details>
 
       <button class="btn primary big" id="renderBtn" type="button">הורדת הקובץ הסופי</button>
       <p class="status" id="renderStatus"></p>
@@ -626,7 +657,7 @@ function fmtDur(sec){sec=Math.round(sec);var m=Math.floor(sec/60),s=sec%60;retur
 document.querySelectorAll(".seg button").forEach(function(b){b.onclick=function(){
   S.mode=b.dataset.mode;
   if(S.mode!=="family"&&S.blessers.length>1) S.blessers=S.blessers.slice(0,1);
-  $("#musicDb").value=S.mode==="drasha"?-14:-10;
+  $("#musicDb").value=musicLevelDb(S.mlevel||"normal");
   saveText();renderSetup();
 }});
 $("#addBlesser").onclick=function(){S.blessers.push(newBlesser("",""));saveText();renderSetup()};
@@ -655,8 +686,17 @@ function firstMissing(b){for(var i=0;i<b.takes.length;i++) if(!b.takes[i]) retur
 
 /* ---------- audio capture ---------- */
 var Rec={ctx:null,stream:null,src:null,node:null,sink:null,wl:false,chunks:[],total:0,onChunk:null};
+function setSession(t){try{if(navigator.audioSession) navigator.audioSession.type=t}catch(e){}}
+var PB=null;
+// playback runs on its own context, so a phone that just used the mic plays through the speaker at full volume
+function ensurePlay(){
+  setSession("playback");
+  if(!PB||PB.state==="closed") PB=new AC();
+  return PB.state==="running"?Promise.resolve(PB):PB.resume().then(function(){return PB});
+}
 function ensureCtx(){
-  if(!Rec.ctx) Rec.ctx=new AC();
+  setSession("play-and-record");
+  if(!Rec.ctx||Rec.ctx.state==="closed"){Rec.ctx=new AC();Rec.wl=false}
   return Rec.ctx.state==="running"?Promise.resolve(Rec.ctx):Rec.ctx.resume().then(function(){return Rec.ctx});
 }
 function startMic(){
@@ -684,6 +724,8 @@ function stopMic(){
   try{if(Rec.src) Rec.src.disconnect();if(Rec.node) Rec.node.disconnect();if(Rec.sink) Rec.sink.disconnect()}catch(e){}
   if(Rec.stream) Rec.stream.getTracks().forEach(function(t){t.stop()});
   Rec.stream=null;Rec.src=null;Rec.node=null;Rec.onChunk=null;
+  if(Rec.ctx){var c=Rec.ctx;Rec.ctx=null;Rec.wl=false;try{c.close()}catch(e){}}
+  setSession("playback");
 }
 function sliceRec(a,b){
   var out=new Float32Array(Math.max(0,b-a)),pos=0;
@@ -928,7 +970,7 @@ var playing=null;
 function stopPlaying(){if(playing){try{playing.stop()}catch(e){}playing=null}}
 function playBuffer(buf){
   stopPlaying();stopLive();
-  return ensureCtx().then(function(ctx){var s=ctx.createBufferSource();s.buffer=buf;s.connect(ctx.destination);s.start();playing=s;s.onended=function(){if(playing===s) playing=null}});
+  return ensurePlay().then(function(ctx){var s=ctx.createBufferSource();s.buffer=buf;s.connect(ctx.destination);s.start();playing=s;s.onended=function(){if(playing===s) playing=null}});
 }
 function showReview(){$("#setup").hidden=true;$("#review").hidden=false;renderReview();window.scrollTo(0,0)}
 function renderReview(){
@@ -983,13 +1025,41 @@ bindOut("gap",sec);bindOut("fade",sec);bindOut("famGap",sec);
 function settings(){
   return {nrMix:+$("#nrMix").value/100,aiMix:S.aiAvailable?+$("#aiMix").value/100:0,deess:+$("#deess").value,highs:+$("#highs").value,mids:+$("#mids").value,
     voiceDb:+$("#voiceDb").value,room:+$("#room").value/100,hall:+$("#hall").value/100,musicDb:+$("#musicDb").value,
-    gap:+$("#gap").value,fade:+$("#fade").value,famGap:+$("#famGap").value};
+    gap:+$("#gap").value,fade:+$("#fade").value,famGap:+$("#famGap").value,preset:S.preset,mlevel:S.mlevel};
 }
 ["nrMix","aiMix","deess","highs","mids","voiceDb","room","hall","musicDb"].forEach(function(id){
   $("#"+id).addEventListener("input",function(){if(MIXP.nodes&&MIXP.ctx) applySet(MIXP.nodes,settings(),MIXP.ctx,true);cloudSettingsSoon()});
 });
 ["gap","fade","famGap"].forEach(function(id){$("#"+id).addEventListener("change",function(){restartIfPlaying();cloudSettingsSoon()})});
 document.querySelectorAll("input[name=music]").forEach(function(r){r.addEventListener("change",function(){restartIfPlaying();cloudSettingsSoon()})});
+
+/* ---------- presets ---------- */
+var VOICE_PRESETS={
+  natural:{nrMix:65,aiMix:0,deess:60,highs:1,mids:-2.5,voiceDb:0,room:10,hall:4},
+  warm:{nrMix:60,aiMix:0,deess:65,highs:0,mids:-1.5,voiceDb:0,room:6,hall:1},
+  hall:{nrMix:65,aiMix:0,deess:60,highs:1.5,mids:-2.5,voiceDb:0,room:8,hall:16},
+  clean:{nrMix:90,aiMix:35,deess:65,highs:0.5,mids:-2.5,voiceDb:0,room:9,hall:4}
+};
+var MUSIC_LEVELS={soft:-15,normal:-10,loud:-6};
+S.preset="natural";S.mlevel="normal";
+var applying=false;
+function setSlider(id,v){var el=$("#"+id);if(!el) return;el.value=v;el.dispatchEvent(new Event("input"))}
+function applyPreset(name,quiet){
+  var p=VOICE_PRESETS[name];if(!p) return;
+  applying=true;Object.keys(p).forEach(function(k){setSlider(k,k==="aiMix"&&!S.aiAvailable?0:p[k])});applying=false;
+  S.preset=name;markPresets();if(!quiet) cloudSettingsSoon();
+}
+function musicLevelDb(lv){return MUSIC_LEVELS[lv]+(S.mode==="drasha"?-4:0)}
+function applyLevel(lv,quiet){applying=true;setSlider("musicDb",musicLevelDb(lv));applying=false;S.mlevel=lv;markPresets();if(!quiet) cloudSettingsSoon()}
+function markPresets(){
+  document.querySelectorAll("#voicePresets .preset").forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.preset===S.preset))});
+  document.querySelectorAll("#musicLevels button").forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.level===S.mlevel))});
+  $("#presetNote").hidden=!!S.preset;
+}
+document.querySelectorAll("#voicePresets .preset").forEach(function(b){b.onclick=function(){applyPreset(b.dataset.preset)}});
+document.querySelectorAll("#musicLevels button").forEach(function(b){b.onclick=function(){applyLevel(b.dataset.level)}});
+["nrMix","aiMix","deess","highs","mids","voiceDb","room","hall"].forEach(function(id){$("#"+id).addEventListener("input",function(e){if(!applying&&e.isTrusted){S.preset="";markPresets()}})});
+$("#musicDb").addEventListener("input",function(e){if(!applying&&e.isTrusted){S.mlevel="";markPresets()}});
 
 /* ---------- music ---------- */
 function mtof(m){return 440*Math.pow(2,(m-69)/12)}
@@ -1094,7 +1164,7 @@ document.querySelectorAll("[data-prev]").forEach(function(b){b.onclick=function(
   if(b.dataset.on){stopPlaying();b.textContent="▶ האזנה";delete b.dataset.on;return}
   document.querySelectorAll("[data-prev]").forEach(function(x){x.textContent="▶ האזנה";delete x.dataset.on});
   b.textContent="טוען…";
-  ensureCtx().then(function(){return synthBed(b.dataset.prev,16)}).then(function(buf){
+  ensurePlay().then(function(){return synthBed(b.dataset.prev,16)}).then(function(buf){
     b.textContent="■ עצירה";b.dataset.on="1";playBuffer(buf).then(function(){playing.onended=function(){b.textContent="▶ האזנה";delete b.dataset.on}});
   });
 }});
@@ -1220,7 +1290,7 @@ function prepare(solo){
 function startLive(offset,solo,label){
   stopLive(true);stopPlaying();MIXP.busy=true;
   $("#playBtn").textContent="…";
-  return Promise.all([ensureCtx(),prepare(solo)]).then(function(r){
+  return Promise.all([ensurePlay(),prepare(solo)]).then(function(r){
     var ctx=r[0],T=r[1].T;
     MIXP.ctx=ctx;MIXP.T=T;MIXP.solo=solo||null;MIXP.label=label||"המיקס המלא, עם כל ההגדרות";
     MIXP.offset=Math.min(offset,Math.max(0,T.total-0.5));MIXP.when0=ctx.currentTime+0.06;
@@ -1386,6 +1456,7 @@ function applySettings(st,music){
     var map={nrMix:100,aiMix:100,room:100,hall:100},v=st[id];if(v==null) return;
     var el=$("#"+id);el.value=map[id]?Math.round(v*map[id]):v;el.dispatchEvent(new Event("input"));
   });
+  if(st){S.preset=st.preset!=null?st.preset:S.preset;S.mlevel=st.mlevel!=null?st.mlevel:S.mlevel;markPresets()}
   if(music&&music!=="file"){var r=document.querySelector('input[name=music][value="'+music+'"]');if(r) r.checked=true}
 }
 function cloudOpen(){
@@ -1450,7 +1521,7 @@ window.addEventListener("beforeunload",function(e){if(CLOUD.on&&!CLOUD.q.length&
 window.__kolotDebug={CLOUD:CLOUD,cloudQueue:cloudQueue,cloudFlush:cloudFlush,submitMix:submitMix,cloudOpen:cloudOpen,unwav:unwav,wavMono:wavMono,setApi:function(u){API=u},S:S,quickCheck:quickCheck,ensureClean:ensureClean,DSP:DSP,render:exportMix,startLive:startLive,stopLive:stopLive,MIXP:MIXP,settings:settings,showReview:showReview,renderReview:renderReview,splitText:splitText,resplit:resplit};
 
 /* ---------- visible errors (prototype) ---------- */
-var VERSION="2026-11-04a";
+var VERSION="2026-11-04b";
 function reportErr(msg){
   var el=document.getElementById("errBox");
   if(!el){el=document.createElement("p");el.id="errBox";el.className="note warn";el.style.cssText="position:fixed;inset:auto 8px calc(8px + env(safe-area-inset-bottom,0px)) 8px;z-index:99;background:var(--paper);border:1px solid var(--warn);border-radius:10px;padding:8px 10px;margin:0";document.body.appendChild(el)}
@@ -1461,6 +1532,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e.reason;reportEr
 
 /* ---------- boot ---------- */
 $("#verNote").textContent="גרסה "+VERSION;
+applyPreset("natural",true);applyLevel("normal",true);
 var hk=(location.hash.match(/k=([a-f0-9]{20,40})/)||[])[1];
 if(hk){
   CLOUD.on=true;CLOUD.k=hk;CLOUD.dev=devId();

@@ -99,6 +99,7 @@ body.dragging,body.dragging *{cursor:grabbing!important;user-select:none}
 .cl .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .tag{border-radius:999px;padding:1px 9px;font-size:12px;font-weight:700}.tag.open{background:#d9f5e3;color:#14663a}.tag.lock{background:#fde2dc;color:#9a2f1c}
 body.locked [data-step="people"] .row,body.locked [data-step="people"] label,body.locked #peopleList,body.locked #pickChips,body.locked #pickFloat,body.locked #splitList,body.locked #autoSplit,body.locked #clearSplit{pointer-events:none;opacity:.6}
+.fld{display:grid;gap:4px;margin-bottom:10px}.fld input,.fld textarea{font-size:16px}
 .howto{margin:0;padding-inline-start:20px;display:grid;gap:2px}
 .people{display:grid;gap:8px}
 .person{display:flex;gap:10px;align-items:center;padding:8px 12px;border-radius:12px;background:var(--bg);border:1.5px solid var(--line)}
@@ -139,9 +140,19 @@ body.locked [data-step="people"] .row,body.locked [data-step="people"] label,bod
       <input type="radio" name="mode" id="m-client" value="client" checked><label for="m-client">תצוגת לקוח</label>
     </div>
   </header>
-  <div id="staffBar" class="staffbar" hidden><span id="cloudInfo" class="hint small">פרויקט מקומי – עוד לא נשמר ללקוח</span><span class="sp"></span><button class="small primary" id="intakeBtn">📥 גייד חדש</button><button class="small" id="cloudList">📋 לקוחות</button><button class="small" id="cloudNew">➕ שיר חדש</button><button class="small" id="cloudSave">☁ שמירה ולינק ללקוח</button></div>
+  <div id="staffBar" class="staffbar" hidden><span id="reviewBadge" class="tag lock" hidden style="cursor:pointer"></span><span id="cloudInfo" class="hint small">פרויקט מקומי – עוד לא נשמר ללקוח</span><span class="sp"></span><button class="small primary" id="intakeBtn">📥 גייד חדש</button><button class="small" id="cloudList">📋 לקוחות</button><button class="small" id="upMgr">👤 לינקים להעלאה</button><button class="small" id="cloudNew">➕ שיר חדש</button><button class="small" id="cloudSave">☁ שמירה ולינק ללקוח</button></div>
   <div id="clientBar" class="clientbar" hidden></div>
   <div id="gate" class="card" hidden style="text-align:center;gap:10px"><h2>הקריוקי המשפחתי שלכם</h2><p class="hint">הכלי נפתח דרך הלינק האישי שקיבלתם מאולפני קולות. אם קיבלתם לינק – פתחו אותו כמו שהוא, במלואו.</p><p><button class="small" id="staffLogin" style="border:none;background:none;color:var(--muted);font-weight:400">כניסת צוות</button></p></div>
+  <div id="upCard" class="card" hidden>
+    <h2>📥 העלאת גייד</h2><p class="hint" id="upHello"></p>
+    <div class="fld"><label for="uPhone">טלפון של הלקוח/ה</label><input type="tel" id="uPhone" inputmode="tel" style="direction:ltr" placeholder="05X-XXXXXXX"></div>
+    <div class="fld"><label for="uName">שם הלקוח/ה</label><input type="text" id="uName"></div>
+    <div class="fld"><label for="uTitle">שם השיר (לא חובה)</label><input type="text" id="uTitle"></div>
+    <div class="fld"><label for="uLyrics">המילים של השיר (כמו שאושרו, עם "פזמון" / "בית")</label><textarea id="uLyrics" style="min-height:200px"></textarea></div>
+    <div class="fld"><label for="uAudio">קובץ הגייד</label><input type="file" id="uAudio" accept="audio/*,.mp3,.wav,.m4a"></div>
+    <div class="row"><button class="primary big" id="uGo">שליחה</button></div>
+    <div id="uMsg" class="hint" style="white-space:pre-line;font-size:17px"></div>
+  </div>
   <div id="loading" class="card" hidden style="text-align:center"><b>טוען את השיר שלכם…</b><span class="hint">זה לוקח כמה שניות</span></div>
   <div class="steps" id="steps"></div>
 
@@ -305,7 +316,7 @@ function snapT(t){if(!P.bpm||!$('snap').checked)return t;const half=beatLen()/2;
 const DB={open(){return new Promise((res,rej)=>{const r=indexedDB.open('kolot-karaoke',1);r.onupgradeneeded=()=>r.result.createObjectStore('p');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})},
  async put(k,v){try{const d=await this.open();await new Promise((res,rej)=>{const tx=d.transaction('p','readwrite');tx.objectStore('p').put(v,k);tx.oncomplete=res;tx.onerror=()=>rej(tx.error)})}catch(e){}},
  async get(k){try{const d=await this.open();return await new Promise(res=>{const r=d.transaction('p').objectStore('p').get(k);r.onsuccess=()=>res(r.result);r.onerror=()=>res(null)})}catch(e){return null}}};
-let saveT=null;const save=()=>{if(K){cloudPush();return}clearTimeout(saveT);saveT=setTimeout(()=>DB.put('proj',{P:JSON.parse(JSON.stringify({...P,img:null})),img:P.img}),400)};
+let saveT=null;const save=()=>{if(K){cloudPush();return}if(UPK)return;clearTimeout(saveT);saveT=setTimeout(()=>DB.put('proj',{P:JSON.parse(JSON.stringify({...P,img:null})),img:P.img}),400)};
 
 // ---------- people & split ----------
 const pById=id=>P.people.find(p=>p.id===id);
@@ -759,11 +770,11 @@ let autoBusy=false;
 async function autoAlign(opt){opt=opt||{};if(autoBusy)return;if(!audioBuf){if(opt.silent)throw new Error('חסר גייד');return toast('קודם מעלים גייד')}if(!P.lines.length){if(opt.silent)throw new Error('חסרות מילים');return toast('קודם מדביקים מילים')}
  if(!API||API.indexOf('http')!==0)return toast('הזיהוי האוטומטי עוד לא חובר');
  if(!opt.silent&&P.lines.some(l=>l.t!=null)&&!confirm('הזיהוי יחליף את המיקומים הקיימים של כל השורות. להמשיך?'))return;
- let pass=lsGet('kk_pass');if(!pass){try{const pg=await api({action:'ping'});if(!pg.admin||!pg.whisper){openSetup();return toast('קודם מגדירים את הזיהוי (פעם אחת)')}}catch(e){}pass=(prompt('סיסמת צוות:')||'').trim();if(!pass)return}
+ let pass=opt.u?'-':lsGet('kk_pass');if(!pass){try{const pg=await api({action:'ping'});if(!pg.admin||!pg.whisper){openSetup();return toast('קודם מגדירים את הזיהוי (פעם אחת)')}}catch(e){}pass=(prompt('סיסמת צוות:')||'').trim();if(!pass)return}
  const msg=s=>{$('autoMsg').textContent=s;if(opt.onMsg)opt.onMsg(s)};autoBusy=true;$('autoBtn').disabled=true;
  try{msg('מכין את השמע…');const wav=await voiceWav(audioBuf);if(wav.size>24e6)throw new Error('הגייד ארוך מדי לזיהוי (מעל 12 דקות)');
-  msg('מזהה את השירה… (בערך חצי דקה)');const r=await api({action:'transcribe',pass,audio:await b64(wav),mime:'audio/wav',name:(P.title||'guide')+'.wav',prompt:whisperPrompt()});
-  if(!r.ok){if(/סיסמה/.test(r.error||''))lsSet('kk_pass','');throw new Error(r.error||'שגיאה')}lsSet('kk_pass',pass);
+  msg('מזהה את השירה… (בערך חצי דקה)');const r=await api({action:opt.u?'kk_u_transcribe':'transcribe',pass,u:opt.u,audio:await b64(wav),mime:'audio/wav',name:(P.title||'guide')+'.wav',prompt:whisperPrompt()});
+  if(!r.ok){if(!opt.u&&/סיסמה/.test(r.error||''))lsSet('kk_pass','');throw new Error(r.error||'שגיאה')}if(!opt.u)lsSet('kk_pass',pass);
   if(!r.words||!r.words.length)throw new Error('לא זוהתה שירה בגייד');
   const res=alignWords(P.lines.map(l=>l.text),r.words,audioBuf.duration);res.forEach((x,k)=>{const l=P.lines[k];l.t=x.t;l.e=x.e;l.cf=x.cf});
   cur=P.lines.length;sel=-1;save();view0=Math.max(0,P.lines[0].t-2);clampView();renderSync();
@@ -836,7 +847,7 @@ $('cloudSave').onclick=()=>{if(!P.lines.length)return toast('קודם מכיני
   catch(e){$('cMsg').textContent='✗ '+(e.message||e)}finally{$('cGo').disabled=false}}};
 // list of client projects (staff)
 $('cloudList').onclick=async()=>{showPanel('<b>לקוחות</b><p class="hint">טוען…</p>');try{const r=await staffApi({action:'kk_list'});if(!r.ok)throw new Error(r.error);renderList(r.items)}catch(e){showPanel(`<b>לקוחות</b><p class="warn">✗ ${esc(e.message||e)}</p><button id="cX">סגירה</button>`);$('cX').onclick=hidePanel}};
-function renderList(items){showPanel(`<div class="row"><b>לקוחות (${items.length})</b><span class="sp"></span><button class="small" id="cX">סגירה</button></div>`+(items.length?items.map(it=>`<div class="cl" data-k="${it.k}"><div><b>${esc(it.name||'לקוח')}</b> <span class="hint small">${esc(it.title||'')}</span><br><span class="tag ${it.editable?'open':'lock'}">${it.closed?'סגור':it.editable?'פתוח עד '+fmtE(it.expires):'נעול'}</span> <span class="hint small">${it.recDate?'הקלטה '+it.recDate.split('-').reverse().join('/')+' · ':''}${it.updated?(it.by==='client'?'הלקוח עדכן ':'עודכן ')+fmtD(it.updated):''}${it.people?' · '+it.people+' משתתפים':''}${it.sentAt?' · נשלח '+fmtD(it.sentAt):''}${it.reminded?' · תזכורת '+fmtD(it.reminded):''}</span></div>
+function renderList(items){showPanel(`<div class="row"><b>לקוחות (${items.length})</b><span class="sp"></span><button class="small" id="cX">סגירה</button></div>`+(items.length?items.map(it=>`<div class="cl" data-k="${it.k}"><div><b>${esc(it.name||'לקוח')}</b> <span class="hint small">${esc(it.title||'')}</span><br><span class="tag ${it.editable?'open':'lock'}">${it.closed?'סגור':it.editable?'פתוח עד '+fmtE(it.expires):'נעול'}</span> <span class="hint small">${it.recDate?'הקלטה '+it.recDate.split('-').reverse().join('/')+' · ':''}${it.updated?(it.by==='client'?'הלקוח עדכן ':'עודכן ')+fmtD(it.updated):''}${it.people?' · '+it.people+' משתתפים':''}${it.sentAt?' · נשלח '+fmtD(it.sentAt):''}${it.uploaderName?' · הועלה ע"י '+esc(it.uploaderName):''}${it.needsReview?`<br><span class="warn small">⚠ לבדיקה: ${esc(it.needsReview)}</span>`:''}${it.reminded?' · תזכורת '+fmtD(it.reminded):''}</span></div>
  <div class="acts"><button class="small" data-a="copy">🔗 לינק</button>${it.sentAt?'':'<button class="small" data-a="send">📲 שליחה</button>'}<button class="small" data-a="open">פתיחה</button><button class="small" data-a="ext">+7 ימים</button><button class="small" data-a="${it.closed?'reopen':'close'}">${it.closed?'פתיחה מחדש':'סגירה'}</button></div></div>`).join(''):'<p class="hint">עוד אין לקוחות.</p>'));
  $('cX').onclick=hidePanel;
  $('panelBox').onclick=async e=>{const b=e.target.closest('[data-a]');if(!b)return;const k=b.closest('[data-k]').dataset.k;const a=b.dataset.a;
@@ -886,11 +897,46 @@ $('intakeBtn').onclick=()=>{showPanel(`<b>📥 גייד חדש ללקוח</b><p 
 async function sendToClient(k,btn){if(!confirm('לשלוח ללקוח את הלינק בוואטסאפ עכשיו?'))return;if(btn)btn.disabled=true;try{const s=await staffApi({action:'kk_send',k});if(!s.ok)throw new Error(s.error);toast(s.already?'הלינק כבר נשלח בעבר':'✓ נשלח ללקוח')}catch(e){toast('✗ '+(e.message||e))}finally{if(btn)btn.disabled=false}}
 // client: a video needs a full split
 function clientCanExport(){if(!K)return true;const g=verseGaps();if(!P.people.length){toast('קודם מוסיפים את המשתתפים ומחלקים את השורות');show(0);return false}if(g.length){toast(`נשארו ${g.length} שורות בלי משתתף – משלימים את החלוקה ואז יוצרים סרטון`);show(1);return false}return true}
+// ---------- personal upload link (#u=KEY): guide + lyrics + phone -> everything automatic ----------
+var UPK='';
+function hashU(){let h='';try{h=window.frameElement?window.parent.location.hash:location.hash}catch(e){h=location.hash}const m=h.match(/[#&]u=([a-f0-9]{20,40})/);return m?m[1]:''}
+async function upBoot(){mode='staff';document.querySelectorAll('[data-step],.steps,.nav,#gate').forEach(e=>e.hidden=true);$('upCard').hidden=false;$('hTitle').textContent='העלאת גייד';
+ try{const r=await api({action:'kk_u_check',u:UPK});if(!r.ok)throw new Error(r.error);$('upHello').textContent=`שלום ${r.name} 😊 ממלאים את הפרטים, מצרפים את הגייד ולוחצים "שליחה". המערכת מזהה את הלקוח/ה לפי הטלפון, מסנכרנת את המילים ושולחת לו/ה לינק לחלוקה.`}
+ catch(e){$('upHello').textContent='✗ '+(e.message||e);$('uGo').disabled=true}}
+$('uGo').onclick=async()=>{const say=s=>{$('uMsg').textContent=s};const phone=$('uPhone').value.trim(),name=$('uName').value.trim(),ly=$('uLyrics').value.trim(),f=$('uAudio').files[0];
+ if(phone.replace(/\D/g,'').length<9)return say('חסר טלפון תקין');if(!name)return say('חסר שם');if(!ly)return say('חסרות מילים');if(!f)return say('חסר קובץ גייד');
+ $('uGo').disabled=true;const review=[];
+ try{say('מחפש את ההזמנה בקאלה…');let o={};try{o=await api({action:'kk_u_find',u:UPK,phone,name});if(!o.ok)throw new Error(o.error)}catch(e){o={found:0,err:e.message}}
+  if(o.found!==1)review.push(o.found>1?'נמצאו כמה הזמנות לטלפון הזה':'לא נמצאה הזמנת קליפ לטלפון הזה');
+  say('טוען את הגייד…');Object.assign(P,{title:$('uTitle').value.trim()||name,lyrics:ly,lines:[],bpm:0,beat0:0,people:[],assign:{},bg:{type:'theme',v:'party'},ratio:'h',img:null});
+  $('title').value=P.title;$('lyrics').value=ly;reparse();if(!P.lines.length)throw new Error('לא הצלחתי לקרוא את המילים');P.bg.v=suggestTheme();await setAudio(f,true);if(!audioBuf)throw new Error('לא הצלחתי לקרוא את קובץ הגייד (mp3 / wav)');
+  const low=await autoAlign({silent:true,u:UPK,onMsg:s=>say(s)});if(low)review.push(low+' שורות לא זוהו בוודאות');if(!P.lines.every(l=>l.t!=null))review.push('יש שורות שלא מוקמו');
+  say('שומר…');const s=await api({action:'kk_u_save',u:UPK,meta:{name:o.found===1&&o.name?o.name:name,phone,orderId:o.orderId||'',recDate:o.date||'',product:o.product||'',maxP:o.maxP||0,minP:o.minP||0,review:review.join(' · ')},project:projData(),audio:await b64(audioBlob),mime:audioBlob.type||'audio/mpeg'});
+  if(!s.ok)throw new Error(s.error);
+  if(review.length){say(`✓ הגייד נקלט.\nהלינק ללקוח/ה עוד לא נשלח: ${review.join(', ')}.\nאורן יבדוק וישלח.`);return}
+  say('שולח ללקוח/ה…');const t=await api({action:'kk_u_send',u:UPK,k:s.k});
+  say(t.ok?`✓ הכול מוכן! הלינק לחלוקה נשלח ל${o.name||name} בוואטסאפ.`:`✓ הגייד נקלט והלינק נוצר.\nהשליחה לא בוצעה: ${t.error||''}\nאורן יקבל עדכון.`);
+  $('uPhone').value='';$('uName').value='';$('uTitle').value='';$('uLyrics').value='';$('uAudio').value=''}
+ catch(e){say('✗ '+(e.message||e)+'\nאפשר לנסות שוב, ואם זה חוזר – לשלוח לאורן.')}finally{$('uGo').disabled=false}};
+// staff: manage upload links
+$('upMgr').onclick=async()=>{showPanel('<b>לינקים להעלאת גייד</b><p class="hint">טוען…</p>');try{const r=await staffApi({action:'kk_up_list'});if(!r.ok)throw new Error(r.error);renderUps(r.items)}catch(e){showPanel(`<b>לינקים להעלאה</b><p class="warn">✗ ${esc(e.message||e)}</p><button id="cX">סגירה</button>`);$('cX').onclick=hidePanel}};
+function upLink(key){return pageURL()+'#u='+key}
+function renderUps(items){showPanel(`<div class="row"><b>לינקים להעלאת גייד</b><span class="sp"></span><button class="small" id="cX">סגירה</button></div><p class="hint">מי שמקבל לינק כזה יכול רק להעלות גייד + מילים + טלפון של לקוח. הוא לא רואה שירים או לקוחות אחרים. אפשר להשבית בכל רגע.</p>`+
+ items.map(it=>`<div class="cl" data-key="${it.key}"><div><b>${esc(it.name)}</b> <span class="tag ${it.active?'open':'lock'}">${it.active?'פעיל':'מושבת'}</span> <span class="hint small">${it.count||0} העלאות</span></div><div class="acts"><button class="small" data-u="copy">🔗 העתקה</button><button class="small" data-u="${it.active?'off':'on'}">${it.active?'השבתה':'הפעלה'}</button></div></div>`).join('')+
+ `<div class="row" style="margin-top:8px"><input type="text" id="upNew" placeholder="שם (למשל: ליאור)" style="flex:1"><button class="small primary" id="upAdd">➕ יצירת לינק</button></div>`);
+ $('cX').onclick=hidePanel;
+ $('upAdd').onclick=async()=>{const n=$('upNew').value.trim();if(!n)return;try{const r=await staffApi({action:'kk_up_create',name:n});if(!r.ok)throw new Error(r.error);const l=await staffApi({action:'kk_up_list'});renderUps(l.items);copyText(upLink(r.key))}catch(e){toast('✗ '+(e.message||e))}};
+ $('panelBox').onclick=async e=>{const b=e.target.closest('[data-u]');if(!b)return;const key=b.closest('[data-key]').dataset.key;if(b.dataset.u==='copy')return copyText(upLink(key));
+  if(b.dataset.u==='off'&&!confirm('להשבית את הלינק? מי שיש לו אותו לא יוכל להעלות יותר.'))return;try{const r=await staffApi({action:'kk_up_set',key,active:b.dataset.u==='on'});if(!r.ok)throw new Error(r.error);const l=await staffApi({action:'kk_up_list'});renderUps(l.items)}catch(err){toast('✗ '+(err.message||err))}}}
+async function copyText(u){try{await navigator.clipboard.writeText(u);toast('הלינק הועתק')}catch(e){prompt('העתיקו את הלינק:',u)}}
+// staff: songs waiting for a check
+async function refreshReview(){try{const r=await staffApi({action:'kk_list'});if(!r.ok)return;const n=r.items.filter(x=>x.needsReview).length;const b=$('reviewBadge');b.hidden=!n;b.textContent=`⚠ ${n} שירים ממתינים לבדיקה`;b.onclick=()=>renderList(r.items)}catch(e){}}
+
 $('staffLogin').onclick=async()=>{const pw=(prompt('סיסמת צוות:')||'').trim();if(!pw)return;try{const r=await api({action:'login',pass:pw});if(!r.ok)throw new Error(r.error);lsSet('kk_pass',pw);location.reload()}catch(e){toast('✗ '+(e.message||e))}};
 
 // ---------- boot ----------
 (async()=>{
- K=hashK();
+ K=hashK();UPK=K?'':hashU();if(UPK){await upBoot();return}
  try{await Promise.all([document.fonts.load(`800 40px Rubik`),document.fonts.load(`600 40px Rubik`),document.fonts.load(`40px "Secular One"`)])}catch(e){}
  if(K){ // a client's personal link: only that song, client view only
   mode='client';$('loading').hidden=false;document.querySelectorAll('[data-step],.steps,.nav').forEach(e=>e.style.visibility='hidden');
@@ -899,7 +945,7 @@ $('staffLogin').onclick=async()=>{const pw=(prompt('סיסמת צוות:')||'').
   if(!r.ok){$('gate').hidden=false;$('gate').querySelector('p').textContent=r.error||'הלינק לא נמצא';document.querySelectorAll('[data-step],.steps,.nav').forEach(e=>e.hidden=true);return}
   KS=r.state;await applyCloud(r);setClientBar('');if(!P.people.length&&P.lines.length){}show(0);if(!KS.editable)lockClient();return}
  if(!isStaff()){$('gate').hidden=false;document.querySelectorAll('.steps,.nav').forEach(e=>e.hidden=true);document.querySelectorAll('[data-step]').forEach(e=>e.hidden=true);return}
- $('modeSeg').hidden=false;$('staffBar').hidden=false;
+ $('modeSeg').hidden=false;$('staffBar').hidden=false;setTimeout(refreshReview,1500);
  const saved=await DB.get('proj');if(saved&&saved.P){Object.assign(P,saved.P);P.img=saved.img||null;await loadImg()}renderStaffBar();
  const ab=await DB.get('audio');if(ab)await setAudio(ab,false);
  $('title').value=P.title;$('lyrics').value=P.lyrics;if(P.lyrics)reparse();if(P.ratio==='v')$('r-v').checked=true;

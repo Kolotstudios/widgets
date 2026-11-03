@@ -781,11 +781,17 @@ function alignWords(lines,words,dur){
  // fill missing lines between neighbours, by word count
  for(let k=0;k<res.length;k++){if(res[k])continue;let a=k;while(a<res.length&&!res[a])a++;// k..a-1 missing
   const prevE=k>0&&res[k-1]?res[k-1].e:0;const nextT=a<res.length?res[a].t:Math.min(dur,prevE+(a-k)*3.5);
-  const cnt=lines.slice(k,a).map(s=>s.split(/\s+/).length);const tot=cnt.reduce((x,y)=>x+y,0)||1;const want=tot*0.6+(a-k)*0.4;let t=prevE+0.15;if(nextT-0.3-t>want*1.4)t=nextT-0.3-want;const span=Math.max(0.5,nextT-0.15-t);
+  const cnt=lines.slice(k,a).map(s=>s.split(/\s+/).length);const tot=cnt.reduce((x,y)=>x+y,0)||1;const want=tot*0.6+(a-k)*0.4;let t=prevE+0.15;if(nextT-0.3-t>want*1.4)t=nextT-0.3-want;
+  const P0=k>0?res[k-1]:null;
+  if(P0&&nextT-0.15-t<(a-k)*0.6&&nextT-P0.t>(a-k+1)*0.5){ // no room after the previous line: share its slot with the missing lines, by word count
+   const pw=P0.n||1,tot2=tot+pw,span2=nextT-0.1-P0.t;t=P0.t+span2*pw/tot2;P0.e=t-0.02;
+   for(let q=k;q<a;q++){const len=span2*cnt[q-k]/tot2;res[q]={t,e:t+Math.max(0.3,len-0.05),cf:0,n:cnt[q-k]};t+=len}k=a;continue}
+  const span=Math.max(0.5,nextT-0.15-t);
   for(let q=k;q<a;q++){const len=span*cnt[q-k]/tot;res[q]={t,e:t+Math.max(0.4,len-0.1),cf:0,n:cnt[q-k]};t+=len}k=a}
  // tidy: no overlaps, sane lengths (Whisper may stretch the last word over an instrumental)
  for(let k=0;k<res.length;k++){const r=res[k];const nx=res[k+1];const maxLen=Math.max(2.5,r.n*1.1+1.5);if(r.e-r.t>maxLen)r.e=r.t+maxLen;if(nx&&r.e>nx.t-0.02)r.e=Math.max(r.t+0.3,nx.t-0.02);
   r.t=Math.max(0,+(r.t-0.05).toFixed(2));r.e=+r.e.toFixed(2);r.cf=+r.cf.toFixed(2)}
+ for(let k=1;k<res.length;k++){const a=res[k-1],r=res[k];if(r.t<=a.t+0.2){r.t=+(a.t+0.25).toFixed(2);r.cf=0;if(r.e<r.t+0.3)r.e=+(r.t+0.3).toFixed(2)}if(a.e>r.t-0.02)a.e=+Math.max(a.t+0.2,r.t-0.02).toFixed(2)}
  return res}
 async function api(body,url){const r=await fetch(url||API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({app:'karaoke',...body}),redirect:'follow'});const tx=await r.text();try{return JSON.parse(tx)}catch(e){return {ok:false,error:'תשובה לא צפויה מהשרת'}}}
 function lsGet(k){try{return localStorage.getItem(k)||''}catch(e){return ''}}function lsSet(k,v){try{v?localStorage.setItem(k,v):localStorage.removeItem(k)}catch(e){}}

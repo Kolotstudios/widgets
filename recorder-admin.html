@@ -103,7 +103,7 @@ function msgFor(name,k){
 }
 function boot(){
   if(!API){$("#loginStatus").textContent="המערכת עוד לא חוברה לשרת.";$("#loginBtn").disabled=true;return}
-  call("ping").then(function(r){
+  call("rc_ping").then(function(r){
     setupMode=!r.admin;
     $("#loginTitle").textContent=setupMode?"הגדרת סיסמה ראשונה":"כניסה";
     $("#newPassWrap").hidden=!setupMode;$("#pass").parentNode.hidden=setupMode;
@@ -112,7 +112,7 @@ function boot(){
   }).catch(function(){$("#loginStatus").textContent="אין חיבור לשרת."});
 }
 function login(){
-  call("login").then(function(r){
+  call("rc_login").then(function(r){
     if(!r.ok){$("#loginStatus").textContent=r.error||"סיסמה שגויה";return}
     try{sessionStorage.setItem("kolot_rec_admin",pass)}catch(e){}
     $("#login").hidden=true;$("#create").hidden=false;$("#list").hidden=false;load();
@@ -121,7 +121,7 @@ function login(){
 $("#loginBtn").onclick=function(){
   if(setupMode){
     var np=$("#newPass").value.trim();
-    call("setup",{newPass:np}).then(function(r){if(!r.ok){$("#loginStatus").textContent=r.error;return}pass=np;setupMode=false;login()});
+    call("rc_setup",{newPass:np}).then(function(r){if(!r.ok){$("#loginStatus").textContent=r.error;return}pass=np;setupMode=false;login()});
   } else {pass=$("#pass").value;login()}
 };
 $("#pass").addEventListener("keydown",function(e){if(e.key==="Enter") $("#loginBtn").click()});

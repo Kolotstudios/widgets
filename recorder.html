@@ -262,7 +262,7 @@ function detectHum(room,sr){
   });
   return out;
 }
-function dehum(x,freqs,sr){freqs.forEach(function(f){x=filt(x,coef("notch",f,f<120?20:30,0,sr))});return x}
+function dehum(x,freqs,sr){freqs.forEach(function(f){x=filt(x,coef("notch",f,12,0,sr))});return x}
 
 /* ---- clicks ---- */
 function declick(x,sr){
@@ -375,15 +375,22 @@ function selfProfile(x,sr){
 }
 function denoise(x,sr,prof,reductionDb){
   if(!prof) return x;
-  var N=prof.N,H=N/4,T=fftTables(N),K=N/2+1,gmin=Math.pow(10,-reductionDb/20),over=2.2;
+  var N=prof.N,H=N/4,T=fftTables(N),K=N/2+1,gmin=Math.pow(10,-reductionDb/20),over=1.8;
   var pad=new Float32Array(x.length+2*N);pad.set(x,N);
   var out=new Float32Array(pad.length),re=new Float64Array(N),im=new Float64Array(N),g=new Float64Array(K),prev=new Float64Array(K).fill(gmin),gs=new Float64Array(K);
+  var ps=new Float64Array(K),pw=new Float64Array(K),first=true;
   for(var s=0;s+N<=pad.length;s+=H){
     var i,k;
     for(i=0;i<N;i++){re[i]=pad[s+i]*T.win[i];im[i]=0}
     fft(re,im,T,false);
+    for(k=0;k<K;k++) pw[k]=re[k]*re[k]+im[k]*im[k];
     for(k=0;k<K;k++){
-      var P=re[k]*re[k]+im[k]*im[k],v=1-over*prof.p[k]/(P+1e-20);
+      var q=(pw[k>1?k-2:k]+2*pw[k>0?k-1:k]+3*pw[k]+2*pw[k<K-1?k+1:k]+pw[k<K-2?k+2:k])/9;
+      ps[k]=first?q:(q>ps[k]?0.35*ps[k]+0.65*q:0.75*ps[k]+0.25*q);
+    }
+    first=false;
+    for(k=0;k<K;k++){
+      var P=ps[k],v=1-over*prof.p[k]/(P+1e-20);
       v=v>0?Math.sqrt(v):0;if(v<gmin) v=gmin;
       if(v<prev[k]) v=prev[k]*0.72+v*0.28;
       g[k]=v;prev[k]=v;
@@ -456,17 +463,16 @@ function finish(x,sr){
 function prepRoom(room,sr){
   if(!room||room.length<sr*0.4) return {hum:[],prof:null};
   var x=highpass(removeDC(room),70,sr),hum=detectHum(removeDC(room),sr);
-  x=dehum(x,hum,sr);
   return {hum:hum,prof:noiseProfile(x,sr)};
 }
 function clean(raw,pre,sr,roomInfo,opts){
   opts=opts||{};
   var red=opts.reduction==null?18:opts.reduction,info={};
   var x=highpass(removeDC(raw),70,sr);
-  var hum=roomInfo&&roomInfo.hum||[];
-  x=dehum(x,hum,sr);info.hum=hum;
   var dc=declick(x,sr);x=dc.x;info.clicks=dc.fixed;
   var dp=deplosive(x,sr);x=dp.x;info.plosives=dp.hits;
+  // hum is stationary, so the room-tone profile removes it in the spectral stage (no notch filters, which ring after pops)
+  info.hum=roomInfo&&roomInfo.hum||[];
   x=x.subarray(pre);
   var prof=roomInfo&&roomInfo.prof||selfProfile(x,sr);
   if(red>0) x=denoise(x,sr,prof,red);

@@ -569,7 +569,7 @@ function playFrom(t){audio.currentTime=Math.max(0,t);audio.play().then(()=>{$('p
 function nudgeLine(i,d){const l=P.lines[i];if(!l||l.t==null)return;const t0=l.t0!=null?l.t0:l.t,e0=l.e0!=null?l.e0:l.e;
  let nt=d==null?t0:+(l.t+d).toFixed(2);if(Math.abs(nt-t0)>FIX_MAX+1e-6)return toast('אפשר להזיז שורה עד 3 שניות. לתיקון גדול יותר פנו לאולפן');
  let pi=i-1;while(pi>=0&&P.lines[pi].t==null)pi--;let ni=i+1;while(ni<P.lines.length&&P.lines[ni].t==null)ni++;const prev=pi>=0?P.lines[pi]:null,next=ni<P.lines.length?P.lines[ni]:null;
- if(prev&&nt<prev.t+0.3)return toast('אי אפשר להקדים יותר – השורה הקודמת מתחילה כאן');if(next&&nt>next.t-0.3)return toast('אי אפשר לאחר יותר – השורה הבאה מתחילה כאן');
+ if(d!=null&&d<0&&prev&&nt<prev.t+0.3)return toast('אי אפשר להקדים יותר – השורה הקודמת מתחילה כאן');if(d!=null&&d>0&&next&&nt>next.t-0.3)return toast('אי אפשר לאחר יותר – השורה הבאה מתחילה כאן');
  if(l.t0==null){l.t0=l.t;l.e0=l.e}const len=Math.max(0.4,(e0!=null?e0:l.e)-t0);l.t=nt;l.e=+(next?Math.min(nt+len,next.t-0.02):nt+len).toFixed(2);
  if(prev&&prev.e!=null&&prev.e>nt-0.02)prev.e=+Math.max(prev.t+0.3,nt-0.02).toFixed(2);
  if(Math.abs(l.t-l.t0)<0.01){l.t=l.t0;if(l.e0!=null)l.e=next?Math.min(l.e0,next.t-0.02):l.e0;delete l.t0;delete l.e0}

@@ -157,7 +157,8 @@ function kkClientTimes_(pr, times, e) {
     const t0 = l.t0 != null ? +l.t0 : +l.t, e0 = l.e0 != null ? +l.e0 : +l.e; let nt = Math.round(+x.t * 100) / 100;
     if (Math.abs(nt - t0) > MAX) return;
     let pi = i - 1; while (pi >= 0 && L[pi].t == null) pi--; let ni = i + 1; while (ni < L.length && L[ni].t == null) ni++;
-    if (pi >= 0 && nt < +L[pi].t + 0.25) return; if (ni < L.length && nt > +L[ni].t - 0.25) return;
+    const back = Math.abs(nt - t0) < 0.01;
+    if (!back && pi >= 0 && nt < +L[pi].t + 0.25 && nt < +l.t) return; if (!back && ni < L.length && nt > +L[ni].t - 0.25 && nt > +l.t) return;
     if (Math.abs(nt - t0) < 0.01) { l.t = t0; if (l.e0 != null) l.e = e0; delete l.t0; delete l.e0; return; }
     if (l.t0 == null) { l.t0 = +l.t; l.e0 = +l.e; }
     let ne = isFinite(+x.e) ? Math.round(+x.e * 100) / 100 : nt + Math.max(0.4, e0 - t0); if (ne <= nt || ne - nt > 15) ne = nt + Math.max(0.4, e0 - t0);

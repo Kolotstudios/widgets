@@ -140,6 +140,7 @@ function kkClient_(d, P) {
       const pr = JSON.parse(kkGet_(e.json).getContentText());
       const c = d.changes || {};
       ['people', 'assign', 'bg', 'ratio'].forEach(f => { if (c[f] !== undefined) pr[f] = c[f]; });
+      if (c.times && typeof c.times === 'object') kkClientTimes_(pr, c.times, e);
       kkPut_(P, e.json, k + '.json', Utilities.newBlob(JSON.stringify(pr), 'application/json'));
       if (d.img) e.img = kkPut_(P, e.img, k + '.img', Utilities.newBlob(Utilities.base64Decode(d.img), 'image/jpeg'));
       e.updated = Date.now(); e.by = 'client'; e.people = (pr.people || []).length; idx[k] = e; kkSaveIndex_(P, idx);
@@ -147,6 +148,23 @@ function kkClient_(d, P) {
     } finally { lock.releaseLock(); }
   }
   return { ok: false, error: 'unknown action' };
+}
+/** Client timing fixes: a line may move at most 3 s from the studio's placement, never past its neighbours. Original kept in t0/e0. */
+function kkClientTimes_(pr, times, e) {
+  const L = pr.lines || []; const MAX = 3.05;
+  Object.keys(times).forEach(key => {
+    const i = +key, x = times[key] || {}, l = L[i]; if (!l || l.t == null || !isFinite(+x.t)) return;
+    const t0 = l.t0 != null ? +l.t0 : +l.t, e0 = l.e0 != null ? +l.e0 : +l.e; let nt = Math.round(+x.t * 100) / 100;
+    if (Math.abs(nt - t0) > MAX) return;
+    let pi = i - 1; while (pi >= 0 && L[pi].t == null) pi--; let ni = i + 1; while (ni < L.length && L[ni].t == null) ni++;
+    if (pi >= 0 && nt < +L[pi].t + 0.25) return; if (ni < L.length && nt > +L[ni].t - 0.25) return;
+    if (Math.abs(nt - t0) < 0.01) { l.t = t0; if (l.e0 != null) l.e = e0; delete l.t0; delete l.e0; return; }
+    if (l.t0 == null) { l.t0 = +l.t; l.e0 = +l.e; }
+    let ne = isFinite(+x.e) ? Math.round(+x.e * 100) / 100 : nt + Math.max(0.4, e0 - t0); if (ne <= nt || ne - nt > 15) ne = nt + Math.max(0.4, e0 - t0);
+    if (ni < L.length) ne = Math.min(ne, +L[ni].t - 0.02); l.t = nt; l.e = ne;
+  });
+  for (let i = 1; i < L.length; i++) { const a = L[i - 1], b = L[i]; if (a.t != null && b.t != null && a.e != null && a.e > b.t - 0.02) a.e = Math.max(+a.t + 0.3, +b.t - 0.02); }
+  e.timeFix = L.filter(l => l.t0 != null).length;
 }
 /** Run once from the editor to approve the new Drive permission (only files this script creates). */
 function kkAuthorize() { const P = PropertiesService.getScriptProperties(); Logger.log('folder ' + kkFolder_(P) + ' · password ' + (P.getProperty('KARAOKE_ADMIN_PASSWORD') ? 'yes' : 'no') + ' · OpenAI ' + (P.getProperty('OPENAI_API_KEY') ? 'yes' : 'no')); }

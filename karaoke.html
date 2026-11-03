@@ -49,6 +49,8 @@ button.ic{padding:4px 9px;border-radius:9px}
 #tlWrap.drop{outline:3px dashed #ff4d6d;outline-offset:2px}
 .sechdr{font-size:13px;font-weight:800;color:var(--accent);margin:8px 4px 0;letter-spacing:.02em}
 .ln .sec{font-size:12px;color:var(--muted)}
+.fixbox{margin-top:10px;border:1.5px solid var(--line);border-radius:12px;padding:8px 12px;background:var(--bg)}.fixbox summary{cursor:pointer;font-weight:600}
+#fixList{display:grid;gap:6px;max-height:420px;overflow:auto}.fx{display:grid;grid-template-columns:auto 1fr auto;gap:6px;align-items:center;padding:6px 8px;border:1px solid var(--line);border-radius:10px;background:var(--paper)}.fx.ch{border-color:var(--accent)}.fx .sec{font-size:12px;color:var(--muted)}.fx .d{font-size:12px;color:var(--accent);direction:ltr}.fx .acts{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}.fx .acts button{padding:4px 9px;font-size:13px}
 .ln.playing{box-shadow:inset -4px 0 0 #ff4d6d}
 .ln.cur{border-color:var(--accent);background:var(--soft)}
 .ln.chorus .tx::after{content:" · פזמון";font-size:12px;color:var(--muted)}
@@ -98,7 +100,7 @@ body.dragging,body.dragging *{cursor:grabbing!important;user-select:none}
 .cl{display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--bg)}
 .cl .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .tag{border-radius:999px;padding:1px 9px;font-size:12px;font-weight:700}.tag.open{background:#d9f5e3;color:#14663a}.tag.lock{background:#fde2dc;color:#9a2f1c}
-body.locked [data-step="people"] .row,body.locked [data-step="people"] label,body.locked #peopleList,body.locked #pickChips,body.locked #pickFloat,body.locked #splitList,body.locked #autoSplit,body.locked #clearSplit{pointer-events:none;opacity:.6}
+body.locked #fixBox,body.locked [data-step="people"] .row,body.locked [data-step="people"] label,body.locked #peopleList,body.locked #pickChips,body.locked #pickFloat,body.locked #splitList,body.locked #autoSplit,body.locked #clearSplit{pointer-events:none;opacity:.6}
 .fld{display:grid;gap:4px;margin-bottom:10px}.fld input,.fld textarea{font-size:16px}
 .howto{margin:0;padding-inline-start:20px;display:grid;gap:2px}
 .people{display:grid;gap:8px}
@@ -238,6 +240,9 @@ body.locked [data-step="people"] .row,body.locked [data-step="people"] label,bod
     <h2>הסרטון</h2>
     <div class="stage"><canvas id="preview" width="1280" height="720"></canvas></div>
     <div class="row"><button class="primary" id="pPlay">▶ צפייה</button><input type="range" id="pSeek" min="0" max="1000" value="0" style="flex:1"><span id="pTime" class="tm" style="direction:ltr">0:00</span></div>
+    <details id="fixBox" class="fixbox"><summary>🎯 שורה לא מתוזמנת? תיקון תזמון</summary>
+      <p class="hint">אם הכתובית של שורה מופיעה לפני השירה או אחריה – מזיזים אותה כאן ברבע שנייה בכל לחיצה (עד 3 שניות). ▶ מנגן מאותה שורה כדי לבדוק. ↺ מחזיר למקור.</p>
+      <div id="fixList"></div></details>
     <div class="grid2">
       <button class="big" id="expLow">⬇ סרטון קטן לוואטסאפ</button>
       <button class="big primary" id="expHigh">⬇ סרטון באיכות גבוהה</button>
@@ -556,6 +561,21 @@ function pvLoop(){drawPreview();if(!audio.paused)pvRaf=requestAnimationFrame(pvL
 $('pPlay').onclick=async()=>{if(!audioURL)return toast('אין עדיין גייד');if(audio.paused){await audio.play();$('pPlay').textContent='⏸ עצירה';pvLoop()}else{audio.pause();$('pPlay').textContent='▶ צפייה'}};
 $('pSeek').oninput=()=>{const d=timeline().dur||0;audio.currentTime=$('pSeek').value/1000*d;drawPreview()};
 audio.addEventListener('ended',()=>{$('pPlay').textContent='▶ צפייה'});
+// ---- small timing fixes by the client: shift one line by 1/4 s (max 3 s from the studio's placement), order is kept ----
+const FIX_STEP=0.25,FIX_MAX=3;
+function renderFix(){const box=$('fixList');if(!box)return;box.innerHTML=P.lines.map((l,i)=>{if(l.t==null)return '';const sh=l.t0!=null?+(l.t-l.t0).toFixed(2):0;
+ return `<div class="fx${sh?' ch':''}" data-i="${i}"><span class="sec">${i+1}</span><span>${esc(l.text)} <span class="d">${sh?(sh>0?'+':'')+sh+'s':''}</span></span><span class="acts"><button class="small" data-f="play" title="ניגון מהשורה">▶</button><button class="small" data-f="-1" title="הכתובית מאחרת – להקדים">⏪ להקדים</button><button class="small" data-f="1" title="הכתובית מקדימה – לאחר">לאחר ⏩</button>${sh?'<button class="small" data-f="0" title="חזרה למקור">↺</button>':''}</span></div>`}).join('')}
+function playFrom(t){audio.currentTime=Math.max(0,t);audio.play().then(()=>{$('pPlay').textContent='⏸ עצירה';pvLoop()}).catch(()=>drawPreview())}
+function nudgeLine(i,d){const l=P.lines[i];if(!l||l.t==null)return;const t0=l.t0!=null?l.t0:l.t,e0=l.e0!=null?l.e0:l.e;
+ let nt=d==null?t0:+(l.t+d).toFixed(2);if(Math.abs(nt-t0)>FIX_MAX+1e-6)return toast('אפשר להזיז שורה עד 3 שניות. לתיקון גדול יותר פנו לאולפן');
+ let pi=i-1;while(pi>=0&&P.lines[pi].t==null)pi--;let ni=i+1;while(ni<P.lines.length&&P.lines[ni].t==null)ni++;const prev=pi>=0?P.lines[pi]:null,next=ni<P.lines.length?P.lines[ni]:null;
+ if(prev&&nt<prev.t+0.3)return toast('אי אפשר להקדים יותר – השורה הקודמת מתחילה כאן');if(next&&nt>next.t-0.3)return toast('אי אפשר לאחר יותר – השורה הבאה מתחילה כאן');
+ if(l.t0==null){l.t0=l.t;l.e0=l.e}const len=Math.max(0.4,(e0!=null?e0:l.e)-t0);l.t=nt;l.e=+(next?Math.min(nt+len,next.t-0.02):nt+len).toFixed(2);
+ if(prev&&prev.e!=null&&prev.e>nt-0.02)prev.e=+Math.max(prev.t+0.3,nt-0.02).toFixed(2);
+ if(Math.abs(l.t-l.t0)<0.01){l.t=l.t0;if(l.e0!=null)l.e=next?Math.min(l.e0,next.t-0.02):l.e0;delete l.t0;delete l.e0}
+ save();cloudPush();renderFix();playFrom(l.t-1.5)}
+$('fixList').onclick=e=>{const b=e.target.closest('[data-f]');if(!b)return;const i=+b.closest('[data-i]').dataset.i;const f=b.dataset.f;if(f==='play')return playFrom(P.lines[i].t-1.5);nudgeLine(i,f==='0'?null:+f*FIX_STEP)};
+function clientTimes(){const o={};P.lines.forEach((l,i)=>{if(l.t0!=null||l.e0!=null)o[i]={t:l.t,e:l.e}});return o}
 
 // ---------- export ----------
 let expCancel=false;
@@ -813,7 +833,7 @@ function show(i){const F=flow();step=Math.max(0,Math.min(F.length-1,i));const ke
  $('steps').innerHTML=F.map(([k,n],j)=>`<button data-go="${j}" class="${j===step?'on':j<step?'done':''}">${n}</button>`).join('');
  $('prev').style.visibility=step?'visible':'hidden';$('next').hidden=step===F.length-1;
  if(key!=='sync'&&key!=='video'){audio.pause()};setTimeout(placeFloats,60)
- if(key==='sync')renderSync();if(key==='people')renderPeople();if(key==='split'){if(P.people.length&&!Object.values(P.assign).some(a=>a&&a.length))autoSplit();else renderSplit()}if(key==='look')renderThemes();if(key==='video'){sizePreview();audio.currentTime=0;drawPreview()}
+ if(key==='sync')renderSync();if(key==='people')renderPeople();if(key==='split'){if(P.people.length&&!Object.values(P.assign).some(a=>a&&a.length))autoSplit();else renderSplit()}if(key==='look')renderThemes();if(key==='video'){sizePreview();audio.currentTime=0;drawPreview();renderFix()}
  toTop()}
 // back to the top of the tool (on the site the tool sits in an iframe, so scroll the site itself)
 function toTop(){try{if(window.frameElement){const r=window.frameElement.getBoundingClientRect();const ins=siteInset();if(r.top<ins||r.top>window.parent.innerHeight*0.6)window.parent.scrollBy({top:r.top-ins-12,behavior:'smooth'});return}}catch(e){}window.scrollTo({top:0,behavior:'smooth'})}
@@ -876,7 +896,7 @@ async function applyCloud(r){const pr=r.project||{};Object.assign(P,{title:'',ly
  $('title').value=P.title||'';$('lyrics').value=P.lyrics||'';$('hTitle').textContent=P.title||'קריוקי משפחתי';if(P.ratio==='v')$('r-v').checked=true;
  cur=Math.max(0,P.lines.findIndex(l=>l.t==null));if(cur<0)cur=P.lines.length;audioDirty=false;imgDirty=false}
 // client: changes go to the cloud (debounced)
-function cloudPush(){if(!K||!KS||!KS.editable)return;clearTimeout(cloudT);cloudT=setTimeout(async()=>{try{const body={action:'kk_update',k:K,changes:{people:P.people,assign:P.assign,bg:P.bg,ratio:P.ratio}};if(imgDirty&&P.img)body.img=await b64(P.img);const r=await api(body);if(r.ok){imgDirty=false;setClientBar('✓ השינויים נשמרו')}else if(r.locked){KS.editable=false;lockClient()}else setClientBar('✗ לא נשמר: '+(r.error||''))}catch(e){setClientBar('✗ אין חיבור – ננסה שוב בשינוי הבא')}},1200)}
+function cloudPush(){if(!K||!KS||!KS.editable)return;clearTimeout(cloudT);cloudT=setTimeout(async()=>{try{const body={action:'kk_update',k:K,changes:{people:P.people,assign:P.assign,bg:P.bg,ratio:P.ratio,times:clientTimes()}};if(imgDirty&&P.img)body.img=await b64(P.img);const r=await api(body);if(r.ok){imgDirty=false;setClientBar('✓ השינויים נשמרו')}else if(r.locked){KS.editable=false;lockClient()}else setClientBar('✗ לא נשמר: '+(r.error||''))}catch(e){setClientBar('✗ אין חיבור – ננסה שוב בשינוי הבא')}},1200)}
 function setClientBar(msg){const b=$('clientBar');b.hidden=false;const st=KS?(KS.editable?`פתוח לשינויים עד ${fmtE(KS.expires)}`:'מועד ההקלטה עבר – אפשר לצפות ולהוריד את הסרטון. לשינויים צרו קשר עם אולפני קולות.'):'';b.className='clientbar'+(KS&&!KS.editable?' locked':'');b.innerHTML=`<span>🎤 <b>${esc(P.title||'השיר שלכם')}</b></span><span class="hint small">${esc(st)}</span><span class="sp"></span><span class="hint small">${esc(msg||'')}</span>`}
 function lockClient(){document.body.classList.add('locked');setClientBar('');show(flow().length-1)}
 // ---------- automatic intake: guide + lyrics + order -> placed lines -> link -> sent ----------

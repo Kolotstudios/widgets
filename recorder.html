@@ -1,0 +1,821 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>מקליט הברכות של קולות</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700&family=Assistant:wght@400;600;700&display=swap">
+<style>
+/* Layout: single column of working cards on a soft studio ground; the prompter is a full-screen dark stage. */
+:root{
+  --bg:#f7f3f8;--paper:#ffffff;--ink:#251b2e;--muted:#6f6479;--line:#e6dcea;
+  --accent:#6b2fb3;--accent-ink:#ffffff;--soft:#efe6f8;--gold:#a0782a;
+  --rec:#d23048;--ok:#2c8553;--warn:#a85a14;
+  --stage:#0e0a13;--stage-ink:#f5effa;--stage-dim:rgba(245,239,250,.30);--stage-line:rgba(245,239,250,.14);
+  --f-display:"Frank Ruhl Libre","David Libre",Georgia,serif;
+  --f-body:"Assistant",system-ui,"Segoe UI",Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#16111c;--paper:#201929;--ink:#f0eaf5;--muted:#a99db6;--line:#382d45;
+  --accent:#b78bf0;--accent-ink:#1b1325;--soft:#2d2340;--gold:#d6b066;
+  --rec:#f0566b;--ok:#5cc58a;--warn:#e39a52;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#16111c;--paper:#201929;--ink:#f0eaf5;--muted:#a99db6;--line:#382d45;
+  --accent:#b78bf0;--accent-ink:#1b1325;--soft:#2d2340;--gold:#d6b066;
+  --rec:#f0566b;--ok:#5cc58a;--warn:#e39a52;color-scheme:dark}
+[hidden]{display:none!important}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:max(16px,env(safe-area-inset-top,0px)) max(32px,env(safe-area-inset-bottom,0px))}
+.wrap{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+header.top{display:flex;flex-direction:column;gap:4px;padding-top:8px}
+.brand{font-size:13px;letter-spacing:.08em;color:var(--gold);font-weight:700}
+h1{font-family:var(--f-display);font-size:clamp(28px,6vw,38px);line-height:1.15;margin:0;text-wrap:balance}
+h2{font-family:var(--f-display);font-size:22px;margin:0;text-wrap:balance}
+.sub{color:var(--muted);margin:0}
+.badge{display:inline-block;font-size:12px;font-weight:700;padding:2px 10px;border-radius:99px;background:var(--soft);color:var(--accent);width:max-content}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:var(--soft);padding:5px;border-radius:12px}
+.seg button{border:0;background:transparent;color:var(--ink);font:600 15px var(--f-body);padding:10px 6px;border-radius:9px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--paper);color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+label{font-weight:600;font-size:14px}
+input[type=text],textarea{width:100%;font:16px/1.6 var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+textarea{min-height:170px;resize:vertical}
+input:focus-visible,textarea:focus-visible,button:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.blesser{border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;background:var(--paper)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.row.between{justify-content:space-between}
+.btn{border:1px solid var(--line);background:var(--paper);color:var(--ink);font:600 15px var(--f-body);padding:10px 16px;border-radius:10px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;justify-content:center}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.big{font-size:18px;padding:14px 20px;width:100%}
+.btn.small{font-size:13px;padding:6px 10px}
+.btn.ghost{background:transparent}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.tips{margin:0;padding-inline-start:20px;color:var(--muted);font-size:14px;display:grid;gap:4px}
+.note{font-size:13px;color:var(--muted);margin:0}
+.warn{color:var(--warn)}
+.ok{color:var(--ok)}
+/* review */
+.take{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start;padding:10px 0;border-top:1px solid var(--line)}
+.take:first-of-type{border-top:0}
+.take .num{font:600 13px var(--f-body);color:var(--muted);min-width:22px;padding-top:3px;font-variant-numeric:tabular-nums}
+.take .txt{min-width:0;font-size:15px}
+.take .meta{font-size:12px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
+.take .acts{display:flex;gap:6px}
+.take.missing .txt{color:var(--muted)}
+.pill{font-size:11px;font-weight:700;padding:1px 8px;border-radius:99px;background:var(--soft)}
+.pill.bad{background:transparent;border:1px solid var(--warn);color:var(--warn)}
+.pill.miss{background:transparent;border:1px dashed var(--muted);color:var(--muted)}
+.music{display:grid;gap:8px}
+.mopt{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer}
+.mopt:has(input:checked){border-color:var(--accent);background:var(--soft)}
+.mopt small{display:block;color:var(--muted);font-size:12px}
+.slider{display:grid;grid-template-columns:1fr auto;gap:2px 12px;align-items:center}
+.slider input{grid-column:1/-1;width:100%;accent-color:var(--accent)}
+.slider output{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.sliders{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+audio{width:100%}
+.status{font-size:14px;color:var(--muted);min-height:1.4em}
+/* prompter stage */
+#stage{position:fixed;inset:0;background:var(--stage);color:var(--stage-ink);z-index:50;display:flex;flex-direction:column}
+#stage[hidden]{display:none!important}
+.st-head{display:flex;flex-direction:column;gap:8px;padding:calc(10px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--stage-line)}
+.st-head .row{color:var(--stage-ink)}
+.st-name{font-weight:700;font-size:16px}
+.st-prog{font-size:13px;color:var(--stage-dim);font-variant-numeric:tabular-nums}
+.chip{border:1px solid var(--stage-line);background:transparent;color:var(--stage-ink);font:600 13px var(--f-body);padding:5px 10px;border-radius:99px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--stage-ink);color:var(--stage)}
+.meter{height:6px;border-radius:3px;background:var(--stage-line);overflow:hidden;position:relative}
+.meter i{position:absolute;inset:0 auto 0 0;right:0;left:auto;width:0;background:#3fbf7f;transition:width .06s linear}
+.meter i.hot{background:#ff5a6e}
+.st-hint{font-size:13px;min-height:1.2em;color:var(--stage-dim)}
+.st-hint.alert{color:#ffb4bf}
+.st-text{flex:1;overflow-y:auto;padding:38vh max(20px,env(safe-area-inset-right,0px)) 45vh max(20px,env(safe-area-inset-left,0px));scroll-behavior:smooth}
+.st-text p{font-family:var(--f-display);font-weight:500;margin:0 auto .9em;max-width:22em;line-height:1.45;color:var(--stage-dim);transition:color .3s,opacity .3s;cursor:pointer;text-wrap:pretty}
+.st-text p.cur{color:var(--stage-ink)}
+.st-text p.done{opacity:.55}
+.st-text p.para{margin-bottom:1.8em}
+.st-foot{display:flex;flex-direction:column;gap:10px;padding:12px max(16px,env(safe-area-inset-right,0px)) calc(14px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));border-top:1px solid var(--stage-line)}
+.st-foot .row{justify-content:center}
+.recbtn{width:76px;height:76px;border-radius:50%;border:4px solid var(--stage-ink);background:var(--rec);cursor:pointer;display:grid;place-items:center}
+.recbtn::after{content:"";width:28px;height:28px;border-radius:50%;background:#fff}
+.sbtn{border:1px solid var(--stage-line);background:transparent;color:var(--stage-ink);font:600 15px var(--f-body);padding:12px 14px;border-radius:12px;cursor:pointer;min-width:0}
+.sbtn.next{background:var(--stage-ink);color:var(--stage);font-size:18px;padding:14px 26px;flex:1;max-width:260px}
+.sbtn.stop{border-color:#ff8a99;color:#ffb4bf}
+.recdot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--rec);margin-inline-end:6px;animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.25}}
+#count{position:absolute;inset:0;display:grid;place-items:center;font:700 120px var(--f-display);color:var(--stage-ink);background:rgba(14,10,19,.72);pointer-events:none}
+@media (prefers-reduced-motion:reduce){.st-text{scroll-behavior:auto}.recdot{animation:none}.meter i{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <header class="top">
+    <span class="brand">אולפני קולות</span>
+    <h1>הקלטת ברכה מהנייד</h1>
+    <p class="sub">כותבים או מדביקים את הטקסט, מקליטים משפט אחרי משפט מול טלפרומפטר, ומקבלים קובץ ערוך עם מוסיקה.</p>
+    <span class="badge">אב-טיפוס לבדיקה</span>
+  </header>
+
+  <!-- SETUP -->
+  <section id="setup" class="wrap" style="gap:18px">
+    <div class="card">
+      <h2>מה מקליטים?</h2>
+      <div class="seg" role="group" aria-label="סוג ההקלטה">
+        <button type="button" data-mode="blessing" aria-pressed="true">ברכה</button>
+        <button type="button" data-mode="family" aria-pressed="false">ברכות משפחה</button>
+        <button type="button" data-mode="drasha" aria-pressed="false">דרשה</button>
+      </div>
+      <p class="note" id="modeNote"></p>
+    </div>
+    <div class="card">
+      <div class="row between"><h2 id="textTitle">הטקסט</h2><button class="btn small" id="sampleBtn" type="button">טען טקסט לדוגמה</button></div>
+      <div id="blessers" style="display:grid;gap:12px"></div>
+      <button class="btn" id="addBlesser" type="button" hidden>+ הוספת מברך</button>
+    </div>
+    <div class="card">
+      <h2>לפני שמתחילים</h2>
+      <ul class="tips">
+        <li>חדר שקט, בלי מזגן או טלוויזיה ברקע.</li>
+        <li>מניחים את הטלפון על שולחן, בערך 20–30 ס"מ מהפה, וקוראים מהמסך.</li>
+        <li>אין צורך באוזניות. בזמן ההקלטה לא מתנגנת מוסיקה.</li>
+        <li>טעיתם? לוחצים "מההתחלה" ומקריאים את המשפט שוב. אפשר גם לתקן כל משפט אחר כך.</li>
+      </ul>
+      <button class="btn primary big" id="toRecord" type="button">למסך ההקלטה</button>
+      <p class="status" id="setupStatus"></p>
+    </div>
+  </section>
+
+  <!-- REVIEW -->
+  <section id="review" class="wrap" style="gap:18px" hidden>
+    <div class="row between">
+      <h2>ההקלטות שלך</h2>
+      <button class="btn small ghost" id="backToText" type="button">→ חזרה לטקסט</button>
+    </div>
+    <div id="takes" style="display:grid;gap:14px"></div>
+
+    <div class="card" id="mixCard">
+      <h2>מוסיקה ומיקס</h2>
+      <div class="music" id="musicList">
+        <label class="mopt"><input type="radio" name="music" value="warm" checked><span>רגשי<small>פסנתר ופד שקט (פס הדגמה)</small></span><button class="btn small" type="button" data-prev="warm">▶ האזנה</button></label>
+        <label class="mopt"><input type="radio" name="music" value="bright"><span>שמח<small>ארפג'יו קליל ואופטימי (פס הדגמה)</small></span><button class="btn small" type="button" data-prev="bright">▶ האזנה</button></label>
+        <label class="mopt"><input type="radio" name="music" value="file"><span>קובץ מוסיקה משלי<small id="fileName">MP3 או WAV מהמכשיר, למשל פס מסונו</small></span><button class="btn small" type="button" id="pickFile">בחירה</button></label>
+        <label class="mopt"><input type="radio" name="music" value="none"><span>בלי מוסיקה<small>קול בלבד</small></span><span></span></label>
+        <input type="file" id="musicFile" accept="audio/*" hidden>
+      </div>
+      <div class="sliders">
+        <div class="slider"><label for="musicDb">עוצמת מוסיקה</label><output id="musicDbOut"></output><input type="range" id="musicDb" min="-24" max="0" step="1" value="-10"></div>
+        <div class="slider"><label for="reverb">ריברב על הקול</label><output id="reverbOut"></output><input type="range" id="reverb" min="0" max="25" step="1" value="9"></div>
+        <div class="slider"><label for="gap">רווח בין משפטים</label><output id="gapOut"></output><input type="range" id="gap" min="0.3" max="1.4" step="0.05" value="0.6"></div>
+        <div class="slider"><label for="fade">פייד-אאוט בסוף</label><output id="fadeOut"></output><input type="range" id="fade" min="4" max="25" step="1" value="20"></div>
+        <div class="slider" id="famGapWrap" hidden><label for="famGap">רווח בין מברכים</label><output id="famGapOut"></output><input type="range" id="famGap" min="4" max="16" step="1" value="10"></div>
+      </div>
+      <button class="btn primary big" id="renderBtn" type="button">יצירת הקובץ הערוך</button>
+      <p class="status" id="renderStatus"></p>
+      <div id="result" hidden style="display:grid;gap:10px">
+        <audio id="player" controls></audio>
+        <div class="row">
+          <a class="btn primary" id="dlMp3" download="kolot-bracha.mp3" hidden>הורדת MP3</a>
+          <a class="btn" id="dlWav" download="kolot-bracha.wav">הורדת WAV</a>
+        </div>
+        <p class="note" id="resultNote"></p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- PROMPTER -->
+<div id="stage" hidden>
+  <div class="st-head">
+    <div class="row between">
+      <div><div class="st-name" id="stName"></div><div class="st-prog" id="stProg"></div></div>
+      <div class="row" style="gap:6px">
+        <button class="chip" id="autoChip" type="button" aria-pressed="true">מעבר אוטומטי</button>
+        <button class="chip" id="sizeDown" type="button" aria-label="הקטנת טקסט">א-</button>
+        <button class="chip" id="sizeUp" type="button" aria-label="הגדלת טקסט">א+</button>
+        <button class="chip" id="stClose" type="button" aria-label="סגירה">✕</button>
+      </div>
+    </div>
+    <div class="meter" aria-hidden="true"><i id="meterBar"></i></div>
+    <div class="st-hint" id="stHint"></div>
+  </div>
+  <div class="st-text" id="stText"></div>
+  <div class="st-foot" id="stFoot"></div>
+  <div id="count" hidden></div>
+</div>
+
+<script>
+(function(){
+"use strict";
+var $=function(s){return document.querySelector(s)};
+var AC=window.AudioContext||window.webkitAudioContext;
+var OAC=window.OfflineAudioContext||window.webkitOfflineAudioContext;
+var OUT_SR=44100;
+
+/* ---------- samples ---------- */
+var SAMPLES={
+  blessing:[{name:"אבא ואמא",text:"איתי שלנו, היום אתה עולה לתורה ונכנס לעול מצוות.\nכשנולדת, לא ידענו כמה אור אתה עומד להכניס לבית שלנו.\nאתה ילד עם לב ענק, צחוק מדבק וסקרנות שאין לה סוף.\nאנחנו גאים בך על הדרך שעשית, ובעיקר על האדם שאתה הופך להיות.\nתמשיך לחלום בגדול, להאמין בעצמך ולשמור על החיוך הזה.\nמזל טוב, אוהבים אותך מכל הלב. אבא ואמא."}],
+  family:[
+    {name:"אבא ואמא",text:"איתי שלנו, היום אתה עולה לתורה ונכנס לעול מצוות.\nאתה ילד עם לב ענק, צחוק מדבק וסקרנות שאין לה סוף.\nתמשיך לחלום בגדול ולהאמין בעצמך. מזל טוב, אוהבים אותך."},
+    {name:"נועה, אחות (15)",text:"אח שלי הקטן, מזל טוב!\nאני יודעת שלפעמים אני מעצבנת, אבל אתה תמיד יכול לסמוך עליי.\nאוהבת אותך, נועה."},
+    {name:"סבא וסבתא",text:"נכד יקר שלנו, ליום הזה חיכינו הרבה שנים.\nשתזכה לבריאות, לשמחה ולהרבה נחת. מזל טוב, סבא וסבתא."}],
+  drasha:[{name:"איתי",text:"פרשת השבוע שלי היא פרשת מקץ.\nבפרשה, יוסף יוצא מבית הסוהר ועומד מול פרעה כדי לפתור את החלומות שלו.\nמה שמעניין בעיניי הוא שיוסף לא לוקח קרדיט לעצמו, ואומר שהפתרון מגיע מאלוהים.\nלמדתי מזה שגם כשמצליחים, חשוב לזכור את מי שעזר לנו בדרך.\nולכן אני רוצה להודות להורים שלי, למשפחה ולכל מי שליווה אותי עד היום.\nתודה שבאתם לשמוח איתי."}]
+};
+var MODE_NOTES={
+  blessing:"ברכה אחת, מברך אחד. מתאים לברכת הורים, סבים או חברים.",
+  family:"כל בני המשפחה אחד אחרי השני, עם כ-10 שניות של מוסיקה בין מברך למברך. עד 5 מברכים.",
+  drasha:"טקסט ארוך יותר, מוסיקה שקטה יותר ברקע."
+};
+
+/* ---------- state ---------- */
+var S={mode:"blessing",blessers:[],musicFile:null,musicFileName:""};
+function uid(){return Math.random().toString(36).slice(2,9)}
+function newBlesser(name,text){return {id:uid(),name:name||"",text:text||"",sentences:[],paraEnd:[],takes:[]}}
+
+/* ---------- text splitting ---------- */
+function wc(s){return s.split(/\s+/).filter(Boolean).length}
+function splitLong(s){
+  if(wc(s)<=20) return [s];
+  var idx=[],re=/[,;–]\s/g,m;
+  while((m=re.exec(s))) idx.push(m.index+1);
+  if(!idx.length) return [s];
+  var mid=s.length/2,best=idx[0];
+  idx.forEach(function(i){if(Math.abs(i-mid)<Math.abs(best-mid)) best=i});
+  return splitLong(s.slice(0,best).trim()).concat(splitLong(s.slice(best).trim()));
+}
+function splitText(text){
+  var paras=String(text||"").replace(/\r/g,"").split(/\n+/).map(function(p){return p.trim()}).filter(Boolean);
+  var out=[],pe=[];
+  paras.forEach(function(p){
+    var parts=(p.match(/[^.!?…]+[.!?…]+["'״׳”)]*|[^.!?…]+$/g)||[p]).map(function(x){return x.trim()}).filter(Boolean);
+    var merged=[];
+    parts.forEach(function(x){
+      if(merged.length && wc(merged[merged.length-1])<4) merged[merged.length-1]+=" "+x; else merged.push(x);
+    });
+    if(merged.length>1 && wc(merged[merged.length-1])<3){var last=merged.pop();merged[merged.length-1]+=" "+last;}
+    var fin=[];merged.forEach(function(x){fin=fin.concat(splitLong(x))});
+    fin.forEach(function(x,i){out.push(x);pe.push(i===fin.length-1)});
+  });
+  return {sentences:out,paraEnd:pe};
+}
+function resplit(b){
+  var old={};b.sentences.forEach(function(s,i){if(b.takes[i]) old[s]=b.takes[i]});
+  var r=splitText(b.text);
+  b.sentences=r.sentences;b.paraEnd=r.paraEnd;
+  b.takes=r.sentences.map(function(s){return old[s]||null});
+}
+
+/* ---------- persistence of text only ---------- */
+var LS="kolot_recorder_v1";
+function saveText(){try{localStorage.setItem(LS,JSON.stringify({mode:S.mode,blessers:S.blessers.map(function(b){return {name:b.name,text:b.text}})}))}catch(e){}}
+function loadText(){
+  var p=new URLSearchParams(location.search);
+  if(p.get("text")){S.mode=p.get("mode")||"blessing";S.blessers=[newBlesser(p.get("name")||"",p.get("text"))];return}
+  try{var d=JSON.parse(localStorage.getItem(LS)||"null");if(d&&d.blessers&&d.blessers.length){S.mode=d.mode||"blessing";S.blessers=d.blessers.map(function(b){return newBlesser(b.name,b.text)});return}}catch(e){}
+  S.blessers=[newBlesser("","")];
+}
+
+/* ---------- setup UI ---------- */
+function renderSetup(){
+  document.querySelectorAll(".seg button").forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.mode===S.mode))});
+  $("#modeNote").textContent=MODE_NOTES[S.mode];
+  $("#textTitle").textContent=S.mode==="drasha"?"טקסט הדרשה":(S.mode==="family"?"המברכים":"טקסט הברכה");
+  $("#addBlesser").hidden=!(S.mode==="family"&&S.blessers.length<5);
+  var box=$("#blessers");box.innerHTML="";
+  S.blessers.forEach(function(b,i){
+    var d=document.createElement("div");d.className="blesser";
+    var head=document.createElement("div");head.className="row between";
+    var lab=document.createElement("label");lab.htmlFor="n_"+b.id;lab.textContent=S.mode==="family"?("מברך "+(i+1)):(S.mode==="drasha"?"שם בעל/ת השמחה":"מי מברך?");
+    head.appendChild(lab);
+    if(S.mode==="family"&&S.blessers.length>1){var del=document.createElement("button");del.type="button";del.className="btn small ghost";del.textContent="הסרה";del.onclick=function(){S.blessers.splice(i,1);saveText();renderSetup()};head.appendChild(del)}
+    var inp=document.createElement("input");inp.type="text";inp.id="n_"+b.id;inp.value=b.name;inp.placeholder=S.mode==="drasha"?"למשל: איתי":"למשל: אבא ואמא";
+    inp.oninput=function(){b.name=inp.value;saveText()};
+    var ta=document.createElement("textarea");ta.id="t_"+b.id;ta.value=b.text;ta.placeholder="מדביקים כאן את הטקסט. כל שורה חדשה היא פסקה.";
+    ta.oninput=function(){b.text=ta.value;saveText();cnt.textContent=countInfo(b.text)};
+    var cnt=document.createElement("p");cnt.className="note";cnt.textContent=countInfo(b.text);
+    d.append(head,inp,ta,cnt);box.appendChild(d);
+  });
+}
+function countInfo(t){var r=splitText(t),w=wc(t||"");if(!w) return "";return r.sentences.length+" משפטים · בערך "+fmtDur(w/2.1)+" הקלטה"}
+function fmtDur(sec){sec=Math.round(sec);var m=Math.floor(sec/60),s=sec%60;return m?(m+":"+(s<10?"0":"")+s+" דק'"):(s+" שנ'")}
+document.querySelectorAll(".seg button").forEach(function(b){b.onclick=function(){
+  S.mode=b.dataset.mode;
+  if(S.mode!=="family"&&S.blessers.length>1) S.blessers=S.blessers.slice(0,1);
+  $("#musicDb").value=S.mode==="drasha"?-14:-10;
+  saveText();renderSetup();
+}});
+$("#addBlesser").onclick=function(){S.blessers.push(newBlesser("",""));saveText();renderSetup()};
+$("#sampleBtn").onclick=function(){S.blessers=SAMPLES[S.mode].map(function(x){return newBlesser(x.name,x.text)});saveText();renderSetup()};
+$("#toRecord").onclick=function(){
+  var ok=S.blessers.filter(function(b){return wc(b.text)>0});
+  if(!ok.length){$("#setupStatus").textContent="צריך טקסט לפני שמקליטים. אפשר לטעון טקסט לדוגמה.";return}
+  S.blessers=ok;S.blessers.forEach(resplit);
+  showReview();
+  var first=S.blessers.filter(function(b){return b.takes.some(function(t){return !t})})[0];
+  if(first) openStage(first,firstMissing(first),false);
+};
+function firstMissing(b){for(var i=0;i<b.takes.length;i++) if(!b.takes[i]) return i;return 0}
+
+/* ---------- audio capture ---------- */
+var Rec={ctx:null,stream:null,src:null,node:null,sink:null,wl:false,chunks:[],total:0,onChunk:null};
+function ensureCtx(){
+  if(!Rec.ctx) Rec.ctx=new AC();
+  return Rec.ctx.state==="running"?Promise.resolve(Rec.ctx):Rec.ctx.resume().then(function(){return Rec.ctx});
+}
+function startMic(){
+  return ensureCtx().then(function(ctx){
+    return navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false,channelCount:1}}).then(function(stream){
+      Rec.stream=stream;Rec.src=ctx.createMediaStreamSource(stream);
+      Rec.sink=ctx.createGain();Rec.sink.gain.value=0;Rec.sink.connect(ctx.destination);
+      Rec.chunks=[];Rec.total=0;
+      var useScript=function(){var sp=ctx.createScriptProcessor(4096,1,1);sp.onaudioprocess=function(e){push(new Float32Array(e.inputBuffer.getChannelData(0)))};Rec.node=sp};
+      var p=Promise.resolve();
+      if(ctx.audioWorklet&&window.AudioWorkletNode){
+        p=(Rec.wl?Promise.resolve():ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([
+          "class P extends AudioWorkletProcessor{constructor(){super();this.b=new Float32Array(2048);this.n=0}process(i){var c=i[0]&&i[0][0];if(c){for(var k=0;k<c.length;k++){this.b[this.n++]=c[k];if(this.n===2048){this.port.postMessage(this.b.slice(0));this.n=0}}}return true}}registerProcessor('kolot-rec',P);"
+        ],{type:"application/javascript"}))).then(function(){Rec.wl=true})).then(function(){
+          Rec.node=new AudioWorkletNode(ctx,"kolot-rec",{numberOfInputs:1,numberOfOutputs:1,channelCount:1,channelCountMode:"explicit"});
+          Rec.node.port.onmessage=function(e){push(e.data)};
+        }).catch(useScript);
+      } else useScript();
+      return p.then(function(){Rec.src.connect(Rec.node);Rec.node.connect(Rec.sink);return ctx});
+    });
+  });
+}
+function push(f){Rec.chunks.push(f);Rec.total+=f.length;if(Rec.onChunk) Rec.onChunk(f)}
+function stopMic(){
+  try{if(Rec.src) Rec.src.disconnect();if(Rec.node) Rec.node.disconnect();if(Rec.sink) Rec.sink.disconnect()}catch(e){}
+  if(Rec.stream) Rec.stream.getTracks().forEach(function(t){t.stop()});
+  Rec.stream=null;Rec.src=null;Rec.node=null;Rec.onChunk=null;
+}
+function sliceRec(a,b){
+  var out=new Float32Array(Math.max(0,b-a)),pos=0;
+  for(var k=0;k<Rec.chunks.length;k++){
+    var c=Rec.chunks[k],cs=pos,ce=pos+c.length;
+    if(ce>a&&cs<b){var s=Math.max(a,cs)-cs,e=Math.min(b,ce)-cs;out.set(c.subarray(s,e),Math.max(a,cs)-a)}
+    pos=ce;if(pos>=b) break;
+  }
+  return out;
+}
+function rms(f){var s=0;for(var i=0;i<f.length;i++) s+=f[i]*f[i];return Math.sqrt(s/(f.length||1))}
+
+/* ---------- take analysis: trim, level, gentle expander ---------- */
+function analyzeTake(raw,sr){
+  var cutHead=Math.round(sr*0.08),cutTail=Math.round(sr*0.12);
+  var pcm=raw.length>cutHead+cutTail+sr*0.2?raw.subarray(cutHead,raw.length-cutTail):raw;
+  var hop=Math.round(sr*0.01),n=Math.floor(pcm.length/hop),r=new Float32Array(n);
+  for(var i=0;i<n;i++) r[i]=rms(pcm.subarray(i*hop,(i+1)*hop));
+  var sorted=Array.prototype.slice.call(r).sort(function(a,b){return a-b});
+  var floor=sorted[Math.floor(n*0.1)]||0,top=sorted[Math.floor(n*0.98)]||0;
+  var thr=Math.max(floor*3,top*0.06,0.0025);
+  var first=-1,last=-1;
+  for(i=0;i<n;i++) if(r[i]>thr){if(first<0) first=i;last=i}
+  if(first<0) return {pcm:new Float32Array(0),sr:sr,dur:0,silent:true,flags:["לא נשמע דיבור"]};
+  var start=Math.max(0,first-8)*hop,end=Math.min(pcm.length,(last+25)*hop);
+  var seg=new Float32Array(pcm.subarray(start,end));
+  var f0=first-Math.max(0,first-8),act=0,ac=0,peak=0,clip=0;
+  for(i=first;i<=last;i++) if(r[i]>thr){act+=r[i]*r[i];ac++}
+  var actRms=Math.sqrt(act/(ac||1));
+  for(i=0;i<seg.length;i++){var a=Math.abs(seg[i]);if(a>peak) peak=a;if(a>0.985) clip++}
+  var flags=[];
+  if(clip>sr*0.004) flags.push("עיוות: להתרחק מהטלפון");
+  else if(actRms<0.012) flags.push("שקט מאוד: לדבר קרוב יותר");
+  if(seg.length/sr<0.6) flags.push("קצר מאוד");
+  return {pcm:seg,sr:sr,dur:seg.length/sr,silent:false,flags:flags,actRms:actRms,thr:thr,floor:floor,lead:f0};
+}
+function processTake(t){
+  var sr=t.sr,pcm=t.pcm,hop=Math.round(sr*0.01),n=Math.ceil(pcm.length/hop);
+  var g=Math.min(10,Math.max(0.25,0.1/(t.actRms||0.1)));
+  var gate=new Float32Array(n+1),cur=1;
+  for(var i=0;i<n;i++){
+    var v=rms(pcm.subarray(i*hop,Math.min(pcm.length,(i+1)*hop)));
+    var target=v>=t.thr?1:Math.max(0.35,Math.pow(v/t.thr,1.5));
+    cur=target>cur?cur+(target-cur)*0.6:cur+(target-cur)*0.12;
+    gate[i]=cur;
+  }
+  gate[n]=cur;
+  var out=new Float32Array(pcm.length),fi=Math.round(sr*0.015),fo=Math.round(sr*0.06);
+  for(i=0;i<pcm.length;i++){
+    var p=i/hop,k=Math.floor(p),fr=p-k,gg=gate[k]+(gate[k+1]-gate[k])*fr;
+    var env=1;if(i<fi) env=i/fi;else if(i>pcm.length-fo) env=(pcm.length-i)/fo;
+    out[i]=pcm[i]*g*gg*env;
+  }
+  return out;
+}
+
+/* ---------- prompter stage ---------- */
+var P={b:null,idx:0,single:false,state:"idle",segStart:0,size:34,auto:true,silenceSec:1.2,vad:null,wake:null,countTimer:null};
+try{var ps=JSON.parse(localStorage.getItem(LS+"_ui")||"null");if(ps){P.size=ps.size||34;P.auto=ps.auto!==false}}catch(e){}
+function saveUi(){try{localStorage.setItem(LS+"_ui",JSON.stringify({size:P.size,auto:P.auto}))}catch(e){}}
+
+function openStage(b,idx,single){
+  P.b=b;P.idx=idx;P.single=single;P.state="idle";
+  $("#stage").hidden=false;document.body.style.overflow="hidden";
+  $("#stName").textContent=(S.mode==="drasha"?"דרשה":"ברכה")+(b.name?" · "+b.name:"");
+  renderStageText();renderFoot();updateProg();
+  hint(single?"מקליטים מחדש משפט אחד. הוא יחליף את הקודם.":"לוחצים על הכפתור האדום, ואחרי ספירה של 3 מתחילים לקרוא את המשפט המודגש.");
+}
+function closeStage(){
+  if(P.state==="rec"||P.state==="count") finishSession(true);
+  stopMic();releaseWake();
+  $("#stage").hidden=true;document.body.style.overflow="";
+  renderReview();
+}
+function renderStageText(){
+  var box=$("#stText");box.innerHTML="";box.style.fontSize=P.size+"px";
+  P.b.sentences.forEach(function(s,i){
+    var p=document.createElement("p");p.textContent=s;p.dataset.i=i;
+    if(P.b.paraEnd[i]) p.className="para";
+    p.onclick=function(){if(P.state==="rec"&&i===P.idx) advance()};
+    box.appendChild(p);
+  });
+  markCurrent();
+}
+function markCurrent(){
+  var ps=$("#stText").children;
+  for(var i=0;i<ps.length;i++){
+    ps[i].classList.toggle("cur",i===P.idx);
+    ps[i].classList.toggle("done",!!P.b.takes[i]&&i!==P.idx);
+  }
+  var c=ps[P.idx];if(c) c.scrollIntoView({block:"center",behavior:matchMedia("(prefers-reduced-motion:reduce)").matches?"auto":"smooth"});
+}
+function updateProg(){
+  var done=P.b.takes.filter(Boolean).length;
+  $("#stProg").textContent="משפט "+(P.idx+1)+" מתוך "+P.b.sentences.length+" · הוקלטו "+done;
+  $("#autoChip").setAttribute("aria-pressed",String(P.auto));
+}
+function hint(t,alert){var h=$("#stHint");h.textContent=t||"";h.classList.toggle("alert",!!alert)}
+function renderFoot(){
+  var f=$("#stFoot");f.innerHTML="";
+  if(P.state==="idle"){
+    var r=document.createElement("div");r.className="row";
+    var b=document.createElement("button");b.className="recbtn";b.type="button";b.setAttribute("aria-label","התחלת הקלטה");b.onclick=beginSession;
+    r.appendChild(b);f.appendChild(r);
+    var n=document.createElement("p");n.className="st-hint";n.style.textAlign="center";n.textContent=P.single?"הקלטה מחדש של המשפט המודגש":"ההקלטה תתחיל מהמשפט המודגש";f.appendChild(n);
+  } else {
+    var top=document.createElement("div");top.className="row";
+    var rs=sbtn("↻ מההתחלה","",restartSentence);
+    var nx=sbtn(P.single?"סיום ✓":"הבא ←","next",advance);
+    var st=sbtn("■ עצירה","stop",function(){finishSession(false)});
+    top.append(rs,nx,st);f.appendChild(top);
+    if(!P.single){var bot=document.createElement("div");bot.className="row";bot.appendChild(sbtn("→ משפט קודם","",prevSentence));f.appendChild(bot)}
+  }
+}
+function sbtn(t,cls,fn){var b=document.createElement("button");b.type="button";b.className="sbtn "+cls;b.textContent=t;b.onclick=fn;return b}
+
+function beginSession(){
+  P.state="count";renderFoot();hint("מבקשים גישה למיקרופון…");
+  startMic().then(function(){
+    requestWake();
+    var floors=[];
+    Rec.onChunk=function(f){var v=rms(f);meter(v,f);if(P.state==="count") floors.push(v);else if(P.state==="rec") vadStep(v,f.length)};
+    var n=3,c=$("#count");c.hidden=false;c.textContent=n;hint("שקט רגע… מודדים את רעש החדר");
+    P.countTimer=setInterval(function(){
+      n--;
+      if(n>0){c.textContent=n;return}
+      clearInterval(P.countTimer);c.hidden=true;
+      floors.sort(function(a,b){return a-b});
+      var fl=floors.length?floors[Math.floor(floors.length*0.4)]:0.002;
+      P.vad={floor:fl,thrS:Math.max(fl*4,0.012),thrQ:Math.max(fl*2,0.006),speech:0,quiet:0,has:false};
+      if(fl>0.03) hint("יש הרבה רעש ברקע. כדאי לעבור למקום שקט יותר.",true);
+      else hint(P.auto?"מקריאים. אחרי הפסקה קצרה עוברים למשפט הבא לבד.":"מקריאים, ולוחצים \"הבא\" בסוף כל משפט.");
+      P.state="rec";P.segStart=Rec.total;renderFoot();markCurrent();
+    },800);
+  }).catch(function(err){
+    P.state="idle";renderFoot();$("#count").hidden=true;
+    hint(err&&err.name==="NotAllowedError"?"אין הרשאה למיקרופון. צריך לאשר גישה בהגדרות הדפדפן ולנסות שוב.":"לא הצלחנו להפעיל את המיקרופון ("+(err&&err.name||"שגיאה")+").",true);
+  });
+}
+function meter(v,f){
+  var pk=0;for(var i=0;i<f.length;i++){var a=Math.abs(f[i]);if(a>pk) pk=a}
+  var db=20*Math.log10(v+1e-9),w=Math.max(0,Math.min(1,(db+60)/54));
+  var bar=$("#meterBar");bar.style.width=(w*100)+"%";bar.classList.toggle("hot",pk>0.97);
+  if(pk>0.985&&P.state==="rec") hint("חזק מדי: מרחיקים קצת את הטלפון.",true);
+}
+function vadStep(v,len){
+  var V=P.vad,ms=len/Rec.ctx.sampleRate*1000;
+  if(v>V.thrS){V.speech+=ms;V.quiet=0;if(V.speech>200) V.has=true}
+  else if(v<V.thrQ) V.quiet+=ms;
+  var segLen=(Rec.total-P.segStart)/Rec.ctx.sampleRate;
+  if(P.auto&&V.has&&V.quiet>=P.silenceSec*1000&&segLen>0.9) advance();
+}
+function resetVad(){if(P.vad){P.vad.speech=0;P.vad.quiet=0;P.vad.has=false}}
+function saveSegment(){
+  var raw=sliceRec(P.segStart,Rec.total);
+  var t=analyzeTake(raw,Rec.ctx.sampleRate);
+  if(t.silent) return false;
+  P.b.takes[P.idx]=t;return true;
+}
+function advance(){
+  if(P.state!=="rec") return;
+  if((Rec.total-P.segStart)/Rec.ctx.sampleRate<0.5) return;
+  var ok=saveSegment();
+  if(!ok){hint("לא נשמע דיבור במשפט הזה. מקריאים אותו שוב.",true);P.segStart=Rec.total;resetVad();return}
+  if(P.single){finishSession(false,true);return}
+  var next=-1;for(var i=P.idx+1;i<P.b.sentences.length;i++){next=i;break}
+  if(next<0){finishSession(false,true);return}
+  P.idx=next;P.segStart=Rec.total;resetVad();markCurrent();updateProg();
+  hint(P.auto?"ממשיכים…":"מקריאים, ולוחצים \"הבא\" בסוף המשפט.");
+}
+function restartSentence(){if(P.state!=="rec") return;P.segStart=Rec.total;resetVad();hint("מתחילים את המשפט מההתחלה.")}
+function prevSentence(){if(P.state!=="rec"||P.idx===0) return;P.idx--;P.segStart=Rec.total;resetVad();markCurrent();updateProg();hint("מקליטים שוב את המשפט הקודם.")}
+function finishSession(silent,saved){
+  if(P.countTimer) clearInterval(P.countTimer);$("#count").hidden=true;
+  if(P.state==="rec"&&!saved&&P.vad&&P.vad.has) saveSegment();
+  P.state="idle";stopMic();releaseWake();
+  if(silent) return;
+  $("#stage").hidden=true;document.body.style.overflow="";
+  // family: continue to next blesser that still has missing sentences
+  if(!P.single&&S.mode==="family"&&saved){
+    var nb=S.blessers.filter(function(b){return b!==P.b&&b.takes.some(function(t){return !t})})[0];
+    renderReview();
+    if(nb){openStage(nb,firstMissing(nb),false);hint("עכשיו תורו של "+(nb.name||"המברך הבא")+". מעבירים לו את הטלפון ולוחצים על הכפתור האדום.");return}
+  }
+  renderReview();
+}
+$("#stClose").onclick=closeStage;
+$("#autoChip").onclick=function(){P.auto=!P.auto;saveUi();updateProg();if(P.state==="rec") hint(P.auto?"מעבר אוטומטי פעיל.":"לוחצים \"הבא\" בסוף כל משפט.")};
+$("#sizeUp").onclick=function(){P.size=Math.min(60,P.size+4);saveUi();$("#stText").style.fontSize=P.size+"px";markCurrent()};
+$("#sizeDown").onclick=function(){P.size=Math.max(22,P.size-4);saveUi();$("#stText").style.fontSize=P.size+"px";markCurrent()};
+function requestWake(){try{if(navigator.wakeLock) navigator.wakeLock.request("screen").then(function(w){P.wake=w}).catch(function(){})}catch(e){}}
+function releaseWake(){try{if(P.wake) P.wake.release()}catch(e){}P.wake=null}
+
+/* ---------- review ---------- */
+var playing=null;
+function stopPlaying(){if(playing){try{playing.stop()}catch(e){}playing=null}}
+function playBuffer(buf){
+  stopPlaying();
+  return ensureCtx().then(function(ctx){var s=ctx.createBufferSource();s.buffer=buf;s.connect(ctx.destination);s.start();playing=s;s.onended=function(){if(playing===s) playing=null}});
+}
+function playTake(t){
+  ensureCtx().then(function(ctx){
+    var d=processTake(t),b=ctx.createBuffer(1,d.length,t.sr);b.getChannelData(0).set(d);playBuffer(b);
+  });
+}
+function showReview(){$("#setup").hidden=true;$("#review").hidden=false;renderReview();window.scrollTo(0,0)}
+function renderReview(){
+  $("#famGapWrap").hidden=S.mode!=="family";
+  var box=$("#takes");box.innerHTML="";
+  S.blessers.forEach(function(b){
+    var card=document.createElement("div");card.className="card";
+    var done=b.takes.filter(Boolean).length,tot=b.sentences.length;
+    var head=document.createElement("div");head.className="row between";
+    var h=document.createElement("div");
+    var t=document.createElement("h2");t.textContent=b.name||(S.mode==="drasha"?"הדרשה":"הברכה");
+    var m=document.createElement("p");m.className="note "+(done===tot?"ok":"");m.textContent=done===tot?("כל "+tot+" המשפטים הוקלטו · "+fmtDur(totalDur(b))):(done+" מתוך "+tot+" משפטים הוקלטו");
+    h.append(t,m);
+    var rb=document.createElement("button");rb.type="button";rb.className="btn "+(done<tot?"primary":"");rb.textContent=done===0?"● התחלת הקלטה":(done<tot?"● המשך הקלטה":"● הקלטה מחדש של הכל");
+    rb.onclick=function(){if(done===tot){b.takes=b.takes.map(function(){return null})}openStage(b,firstMissing(b),false)};
+    head.append(h,rb);card.appendChild(head);
+    var list=document.createElement("div");
+    b.sentences.forEach(function(s,i){
+      var tk=b.takes[i],row=document.createElement("div");row.className="take"+(tk?"":" missing");
+      var num=document.createElement("span");num.className="num";num.textContent=i+1;
+      var tx=document.createElement("div");tx.className="txt";tx.textContent=s;
+      var meta=document.createElement("div");meta.className="meta";
+      if(tk){var dd=document.createElement("span");dd.textContent=tk.dur.toFixed(1)+" שנ'";meta.appendChild(dd);tk.flags.forEach(function(fl){var p=document.createElement("span");p.className="pill bad";p.textContent=fl;meta.appendChild(p)})}
+      else{var p=document.createElement("span");p.className="pill miss";p.textContent="לא הוקלט";meta.appendChild(p)}
+      tx.appendChild(meta);
+      var acts=document.createElement("div");acts.className="acts";
+      if(tk){var pl=document.createElement("button");pl.type="button";pl.className="btn small";pl.textContent="▶";pl.setAttribute("aria-label","השמעת משפט "+(i+1));pl.onclick=function(){playTake(tk)};acts.appendChild(pl)}
+      var re=document.createElement("button");re.type="button";re.className="btn small";re.textContent=tk?"תיקון":"הקלטה";re.onclick=function(){openStage(b,i,true)};acts.appendChild(re);
+      row.append(num,tx,acts);list.appendChild(row);
+    });
+    card.appendChild(list);box.appendChild(card);
+  });
+  var all=S.blessers.every(function(b){return b.takes.some(Boolean)});
+  $("#renderBtn").disabled=!all;
+  $("#renderStatus").textContent=all?"":"אפשר ליצור קובץ אחרי שכל מברך הקליט לפחות משפט אחד.";
+}
+function totalDur(b){return b.takes.reduce(function(a,t){return a+(t?t.dur:0)},0)}
+$("#backToText").onclick=function(){stopPlaying();$("#review").hidden=true;$("#setup").hidden=false;renderSetup();window.scrollTo(0,0)};
+
+/* ---------- sliders ---------- */
+function bindOut(id,fmt){var i=$("#"+id),o=$("#"+id+"Out");var f=function(){o.textContent=fmt(+i.value)};i.addEventListener("input",f);f()}
+bindOut("musicDb",function(v){return v+" dB"});
+bindOut("reverb",function(v){return v+"%"});
+bindOut("gap",function(v){return v.toFixed(2)+" שנ'"});
+bindOut("fade",function(v){return v+" שנ'"});
+bindOut("famGap",function(v){return v+" שנ'"});
+
+/* ---------- music ---------- */
+function mtof(m){return 440*Math.pow(2,(m-69)/12)}
+function makeIR(ctx,sec,decay){
+  var len=Math.round(ctx.sampleRate*sec),ir=ctx.createBuffer(2,len,ctx.sampleRate),pre=Math.round(ctx.sampleRate*0.018);
+  for(var c=0;c<2;c++){var d=ir.getChannelData(c),lp=0;for(var i=pre;i<len;i++){var n=Math.random()*2-1;lp=lp+(n-lp)*0.35;d[i]=lp*Math.pow(1-(i-pre)/(len-pre),decay)}}
+  return ir;
+}
+function synthBed(style,total){
+  var len=Math.ceil(total*OUT_SR),ctx=new OAC(2,len,OUT_SR);
+  var bus=ctx.createGain();bus.gain.value=0.9;
+  var lp=ctx.createBiquadFilter();lp.type="lowpass";lp.frequency.value=style==="bright"?5200:3400;
+  var conv=ctx.createConvolver();conv.buffer=makeIR(ctx,2.6,3);
+  var wet=ctx.createGain();wet.gain.value=0.35;
+  bus.connect(lp);lp.connect(ctx.destination);lp.connect(conv);conv.connect(wet);wet.connect(ctx.destination);
+  var prog=style==="bright"?[[60,64,67],[55,59,62,67],[57,60,64],[53,57,60,65]]:[[57,60,64],[53,57,60,64],[48,52,55,60],[55,59,62]];
+  var bpm=style==="bright"?92:66,beat=60/bpm,chordDur=beat*4;
+  var pat=style==="bright"?[0,1,2,1,0,2,1,2]:[0,2,1,2];
+  var step=style==="bright"?beat/2:beat;
+  for(var t=0,k=0;t<total;t+=chordDur,k++){
+    var ch=prog[k%prog.length];
+    ch.forEach(function(m){[-7,7].forEach(function(dt){
+      var o=ctx.createOscillator(),g=ctx.createGain(),f=ctx.createBiquadFilter();
+      o.type="triangle";o.frequency.value=mtof(m);o.detune.value=dt;f.type="lowpass";f.frequency.value=1300;
+      g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.035,t+Math.min(1.4,chordDur*0.45));
+      g.gain.setValueAtTime(0.035,t+chordDur-0.1);g.gain.linearRampToValueAtTime(0,t+chordDur+0.9);
+      o.connect(f);f.connect(g);g.connect(bus);o.start(t);o.stop(t+chordDur+1);
+    })});
+    var bo=ctx.createOscillator(),bg=ctx.createGain();bo.type="sine";bo.frequency.value=mtof(ch[0]-12);
+    bg.gain.setValueAtTime(0,t);bg.gain.linearRampToValueAtTime(0.11,t+0.08);bg.gain.exponentialRampToValueAtTime(0.02,t+chordDur);bg.gain.linearRampToValueAtTime(0,t+chordDur+0.2);
+    bo.connect(bg);bg.connect(bus);bo.start(t);bo.stop(t+chordDur+0.25);
+    if(k===0) continue;
+    var notes=ch.map(function(m){return m+12});
+    for(var s=0;s*step<chordDur-0.01;s++){
+      var nt=t+s*step,mm=notes[pat[s%pat.length]%notes.length];
+      [1,2].forEach(function(h){
+        var o2=ctx.createOscillator(),g2=ctx.createGain();o2.type=h===1?"triangle":"sine";o2.frequency.value=mtof(mm)*h;
+        var a=h===1?0.05:0.012;g2.gain.setValueAtTime(0,nt);g2.gain.linearRampToValueAtTime(a,nt+0.008);g2.gain.exponentialRampToValueAtTime(0.0005,nt+1.6);
+        o2.connect(g2);g2.connect(bus);o2.start(nt);o2.stop(nt+1.7);
+      });
+    }
+  }
+  return ctx.startRendering();
+}
+function loopFile(buf,total){
+  var N=Math.ceil(total*OUT_SR),chs=Math.min(2,buf.numberOfChannels),out=[],sr=buf.sampleRate;
+  var L=buf.length,xf=Math.round(sr*1.5);
+  var ls=Math.round(Math.min(8,buf.duration*0.25)*sr),le=L-Math.round(sr*2);
+  if(buf.duration<8){ls=0;le=L;xf=Math.round(sr*0.4)}
+  for(var c=0;c<2;c++){
+    var src=buf.getChannelData(Math.min(c,chs-1)),o=new Float32Array(N),w=Math.min(L,N);
+    o.set(src.subarray(0,w));var end=w;
+    while(end<N&&le-ls>2*xf){
+      var st=end-xf;
+      for(var i=0;i<le-ls&&st+i<N;i++){var v=src[ls+i];if(i<xf){var a=i/xf;o[st+i]=o[st+i]*Math.cos(a*Math.PI/2)+v*Math.sin(a*Math.PI/2)}else o[st+i]=v}
+      end=st+(le-ls);
+    }
+    out.push(o);
+  }
+  return out;
+}
+function getMusic(kind,total){
+  if(kind==="none") return Promise.resolve(null);
+  if(kind==="file"){
+    if(!S.musicFile) return Promise.reject(new Error("לא נבחר קובץ מוסיקה."));
+    return Promise.resolve(loopFile(S.musicFile,total));
+  }
+  return synthBed(kind,total).then(function(b){return [b.getChannelData(0),b.getChannelData(1)]});
+}
+function normRms(chs,target){
+  var s=0,n=0;chs.forEach(function(d){for(var i=0;i<d.length;i+=4){s+=d[i]*d[i];n++}});
+  var r=Math.sqrt(s/(n||1)),g=r>1e-5?target/r:1;
+  chs.forEach(function(d){for(var i=0;i<d.length;i++) d[i]*=g});
+}
+$("#pickFile").onclick=function(e){e.preventDefault();$("#musicFile").click()};
+$("#musicFile").onchange=function(){
+  var f=this.files&&this.files[0];if(!f) return;
+  $("#fileName").textContent="טוען…";
+  f.arrayBuffer().then(function(ab){return new OAC(2,1,OUT_SR).decodeAudioData(ab)}).then(function(buf){
+    S.musicFile=buf;S.musicFileName=f.name;$("#fileName").textContent=f.name+" · "+fmtDur(buf.duration);
+    document.querySelector('input[name=music][value=file]').checked=true;
+  }).catch(function(){$("#fileName").textContent="לא הצלחנו לקרוא את הקובץ. נסו MP3 או WAV."});
+};
+document.querySelectorAll("[data-prev]").forEach(function(b){b.onclick=function(e){
+  e.preventDefault();
+  if(b.dataset.on){stopPlaying();b.textContent="▶ האזנה";delete b.dataset.on;return}
+  document.querySelectorAll("[data-prev]").forEach(function(x){x.textContent="▶ האזנה";delete x.dataset.on});
+  b.textContent="טוען…";
+  ensureCtx().then(function(){return synthBed(b.dataset.prev,16)}).then(function(buf){
+    b.textContent="■ עצירה";b.dataset.on="1";playBuffer(buf).then(function(){playing.onended=function(){b.textContent="▶ האזנה";delete b.dataset.on}});
+  });
+}});
+
+/* ---------- mix ---------- */
+function dbg(db){return Math.pow(10,db/20)}
+function buildTimeline(){
+  var gap=+$("#gap").value,para=gap+0.5,famGap=+$("#famGap").value,kind=document.querySelector("input[name=music]:checked").value;
+  var intro=kind==="none"?0.4:4,t=intro,items=[],spans=[];
+  S.blessers.forEach(function(b,bi){
+    var any=false;
+    b.sentences.forEach(function(s,i){
+      var tk=b.takes[i];if(!tk) return;
+      if(!any&&bi>0&&items.length) t+=(kind==="none"?1.5:famGap)-gap;
+      any=true;
+      items.push({t:t,tk:tk});spans.push([t,t+tk.dur]);
+      t+=tk.dur+(b.paraEnd[i]?para:gap);
+    });
+  });
+  var vEnd=spans.length?spans[spans.length-1][1]:0;
+  var fade=+$("#fade").value,total=kind==="none"?vEnd+0.6:vEnd+fade;
+  return {items:items,spans:spans,vEnd:vEnd,total:total,kind:kind,fade:fade,intro:intro};
+}
+function render(){
+  stopPlaying();
+  var T=buildTimeline(),btn=$("#renderBtn"),st=$("#renderStatus");
+  btn.disabled=true;st.textContent="מכינים את המוסיקה…";$("#result").hidden=true;
+  return getMusic(T.kind,T.total).then(function(music){
+    st.textContent="מעבדים את הקול ומחברים למוסיקה…";
+    var len=Math.ceil(T.total*OUT_SR),ctx=new OAC(2,len,OUT_SR);
+    var master=ctx.createGain();
+    var lim=ctx.createDynamicsCompressor();lim.threshold.value=-3;lim.knee.value=0;lim.ratio.value=20;lim.attack.value=0.002;lim.release.value=0.12;
+    master.connect(lim);lim.connect(ctx.destination);
+    // voice chain
+    var vin=ctx.createGain();
+    var hp=ctx.createBiquadFilter();hp.type="highpass";hp.frequency.value=85;hp.Q.value=0.7;
+    var mud=ctx.createBiquadFilter();mud.type="peaking";mud.frequency.value=280;mud.Q.value=1;mud.gain.value=-2.5;
+    var pres=ctx.createBiquadFilter();pres.type="peaking";pres.frequency.value=3500;pres.Q.value=0.9;pres.gain.value=2.5;
+    var air=ctx.createBiquadFilter();air.type="highshelf";air.frequency.value=10000;air.gain.value=1.5;
+    var comp=ctx.createDynamicsCompressor();comp.threshold.value=-22;comp.knee.value=8;comp.ratio.value=3;comp.attack.value=0.006;comp.release.value=0.2;
+    var vout=ctx.createGain();vout.gain.value=1.4;
+    vin.connect(hp);hp.connect(mud);mud.connect(pres);pres.connect(air);air.connect(comp);comp.connect(vout);vout.connect(master);
+    var conv=ctx.createConvolver();conv.buffer=makeIR(ctx,1.4,4);
+    var wet=ctx.createGain();wet.gain.value=(+$("#reverb").value)/100*1.6;
+    comp.connect(conv);conv.connect(wet);wet.connect(master);
+    T.items.forEach(function(it){
+      var d=processTake(it.tk);if(!d.length) return;
+      var b=ctx.createBuffer(1,d.length,it.tk.sr);b.getChannelData(0).set(d);
+      var s=ctx.createBufferSource();s.buffer=b;s.connect(vin);s.start(it.t);
+    });
+    // music with ducking
+    if(music){
+      normRms(music,0.1);
+      var mb=ctx.createBuffer(2,len,OUT_SR);mb.getChannelData(0).set(music[0].subarray(0,len));mb.getChannelData(1).set(music[1].subarray(0,len));
+      var ms=ctx.createBufferSource();ms.buffer=mb;
+      var mg=ctx.createGain(),base=dbg(+$("#musicDb").value),duck=base*dbg(-9),g=mg.gain;
+      g.setValueAtTime(0,0);g.linearRampToValueAtTime(base,1.5);
+      var merged=[];T.spans.forEach(function(sp){var l=merged[merged.length-1];if(l&&sp[0]-l[1]<3) l[1]=sp[1];else merged.push([sp[0],sp[1]])});
+      merged.forEach(function(sp,i){
+        var a=Math.max(1.6,sp[0]-0.6);
+        g.setValueAtTime(base,a);g.linearRampToValueAtTime(duck,sp[0]);
+        g.setValueAtTime(duck,sp[1]+0.15);
+        var up=i===merged.length-1?Math.min(sp[1]+1.4,T.total-0.1):sp[1]+1.2;
+        g.linearRampToValueAtTime(base,up);
+      });
+      g.setValueAtTime(base,Math.min(T.vEnd+1.5,T.total-0.05));g.linearRampToValueAtTime(0,T.total);
+      ms.connect(mg);mg.connect(master);ms.start(0);
+    }
+    return ctx.startRendering();
+  }).then(function(out){
+    st.textContent="כמעט מוכן…";
+    var a=out.getChannelData(0),b=out.getChannelData(1),pk=0;
+    for(var i=0;i<a.length;i++){var x=Math.max(Math.abs(a[i]),Math.abs(b[i]));if(x>pk) pk=x}
+    var gn=pk>0?0.89/pk:1;for(i=0;i<a.length;i++){a[i]*=gn;b[i]*=gn}
+    var wav=encodeWav(a,b,OUT_SR),url=URL.createObjectURL(wav);
+    $("#player").src=url;$("#dlWav").href=url;$("#result").hidden=false;
+    $("#resultNote").textContent="אורך הקובץ: "+fmtDur(out.duration)+". אם משהו לא נשמע טוב, מתקנים את המשפט ברשימה למעלה ויוצרים שוב.";
+    st.textContent="";btn.disabled=false;btn.textContent="יצירה מחדש";
+    $("#dlMp3").hidden=true;
+    encodeMp3(a,b,OUT_SR).then(function(blob){if(blob){$("#dlMp3").href=URL.createObjectURL(blob);$("#dlMp3").hidden=false}});
+  }).catch(function(err){
+    st.textContent=(err&&err.message)?err.message:"משהו השתבש ביצירת הקובץ.";btn.disabled=false;
+  });
+}
+$("#renderBtn").onclick=render;
+
+/* ---------- encoders ---------- */
+function encodeWav(L,R,sr){
+  var n=L.length,buf=new ArrayBuffer(44+n*4),v=new DataView(buf);
+  function ws(o,s){for(var i=0;i<s.length;i++) v.setUint8(o+i,s.charCodeAt(i))}
+  ws(0,"RIFF");v.setUint32(4,36+n*4,true);ws(8,"WAVE");ws(12,"fmt ");v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,2,true);
+  v.setUint32(24,sr,true);v.setUint32(28,sr*4,true);v.setUint16(32,4,true);v.setUint16(34,16,true);ws(36,"data");v.setUint32(40,n*4,true);
+  for(var i=0,o=44;i<n;i++,o+=4){v.setInt16(o,Math.max(-1,Math.min(1,L[i]))*32767,true);v.setInt16(o+2,Math.max(-1,Math.min(1,R[i]))*32767,true)}
+  return new Blob([buf],{type:"audio/wav"});
+}
+var lameP=null;
+function loadLame(){
+  if(window.lamejs) return Promise.resolve(true);
+  if(!lameP) lameP=new Promise(function(res){var s=document.createElement("script");s.src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js";s.onload=function(){res(!!window.lamejs)};s.onerror=function(){res(false)};document.head.appendChild(s)});
+  return lameP;
+}
+function encodeMp3(L,R,sr){
+  return loadLame().then(function(ok){
+    if(!ok) return null;
+    var enc=new lamejs.Mp3Encoder(2,sr,192),parts=[],bl=1152;
+    var l16=new Int16Array(bl),r16=new Int16Array(bl);
+    for(var i=0;i<L.length;i+=bl){
+      var n=Math.min(bl,L.length-i);
+      for(var k=0;k<n;k++){l16[k]=Math.max(-1,Math.min(1,L[i+k]))*32767;r16[k]=Math.max(-1,Math.min(1,R[i+k]))*32767}
+      var d=enc.encodeBuffer(l16.subarray(0,n),r16.subarray(0,n));if(d.length) parts.push(new Uint8Array(d));
+    }
+    var e=enc.flush();if(e.length) parts.push(new Uint8Array(e));
+    return new Blob(parts,{type:"audio/mpeg"});
+  }).catch(function(){return null});
+}
+
+window.addEventListener("beforeunload",function(e){if(S.blessers.some(function(b){return b.takes.some(Boolean)})){e.preventDefault();e.returnValue=""}});
+
+window.__kolotDebug={S:S,analyzeTake:analyzeTake,render:render,showReview:showReview,renderReview:renderReview,splitText:splitText,resplit:resplit};
+
+/* ---------- boot ---------- */
+loadText();renderSetup();
+if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){$("#setupStatus").textContent="הדפדפן הזה לא מאפשר הקלטה. כדאי לפתוח את הקישור ב-Chrome או ב-Safari.";$("#toRecord").disabled=true}
+})();
+</script>
+</body>
+</html>

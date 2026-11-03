@@ -96,7 +96,8 @@ audio{width:100%}
 .meter i.hot{background:#ff5a6e}
 .st-hint{font-size:13px;min-height:1.2em;color:var(--stage-dim)}
 .st-hint.alert{color:#ffb4bf}
-.st-text{flex:1;min-height:0;overflow-y:auto;padding:38vh max(20px,env(safe-area-inset-right,0px)) 45vh max(20px,env(safe-area-inset-left,0px));scroll-behavior:smooth}
+.st-text{flex:1;min-height:0;overflow-y:auto;padding:0 max(20px,env(safe-area-inset-right,0px)) 0 max(20px,env(safe-area-inset-left,0px));scroll-behavior:smooth}
+.st-text::before,.st-text::after{content:"";display:block;height:32vh}
 .st-text p{font-family:var(--f-display);font-weight:500;margin:0 auto .9em;max-width:22em;line-height:1.45;color:var(--stage-dim);transition:color .3s,opacity .3s;cursor:pointer;text-wrap:pretty}
 .st-text p.cur{color:var(--stage-ink)}
 .st-text p.done{opacity:.55}

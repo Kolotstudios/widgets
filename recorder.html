@@ -1444,7 +1444,7 @@ function encodeMp3(L,R,sr){
 
 window.addEventListener("beforeunload",function(e){if(CLOUD.on&&!CLOUD.q.length&&!CLOUD.busy) return;if(S.blessers.some(function(b){return b.takes.some(Boolean)})){e.preventDefault();e.returnValue=""}});
 
-window.__kolotDebug={CLOUD:CLOUD,cloudOpen:cloudOpen,unwav:unwav,wavMono:wavMono,setApi:function(u){API=u},quickCheck:quickCheck,ensureClean:ensureClean,DSP:DSP,render:exportMix,startLive:startLive,stopLive:stopLive,MIXP:MIXP,settings:settings,showReview:showReview,renderReview:renderReview,splitText:splitText,resplit:resplit};
+window.__kolotDebug={CLOUD:CLOUD,cloudQueue:cloudQueue,cloudFlush:cloudFlush,submitMix:submitMix,cloudOpen:cloudOpen,unwav:unwav,wavMono:wavMono,setApi:function(u){API=u},quickCheck:quickCheck,ensureClean:ensureClean,DSP:DSP,render:exportMix,startLive:startLive,stopLive:stopLive,MIXP:MIXP,settings:settings,showReview:showReview,renderReview:renderReview,splitText:splitText,resplit:resplit};
 
 /* ---------- boot ---------- */
 var hk=(location.hash.match(/k=([a-f0-9]{20,40})/)||[])[1];

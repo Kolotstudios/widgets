@@ -89,14 +89,14 @@ audio{width:100%}
 .st-head .row{color:var(--stage-ink)}
 .st-name{font-weight:700;font-size:16px}
 .st-prog{font-size:13px;color:var(--stage-dim);font-variant-numeric:tabular-nums}
-.chip{border:1px solid var(--stage-line);background:transparent;color:var(--stage-ink);font:600 13px var(--f-body);padding:5px 10px;border-radius:99px;cursor:pointer}
+.chip{border:1px solid var(--stage-line);background:transparent;color:var(--stage-ink);font:600 13px var(--f-body);padding:4px 9px;border-radius:99px;cursor:pointer}
 .chip[aria-pressed="true"]{background:var(--stage-ink);color:var(--stage)}
 .meter{height:6px;border-radius:3px;background:var(--stage-line);overflow:hidden;position:relative}
 .meter i{position:absolute;inset:0 auto 0 0;right:0;left:auto;width:0;background:#3fbf7f;transition:width .06s linear}
 .meter i.hot{background:#ff5a6e}
 .st-hint{font-size:13px;min-height:1.2em;color:var(--stage-dim)}
 .st-hint.alert{color:#ffb4bf}
-.st-text{flex:1;overflow-y:auto;padding:38vh max(20px,env(safe-area-inset-right,0px)) 45vh max(20px,env(safe-area-inset-left,0px));scroll-behavior:smooth}
+.st-text{flex:1;min-height:0;overflow-y:auto;padding:38vh max(20px,env(safe-area-inset-right,0px)) 45vh max(20px,env(safe-area-inset-left,0px));scroll-behavior:smooth}
 .st-text p{font-family:var(--f-display);font-weight:500;margin:0 auto .9em;max-width:22em;line-height:1.45;color:var(--stage-dim);transition:color .3s,opacity .3s;cursor:pointer;text-wrap:pretty}
 .st-text p.cur{color:var(--stage-ink)}
 .st-text p.done{opacity:.55}
@@ -568,10 +568,10 @@ function renderReview(){
     var head=document.createElement("div");head.className="row between";
     var h=document.createElement("div");
     var t=document.createElement("h2");t.textContent=b.name||(S.mode==="drasha"?"הדרשה":"הברכה");
-    var m=document.createElement("p");m.className="note "+(done===tot?"ok":"");m.textContent=done===tot?("כל "+tot+" המשפטים הוקלטו · "+fmtDur(totalDur(b))):(done+" מתוך "+tot+" משפטים הוקלטו");
+    var m=document.createElement("p");m.className="note "+(done===tot?"ok":"");m.textContent=done===tot?((tot===1?"המשפט הוקלט":"כל "+tot+" המשפטים הוקלטו")+" · "+fmtDur(totalDur(b))):(done+" מתוך "+tot+" משפטים הוקלטו");
     h.append(t,m);
-    var rb=document.createElement("button");rb.type="button";rb.className="btn "+(done<tot?"primary":"");rb.textContent=done===0?"● התחלת הקלטה":(done<tot?"● המשך הקלטה":"● הקלטה מחדש של הכל");
-    rb.onclick=function(){if(done===tot){b.takes=b.takes.map(function(){return null})}openStage(b,firstMissing(b),false)};
+    var rb=document.createElement("button");rb.type="button";rb.className="btn "+(done<tot?"primary":"");rb.textContent=done===0?"● התחלת הקלטה":(done<tot?"● המשך הקלטה":"● הקלטה חוזרת מההתחלה");
+    rb.onclick=function(){openStage(b,done===tot?0:firstMissing(b),false)};
     head.append(h,rb);card.appendChild(head);
     var list=document.createElement("div");
     b.sentences.forEach(function(s,i){

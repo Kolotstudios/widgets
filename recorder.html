@@ -129,6 +129,7 @@ h3{font:700 15px var(--f-body);margin:0;color:var(--muted);letter-spacing:.02em}
     <span class="brand">אולפני קולות</span>
     <h1>הקלטת ברכה מהנייד</h1>
     <p class="sub">כותבים או מדביקים את הטקסט, מקליטים משפט אחרי משפט מול טלפרומפטר, ומקבלים קובץ ערוך עם מוסיקה.</p>
+    <span class="note" id="verNote" style="font-size:11px"></span>
     <span class="badge" id="modeBadge">מצב הדגמה: ההקלטות לא נשמרות</span>
   </header>
 
@@ -713,7 +714,7 @@ function quickCheck(pcm,sr){
 var Cleaner=(function(){
   var src=document.getElementById("dsp").textContent,w=null,jobs={},n=0,local={};
   var glue="\nvar BASE='',rooms={},rnnP=null,M=null,ip=0,op=0;"+
-    "function loadRnn(){if(rnnP) return rnnP;rnnP=new Promise(function(res){try{importScripts(BASE+'vendor/rnnoise.js');"+
+    "function loadRnn(){if(rnnP) return rnnP;rnnP=new Promise(function(res){setTimeout(function(){res(false)},8000);try{importScripts(BASE+'vendor/rnnoise.js');"+
     "createRNNWasmModule({locateFile:function(p){return BASE+'vendor/'+p}}).then(function(m){M=m;ip=M._malloc(1920);op=M._malloc(1920);res(true)},function(){res(false)})}catch(e){res(false)}});return rnnP}"+
     "function rnn(x){var F=480,n=x.length,L=Math.ceil((n+F)/F)*F,t=new Float32Array(L),o=new Float32Array(L),s=M._rnnoise_create(0),i,k;t.set(x);"+
     "for(k=0;k<L;k+=F){var H=M.HEAPF32,b=ip>>2;for(i=0;i<F;i++) H[b+i]=t[k+i]*32768;M._rnnoise_process_frame(s,op,ip);H=M.HEAPF32;var c=op>>2;for(i=0;i<F;i++) o[k+i]=H[c+i]/32768}"+
@@ -744,6 +745,7 @@ var Cleaner=(function(){
         if(w){
           if(!sent[t.sid]&&S.rooms[t.sid]){w.postMessage({type:"room",sid:t.sid,room:S.rooms[t.sid],sr:t.sr});sent[t.sid]=1}
           var id=++n;jobs[id]=j;w.postMessage({type:"clean",id:id,raw:t.raw,pre:t.pre,sr:t.sr,sid:t.sid});
+          setTimeout(function(){if(jobs[id]){delete jobs[id];reportErr("העיבוד ב-worker לא הגיב, מעבד בדף עצמו");runLocal(j)}},30000);
         } else runLocal(j);
       });
     }
@@ -857,7 +859,8 @@ function beginSession(){
     },800);
   }).catch(function(err){
     P.state="idle";renderFoot();$("#count").hidden=true;
-    hint(err&&err.name==="NotAllowedError"?"אין הרשאה למיקרופון. צריך לאשר גישה בהגדרות הדפדפן ולנסות שוב.":"לא הצלחנו להפעיל את המיקרופון ("+(err&&err.name||"שגיאה")+").",true);
+    hint(err&&err.name==="NotAllowedError"?"אין הרשאה למיקרופון. צריך לאשר גישה בהגדרות הדפדפן ולנסות שוב.":"לא הצלחנו להפעיל את המיקרופון ("+(err&&(err.name+": "+err.message)||"שגיאה")+").",true);
+    reportErr("mic: "+(err&&(err.name+" "+err.message)));
   });
 }
 function meter(v,f){
@@ -1446,7 +1449,18 @@ window.addEventListener("beforeunload",function(e){if(CLOUD.on&&!CLOUD.q.length&
 
 window.__kolotDebug={CLOUD:CLOUD,cloudQueue:cloudQueue,cloudFlush:cloudFlush,submitMix:submitMix,cloudOpen:cloudOpen,unwav:unwav,wavMono:wavMono,setApi:function(u){API=u},S:S,quickCheck:quickCheck,ensureClean:ensureClean,DSP:DSP,render:exportMix,startLive:startLive,stopLive:stopLive,MIXP:MIXP,settings:settings,showReview:showReview,renderReview:renderReview,splitText:splitText,resplit:resplit};
 
+/* ---------- visible errors (prototype) ---------- */
+var VERSION="2026-11-04a";
+function reportErr(msg){
+  var el=document.getElementById("errBox");
+  if(!el){el=document.createElement("p");el.id="errBox";el.className="note warn";el.style.cssText="position:fixed;inset:auto 8px calc(8px + env(safe-area-inset-bottom,0px)) 8px;z-index:99;background:var(--paper);border:1px solid var(--warn);border-radius:10px;padding:8px 10px;margin:0";document.body.appendChild(el)}
+  el.textContent="שגיאה: "+String(msg).slice(0,240)+" · גרסה "+VERSION;
+}
+window.addEventListener("error",function(e){reportErr((e.message||"")+(e.filename?" @"+e.filename.split("/").pop()+":"+e.lineno:""))});
+window.addEventListener("unhandledrejection",function(e){var r=e.reason;reportErr(r&&(r.message||r.name)||String(r))});
+
 /* ---------- boot ---------- */
+$("#verNote").textContent="גרסה "+VERSION;
 var hk=(location.hash.match(/k=([a-f0-9]{20,40})/)||[])[1];
 if(hk){
   CLOUD.on=true;CLOUD.k=hk;CLOUD.dev=devId();

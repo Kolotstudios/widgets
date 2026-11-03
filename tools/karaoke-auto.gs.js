@@ -2,8 +2,10 @@
 /* ===================== Karaoke – automatic send + 3-day check =====================
  * Kala automations (incoming webhook) that message the customer. 0 = not active yet (nothing is sent).
  */
-const KK_TRIGGER_LINK = 0;    // "הלינק לחלוקה מוכן"
-const KK_TRIGGER_REMIND = 0;  // "תזכורת: החלוקה לא הושלמה"
+const KK_TRIGGER_LINK = 712;    // Kala automation (incoming webhook) -> WhatsApp template 323 "הלינק לחלוקה מוכן" to {{send_to}}
+const KK_TRIGGER_REMIND = 713;  // Kala automation (incoming webhook) -> WhatsApp template 324 "תזכורת: החלוקה לא הושלמה" to {{send_to}}
+/** TEST MODE: messages go out only to these phones (last 9 digits). Empty list [] = send to every customer. */
+const KK_ONLY_TO = ['547689850'];
 const KK_PAGE = 'https://www.kolot-studios.com/category/' + encodeURIComponent('קריוקי-משפחתי');
 function kkLink_(k) { return KK_PAGE + '#k=' + k; }
 /** Participants range from the clip product's name (catalog: בייסיק 5, משפחתי 10, סמארטפונים 10, מורחב 11-30, משפחתי + 20, נייד 15, פרימיום 30). */
@@ -14,6 +16,20 @@ function kkRange_(title) {
   const map = [[/פרימיום/, 30], [/משפחתי\s*\+|\+/, 20], [/מורחב/, 30, 11], [/נייד/, 15], [/סמארטפונ/, 10], [/משפחתי/, 10], [/בייסיק|בסיסי/, 5]];
   for (const x of map) if (x[0].test(t)) return { min: x[2] || 0, max: x[1] };
   return { min: 0, max: 0 };
+}
+function kkD9_(x) { return String(x || '').replace(/\D/g, '').slice(-9); }
+/** Who may receive a message for this song: ONLY the primary phone of that same order.
+ *  Never the order's second phone, never another order of the same person (e.g. a surprise clip a husband orders for his wife,
+ *  whose old order lists his number as the second phone). If the phone typed at upload does not match the order's primary phone - nothing is sent. */
+function kkTarget_(e) {
+  if (!e.orderId) return { ok: false, error: 'אין מספר הזמנה – אי אפשר לשלוח' };
+  const j = kalaGet_('/api/v1/order/' + e.orderId); const o = (j && (j.payload || (j.id ? j : null))) || null;
+  if (!o || !o.id) return { ok: false, error: 'ההזמנה ' + e.orderId + ' לא נמצאה בקאלה' };
+  if (o.deleted) return { ok: false, error: 'ההזמנה ' + e.orderId + ' מחוקה בקאלה' };
+  const prim = kkD9_(o.phone); if (prim.length < 9) return { ok: false, error: 'בהזמנה ' + e.orderId + ' אין טלפון ראשי' };
+  if (e.phone && kkD9_(e.phone) !== prim) return { ok: false, error: 'הטלפון שהוזן בהעלאה לא זהה לטלפון הראשי בהזמנה – לא נשלח (מניעת שליחה למספר אחר בהזמנה)' };
+  if (KK_ONLY_TO.length && KK_ONLY_TO.indexOf(prim) < 0) return { ok: false, test: true, error: 'מצב בדיקה – השליחה ללקוחות עוד לא פתוחה (נשלח רק לאורן)' };
+  return { ok: true, phone: '0' + prim };
 }
 function kkNeed_(e) { const max = +e.maxP || 0, min = +e.minP || 0; if (!max) return 0; return min || Math.ceil(max / 2); }
 /** Call a Kala incoming-webhook automation for an order. Uses the API key already stored (no extra keys). */
@@ -38,9 +54,10 @@ function kkSend_(P, k) {
     const idx = kkIndex_(P); const e = idx[k]; if (!e) return { ok: false, error: 'לא נמצא' };
     if (!e.orderId) return { ok: false, error: 'אין מספר הזמנה – אי אפשר לשלוח דרך קאלה' };
     if (e.sentAt) return { ok: true, already: true };
-    const r = kkKala_(KK_TRIGGER_LINK, e.orderId, { karaoke_link: kkLink_(k), karaoke_title: e.title || '' });
+    const to = kkTarget_(e); if (!to.ok) return to;
+    const r = kkKala_(KK_TRIGGER_LINK, e.orderId, { send_to: to.phone, karaoke_link: kkLink_(k), karaoke_title: e.title || '' });
     if (!r.ok) return r;
-    e.sentAt = Date.now(); idx[k] = e; kkSaveIndex_(P, idx); return { ok: true };
+    e.sentAt = Date.now(); delete e.needsReview; idx[k] = e; kkSaveIndex_(P, idx); return { ok: true };
   } finally { lock.releaseLock(); }
 }
 /** Daily (time trigger): 3 days before the recording, remind customers whose split is missing / too small. Once per project. */
@@ -57,12 +74,13 @@ function kkDaily() {
     const singers = (pr.people || []).filter(p => !p.group).length; const need = kkNeed_(e);
     const reason = !singers ? 'no-split' : gaps ? 'gaps:' + gaps : (need && singers < need) ? 'few:' + singers + '/' + need : '';
     if (!reason) return;
-    const r = kkKala_(KK_TRIGGER_REMIND, e.orderId, { karaoke_link: kkLink_(k), rec_date: e.recDate.split('-').reverse().join('/') });
+    const to = kkTarget_(e); if (!to.ok) { log.push(k.slice(0, 6) + ' ' + reason + (to.test ? ' test-skip' : ' fail:' + to.error)); return; }
+    const r = kkKala_(KK_TRIGGER_REMIND, e.orderId, { send_to: to.phone, karaoke_link: kkLink_(k), rec_date: e.recDate.split('-').reverse().join('/').slice(0, 5) });
     log.push(k.slice(0, 6) + ' ' + reason + ' ' + (r.ok ? 'sent' : 'fail'));
     if (r.ok) { e.reminded = now; e.remindReason = reason; changed = true; }
   });
   if (changed) kkSaveIndex_(P, idx);
-  const fails = log.filter(x => / fail$/.test(x)); if (fails.length) kkAlert_('⚠ קריוקי: תזכורות שלא נשלחו (' + fails.length + ')', ['הבדיקה היומית ניסתה לשלוח תזכורת ונכשלה עבור:', fails.join('\n'), '', 'כניסת צוות: ' + KK_PAGE]);
+  const fails = log.filter(x => / fail(:|$)/.test(x)); if (fails.length) kkAlert_('⚠ קריוקי: תזכורות שלא נשלחו (' + fails.length + ')', ['הבדיקה היומית ניסתה לשלוח תזכורת ונכשלה עבור:', fails.join('\n'), '', 'כניסת צוות: ' + KK_PAGE]);
   P.setProperty('KK_DAILY_LAST', new Date().toISOString() + ' ' + log.join(' | '));
 }
 /* ---------- alerts to the studio (email; needs the script.send_mail scope) ---------- */

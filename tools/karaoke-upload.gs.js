@@ -22,7 +22,8 @@ function kkFindByPhone_(phone, name) {
   (j.payload || []).forEach(p => {
     if (p.order_is_deleted || p.deleted == 1) return;
     let od = p.order_data || {}; if (typeof od === 'string') { try { od = JSON.parse(od); } catch (e) { od = {}; } }
-    const phones = [p.phone, p.mobile, od.phone, od.mobile].map(x => String(x || '').replace(/\D/g, '').slice(-9));
+    // primary phone only – a number that appears only as an order's second phone must never pull in that order (surprise clips)
+    const phones = [p.phone, od.phone].map(x => String(x || '').replace(/\D/g, '').slice(-9));
     if (phones.indexOf(want) < 0) return;
     let attrs = p.order_attributes || od.order_attributes || {}; if (typeof attrs === 'string') { try { attrs = JSON.parse(attrs); } catch (e) { attrs = {}; } }
     const id = String(p.order_id);

@@ -1017,7 +1017,7 @@ function renderReview(){
     var h=document.createElement("div");
     var t=document.createElement("h2");t.textContent=b.name||(S.mode==="drasha"?"הדרשה":"הברכה");
     var m=document.createElement("p");m.className="note "+(done===tot?"ok":"");m.textContent=done===tot?((tot===1?"המשפט הוקלט":"כל "+tot+" המשפטים הוקלטו")+" · "+fmtDur(totalDur(b))):(done+" מתוך "+tot+" משפטים הוקלטו");
-    if(proc){var pp=document.createElement("p");pp.className="note";pp.textContent="מעבד "+proc+" משפטים ברקע… אפשר להמשיך להקליט בינתיים.";h.append(t,m,pp)} else h.append(t,m);
+    if(proc){var pp=document.createElement("p");pp.className="note";pp.textContent=(proc===1?"מעבד משפט אחד":"מעבד "+proc+" משפטים")+" ברקע… אפשר להמשיך בינתיים.";h.append(t,m,pp)} else h.append(t,m);
     var rb=document.createElement("button");rb.type="button";rb.className="btn "+(done<tot?"primary":"");rb.textContent=done===0?"● התחלת הקלטה":(done<tot?"● המשך הקלטה":"● הקלטה חוזרת מההתחלה");
     rb.onclick=function(){stopLive();openStage(b,done===tot?0:firstMissing(b),false)};
     head.append(h,rb);card.appendChild(head);

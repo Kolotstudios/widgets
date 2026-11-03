@@ -62,8 +62,21 @@ function kkDaily() {
     if (r.ok) { e.reminded = now; e.remindReason = reason; changed = true; }
   });
   if (changed) kkSaveIndex_(P, idx);
+  const fails = log.filter(x => / fail$/.test(x)); if (fails.length) kkAlert_('⚠ קריוקי: תזכורות שלא נשלחו (' + fails.length + ')', ['הבדיקה היומית ניסתה לשלוח תזכורת ונכשלה עבור:', fails.join('\n'), '', 'כניסת צוות: ' + KK_PAGE]);
   P.setProperty('KK_DAILY_LAST', new Date().toISOString() + ' ' + log.join(' | '));
 }
+/* ---------- alerts to the studio (email; needs the script.send_mail scope) ---------- */
+const KK_ALERT_TO = 'kolot.studios@gmail.com';
+function kkAlert_(subject, lines) {
+  try { MailApp.sendEmail({ to: KK_ALERT_TO, subject: subject, body: lines.join('\n'), name: 'מערכת הקריוקי – אולפני קולות' }); return true; }
+  catch (e) { try { PropertiesService.getScriptProperties().setProperty('KK_ALERT_ERR', new Date().toISOString() + ' ' + e.message); } catch (x) {} return false; }
+}
+function kkAlertSong_(subject, k, e, why) {
+  return kkAlert_(subject, [why, '', 'לקוח/ה: ' + (e.name || '-'), 'טלפון: ' + (e.phone || '-'), 'הזמנה בקאלה: ' + (e.orderId || 'לא נמצאה'), 'מוצר: ' + (e.product || '-'), 'תאריך הקלטה: ' + (e.recDate ? e.recDate.split('-').reverse().join('/') : '-'), 'שם השיר: ' + (e.title || '-'), 'הועלה ע"י: ' + (e.uploaderName || 'צוות'), '',
+    'מה עושים: נכנסים לעמוד הקריוקי ← כניסת צוות ← 📋 לקוחות. פותחים את השיר, בודקים את הסנכרון, משלימים מספר הזמנה ב"☁ שמירה ולינק ללקוח" ושולחים.', KK_PAGE]);
+}
+/** Run once from the editor (approves sending email, then sends a test email to the studio). */
+function kkTestAlert() { kkAlert_('בדיקה: התראות הקריוקי עובדות ✓', ['זו הודעת בדיקה ממערכת הקריוקי. מעכשיו יגיעו לכאן התראות כשגייד לא משויך ללקוח או כשלינק לא נשלח.']); Logger.log(PropertiesService.getScriptProperties().getProperty('KK_ALERT_ERR') || 'sent'); }
 /** Run once from the editor: installs the daily check at ~10:00. */
 function kkInstallDaily() {
   ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'kkDaily').forEach(t => ScriptApp.deleteTrigger(t));

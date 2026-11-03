@@ -9,7 +9,7 @@ function kkUpStaff_(d, P) {
   const m = kkUploaders_(P);
   if (d.action === 'kk_up_list') return { ok: true, items: Object.keys(m).map(k => Object.assign({ key: k }, m[k])) };
   if (d.action === 'kk_up_create') { const name = String(d.name || '').trim().slice(0, 40); if (!name) return { ok: false, error: 'חסר שם' }; const key = kkTok_(); m[key] = { name: name, active: true, created: Date.now(), count: 0 }; P.setProperty('KK_UPLOADERS', JSON.stringify(m)); return { ok: true, key: key }; }
-  if (d.action === 'kk_up_set') { const x = m[String(d.key || '')]; if (!x) return { ok: false, error: 'לא נמצא' }; x.active = !!d.active; P.setProperty('KK_UPLOADERS', JSON.stringify(m)); return { ok: true }; }
+  if (d.action === 'kk_up_set') { const x = m[String(d.key || '')]; if (!x) return { ok: false, error: 'לא נמצא' }; if (d.active != null) x.active = !!d.active; if (d.name) x.name = String(d.name).trim().slice(0, 40); P.setProperty('KK_UPLOADERS', JSON.stringify(m)); return { ok: true }; }
   if (d.action === 'kk_review_done') { const idx = kkIndex_(P); const e = idx[d.k]; if (!e) return { ok: false, error: 'לא נמצא' }; delete e.needsReview; idx[d.k] = e; kkSaveIndex_(P, idx); return { ok: true }; }
   return null;
 }
@@ -53,6 +53,7 @@ function kkUpload_(d, P) {
       if (d.audio) e.audio = kkPut_(P, null, k + '.audio', Utilities.newBlob(Utilities.base64Decode(d.audio), d.mime || 'audio/mpeg'));
       e.title = String((d.project || {}).title || '').slice(0, 80); e.updated = Date.now(); e.by = 'uploader'; e.uploader = String(d.u); e.uploaderName = up.name;
       idx[k] = e; kkSaveIndex_(P, idx);
+      if (e.needsReview) kkAlertSong_('⚠ קריוקי: גייד ממתין לבדיקה – ' + (e.name || e.phone), k, e, 'הלינק לא נשלח ללקוח. הסיבה: ' + e.needsReview);
       const mm = kkUploaders_(P); if (mm[d.u]) { mm[d.u].count = (mm[d.u].count || 0) + 1; P.setProperty('KK_UPLOADERS', JSON.stringify(mm)); }
       return { ok: true, k: k };
     } finally { lock.releaseLock(); }
@@ -60,7 +61,9 @@ function kkUpload_(d, P) {
   if (d.action === 'kk_u_send') {
     const e = kkIndex_(P)[String(d.k || '')]; if (!e || e.uploader !== String(d.u)) return { ok: false, error: 'לא נמצא' };
     if (e.needsReview) return { ok: false, error: 'ממתין לבדיקה של הצוות' };
-    return kkSend_(P, String(d.k));
+    const r = kkSend_(P, String(d.k));
+    if (!r.ok) kkAlertSong_('⚠ קריוקי: הלינק לא נשלח ללקוח – ' + (e.name || e.phone), String(d.k), e, 'השליחה בוואטסאפ לא בוצעה: ' + (r.error || '') + '\nצריך לשלוח ידנית.');
+    return r;
   }
   return { ok: false, error: 'unknown action' };
 }

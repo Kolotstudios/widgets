@@ -116,7 +116,7 @@ function rcClient_(d, P) {
       e.final = rcPut_(P, e.final, k + '-final.mp3', Utilities.newBlob(Utilities.base64Decode(d.mp3), 'audio/mpeg', (e.name || k) + '.mp3'));
       pr.settings = d.settings || pr.settings; pr.music = String(d.music || pr.music || ''); rcSaveProject_(P, k, e, pr);
       e.status = 'submitted'; e.submittedAt = Date.now(); e.updated = Date.now(); idx[k] = e; rcSaveIndex_(P, idx);
-      try { MailApp.sendEmail(Session.getEffectiveUser().getEmail(), 'הקלטה מהנייד הוגשה: ' + (e.name || k), 'הלקוח שלח הקלטה לאישור.\nשם: ' + (e.name || '') + '\nהזמנה: ' + (e.orderId || '') + '\nסוג: ' + (pr.mode || '') + '\n\nאפשר להאזין ולהוריד בדף הניהול של המקליט.'); } catch (x) {}
+      try { MailApp.sendEmail(P.getProperty('RECORDER_NOTIFY') || 'kolot.studios@gmail.com', 'הקלטה מהנייד הוגשה: ' + (e.name || k), 'הלקוח שלח הקלטה לאישור.\nשם: ' + (e.name || '') + '\nהזמנה: ' + (e.orderId || '') + '\nסוג: ' + (pr.mode || '') + '\n\nאפשר להאזין ולהוריד בדף הניהול של המקליט.'); } catch (x) {}
       return { ok: true };
     }
     return { ok: false, error: 'unknown action' };

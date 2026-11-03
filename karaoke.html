@@ -93,7 +93,7 @@ body.dragging,body.dragging *{cursor:grabbing!important;user-select:none}
 .whytx{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:8px 10px;line-height:1.6}
 .staffbar,.clientbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:8px 12px;margin-bottom:10px}
 .clientbar.locked{border-color:var(--warn);background:var(--soft)}
-.panel{max-width:640px;max-height:80vh;overflow:auto}
+.panel{max-width:640px;overflow:auto}
 .panel .fld{display:grid;gap:4px}.panel .fld input{font-size:16px}
 .cl{display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--bg)}
 .cl .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
@@ -326,7 +326,7 @@ const nameOfKey=a=>!a||!a.length?'אף אחד':a.includes('ALL')?'כולם':a.ma
 // height of the site's fixed header (so floating bars are not hidden under it)
 function siteInset(){try{const W=window.parent,D=W.document;let b=0;for(const x of [W.innerWidth*0.2,W.innerWidth/2,W.innerWidth*0.8]){let e=D.elementFromPoint(x,2);while(e&&e!==D.body&&e!==D.documentElement){if(e.tagName==='IFRAME')break;const s=W.getComputedStyle(e);if(s.position==='fixed'||s.position==='sticky'){const bb=e.getBoundingClientRect().bottom;if(bb>b)b=bb;break}e=e.parentElement}}return b<W.innerHeight*0.45?b:0}catch(e){return 0}}
 function visBox(){try{if(window.frameElement){const r=window.frameElement.getBoundingClientRect();const vh=window.parent.innerHeight;const ins=siteInset();return {top:Math.max(0,ins-r.top),h:Math.min(vh,r.bottom)-Math.max(ins,r.top),ins}}}catch(e){}return {top:window.scrollY,h:window.innerHeight,ins:0}}
-function placeFloats(){const v=visBox();placePick(v);placeDock(v);const bar=$('selBar');if(bar&&!bar.hidden){bar.style.top=(v.top+v.h-bar.offsetHeight-10)+'px'}const m=$('askBox');if(m&&!m.hidden){m.style.top=(v.top+Math.max(10,(v.h-m.offsetHeight)/2))+'px'}let emb=false;try{emb=!!window.frameElement}catch(e){}if(emb){const t=$('toast');t.style.top=(v.top+v.h-70)+'px';t.style.bottom='auto'}}
+function placeFloats(){const v=visBox();placePick(v);placeDock(v);const bar=$('selBar');if(bar&&!bar.hidden){bar.style.top=(v.top+v.h-bar.offsetHeight-10)+'px'}const m=$('askBox');if(m&&!m.hidden){m.style.top=(v.top+Math.max(10,(v.h-m.offsetHeight)/2))+'px'}const pb=$('panelBox');if(pb&&!pb.hidden){pb.style.maxHeight=Math.max(240,v.h-24)+'px';pb.style.top=(v.top+Math.max(12,(v.h-pb.offsetHeight)/2))+'px'}let emb=false;try{emb=!!window.frameElement}catch(e){}if(emb){const t=$('toast');t.style.top=(v.top+v.h-70)+'px';t.style.bottom='auto'}}
 try{if(window.frameElement){window.parent.addEventListener('scroll',placeFloats,{passive:true});window.parent.document.addEventListener('scroll',placeFloats,{passive:true,capture:true});window.parent.addEventListener('resize',placeFloats)}}catch(e){}
 setInterval(()=>{const s=document.querySelector('[data-step="split"]'),y=document.querySelector('[data-step="sync"]');if(s&&!s.hidden||y&&!y.hidden)placeFloats()},400);
 window.addEventListener('scroll',placeFloats,{passive:true});window.addEventListener('resize',placeFloats);
@@ -811,7 +811,7 @@ function hashK(){let h='';try{h=window.frameElement?window.parent.location.hash:
 function pageURL(){try{if(window.frameElement){const L=window.parent.location;return L.origin+L.pathname}}catch(e){}return location.origin+location.pathname}
 var K='',KS=null,audioDirty=false,imgDirty=false,cloudT=null;
 const fmtD=ms=>{const d=new Date(ms);return d.getDate()+'/'+(d.getMonth()+1)};const fmtE=ms=>fmtD(ms-2*3600000); // expiry = end of the recording day
-function showPanel(html){const b=$('panelBox');b.innerHTML=html;b.hidden=false;$('askVeil').hidden=false;placeFloats();$('askVeil').onclick=hidePanel}
+function showPanel(html){const b=$('panelBox');b.onclick=null;b.innerHTML=html;b.hidden=false;$('askVeil').hidden=false;placeFloats();$('askVeil').onclick=hidePanel}
 function hidePanel(){$('panelBox').hidden=true;$('askVeil').hidden=true}
 const isoDate=ms=>{const d=new Date(ms);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 function linkOf(k){return pageURL()+'#k='+k}

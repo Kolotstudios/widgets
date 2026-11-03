@@ -275,11 +275,13 @@ const REPW=/^(?:[x×*]\d+|\d+[x×*]|פעמיים|שלוש|פעמים|חוזר|ח
 function header(line){const m=line.match(/^\s*[\[\(\{]?\s*([^\s:：\-–—\]\)\}]+)((?:[\s\-–—]+[^\s:：\]\)\}]+){0,3})\s*[\]\)\}]?\s*(?:[:：\-–—]\s*(.*))?$/);if(!m)return null;
  const kw=KW.find(k=>k[0].test(m[1].replace(/[\[\]\(\)'"׳״.]/g,'')));if(!kw)return null;
  const toks=(m[2]||'').replace(/[\[\]\(\)'"׳״.]/g,' ').split(/[\s\-–—]+/).filter(Boolean);let num=0,rep=1,isRepeat=false;
- for(const t of toks){if(/^\d+$/.test(t)){num=+t;continue}if(ORD[t]){num=ORD[t];continue}const r=t.match(/^[x×*](\d+)$|^(\d+)[x×*]$/i);if(r){rep=+(r[1]||r[2]);isRepeat=true;continue}if(t==='פעמיים'){rep=2;isRepeat=true;continue}if(REPW.test(t)){isRepeat=true;continue}return null}
+ for(const t of toks){if(/^\d+$/.test(t)){num=+t;continue}if(ORD[t]){num=ORD[t];continue}const r=t.match(/^[x×*](\d+)$|^(\d+)[x×*]$/i);if(r){rep=+(r[1]||r[2]);isRepeat=true;continue}if(t==='פעמיים'){rep=2;isRepeat=true;continue}if(REPW.test(t)){isRepeat=true;continue}if(KW.some(k=>k[0].test(t)))continue;return null}
  return {label:kw[1],num,rep:Math.min(rep,6),isRepeat,rest:(m[3]||'').trim()}}
 const REP=/\s*[\(\[]?\s*(?:[x×*]\s*(\d+)|(\d+)\s*[x×*])\s*[\)\]]?\s*$/i;
+// "(קטע מעבר מוזיקלי)", "[סולו גיטרה]", "(instrumental)" – instructions for the singers, not lyrics
+const isDirection=l=>/^\s*[\(\[\{].*[\)\]\}]\s*$/.test(l)&&/מוזיק|נגינ|כלי|אינסטרומנט|קטע|הפסק|מעבר|סולו|מנגינ|instrument|music|solo|break|interlude/i.test(l)&&!header(l);
 function parseLyrics(raw){
- const stanzas=String(raw||'').replace(/\r/g,'').split(/\n\s*\n/).map(s=>s.split('\n').map(l=>l.trim()).filter(Boolean)).filter(s=>s.length);
+ const stanzas=String(raw||'').replace(/\r/g,'').split(/\n\s*\n/).map(s=>s.split('\n').map(l=>l.trim()).filter(l=>l&&!isDirection(l))).filter(s=>s.length);
  let chorus=null,warn='';
  for(const st of stanzas){const hd=header(st[0]);if(hd&&hd.label==='פזמון'){const body=(hd.rest?[hd.rest]:[]).concat(st.slice(1).filter(l=>!header(l)));if(body.length&&!chorus)chorus=body}}
  const out=[];let sIdx=0,verseNo=0;
@@ -341,8 +343,13 @@ function placeFloats(){const v=visBox();placePick(v);placeDock(v);const bar=$('s
 try{if(window.frameElement){window.parent.addEventListener('scroll',placeFloats,{passive:true});window.parent.document.addEventListener('scroll',placeFloats,{passive:true,capture:true});window.parent.addEventListener('resize',placeFloats)}}catch(e){}
 setInterval(()=>{const s=document.querySelector('[data-step="split"]'),y=document.querySelector('[data-step="sync"]');if(s&&!s.hidden||y&&!y.hidden)placeFloats()},400);
 window.addEventListener('scroll',placeFloats,{passive:true});window.addEventListener('resize',placeFloats);
-function ask(title,body,opts){return new Promise(res=>{const m=$('askBox');$('askT').textContent=title;$('askB').innerHTML=body||'';$('askO').innerHTML=opts.map((o,k)=>`<button class="${k===0?'primary':''}" data-k="${k}">${esc(o.label)}</button>`).join('')+`<button data-k="-1">ביטול</button>`;
+function ask(title,body,opts,noCancel){return new Promise(res=>{const m=$('askBox');$('askT').textContent=title;$('askB').innerHTML=body||'';$('askO').innerHTML=opts.map((o,k)=>`<button class="${k===0?'primary':''}" data-k="${k}">${esc(o.label)}</button>`).join('')+(noCancel?'':`<button data-k="-1">ביטול</button>`);
  $('askVeil').hidden=false;m.hidden=false;placeFloats();$('askO').onclick=e=>{const k=e.target.closest('[data-k]');if(!k)return;$('askVeil').hidden=true;m.hidden=true;const n=+k.dataset.k;res(n<0?null:opts[n].v)};$('askVeil').onclick=()=>{$('askVeil').hidden=true;m.hidden=true;res(null)}})}
+// in-page replacements for confirm()/prompt() (blocked in some in-app browsers and webviews)
+async function yes(msg,okLabel){const parts=String(msg).split('\n');const t=parts.shift();const b=parts.join('\n').trim();return (await ask(t,b?`<p class="hint" style="white-space:pre-line;margin:0">${esc(b)}</p>`:'',[{label:okLabel||'כן, להמשיך',v:true}]))===true}
+async function askText(title,o){o=o||{};const p=ask(title,`<input id="askIn" type="${o.password?'password':'text'}" autocomplete="${o.password?'current-password':'off'}" dir="auto" style="width:100%" value="${esc(o.value||'')}">`,[{label:o.ok||'אישור',v:true}],!!o.copy);
+ const inp=$('askIn');setTimeout(()=>{try{inp.focus();if(o.value)inp.select()}catch(e){}},30);inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('askO').querySelector('[data-k="0"]').click()}});
+ const v=await p;return v===true?inp.value.trim():null}
 function placePick(v){const f=$('pickFloat');if(!f)return;const sec=$('splitList').closest('section');if(sec.hidden){f.hidden=true;return}
  const sy=window.frameElement?0:window.scrollY;const top0=$('pickChips').getBoundingClientRect().bottom+sy;const listEnd=$('splitList').getBoundingClientRect().bottom+sy;
  const show=!sec.hidden&&top0<v.top+4&&listEnd>v.top+120;if(show!==!f.hidden){f.hidden=!show;if(show)$('pickFloatChips').innerHTML=$('pickChips').innerHTML}if(show)f.style.top=(v.top+8)+'px'}
@@ -429,8 +436,12 @@ function verseRuns(){const runs=[];let cur=null;P.lines.forEach((l,i)=>{if(l.cho
 function autoSplit(){const solo=P.people.filter(p=>!p.group);if(!solo.length&&!P.people.length)return toast('קודם מוסיפים משתתפים');const ppl=solo.length?solo:P.people;
  P.assign={};P.lines.forEach((l,i)=>{if(l.chorus)P.assign[i]=['ALL']});
  const vIdx=P.lines.map((l,i)=>i).filter(i=>!P.lines[i].chorus);const V=vIdx.length,N=ppl.length;if(!V){save();renderSplit();return}
- if(N<=V){ // contiguous blocks, cut near stanza boundaries, prefer blocks of 2+ lines
-  const cuts=[0];for(let k=1;k<N;k++){let target=Math.round(V*k/N);let best=target,bd=9;for(let d=-1;d<=1;d++){const c=target+d;if(c<=cuts[cuts.length-1]||c>=V)continue;const i=vIdx[c],prev=vIdx[c-1];const boundary=P.lines[i].st!==P.lines[prev].st||i!==prev+1;const sc=Math.abs(d)-(boundary?1.5:0);if(sc<bd){bd=sc;best=c}}cuts.push(best)}cuts.push(V);
+ if(N<=V){ // contiguous blocks of about equal size; cut at a stanza boundary, else after a couplet (even line inside a stanza)
+  const off=[];let o=0;for(let c=0;c<V;c++){const i=vIdx[c],prev=c?vIdx[c-1]:-9;const bd=!c||P.lines[i].st!==P.lines[prev].st||i!==prev+1;o=bd?0:o+1;off.push(o)}
+  const pen=c=>off[c]===0?0:off[c]%2===0?1:4,avg=V/N,INF=1e9;
+  const dp=Array.from({length:N+1},()=>new Array(V+1).fill(INF)),bk=Array.from({length:N+1},()=>new Array(V+1).fill(0));dp[0][0]=0;
+  for(let k=1;k<=N;k++)for(let c=k;c<=V-(N-k);c++)for(let q=k-1;q<c;q++){if(dp[k-1][q]>=INF)continue;const len=c-q;const v=dp[k-1][q]+(len-avg)*(len-avg)+(c<V?pen(c):0)+(len===1&&avg>=2?2:0);if(v<dp[k][c]){dp[k][c]=v;bk[k][c]=q}}
+  const cuts=[V];for(let k=N,c=V;k>0;k--){c=bk[k][c];cuts.unshift(c)}
   for(let k=0;k<N;k++)for(let c=cuts[k];c<cuts[k+1];c++)P.assign[vIdx[c]]=[ppl[k].id]}
  else{ // more people than lines: pairs, each pair on consecutive lines
   const pairs=Math.min(V,Math.ceil(N/2));let k=0;const groups=[];for(let g=0;g<pairs;g++){const a=ppl[k++],b=ppl[k++];groups.push([a,b].filter(Boolean).map(p=>p.id))}
@@ -618,7 +629,7 @@ document.addEventListener('keydown',e=>{if($('tl').closest('section').hidden||/I
  if(sel>=0&&P.lines[sel].t!=null&&(e.key==='ArrowLeft'||e.key==='ArrowRight')){e.preventDefault();const d=(e.key==='ArrowRight'?1:-1)*0.05;const l=P.lines[sel];const en=endOf(sel);l.t=Math.max(0,+(l.t+d).toFixed(2));if(e.shiftKey)l.e=+(en+d).toFixed(2);else if(l.e==null)l.e=+en.toFixed(2);save();renderSync()}});
 $('syncPause').onclick=()=>{audio.pause();$('tapBtn').textContent='▶ המשך'};
 $('syncBack').onclick=()=>{cur=Math.max(0,cur-1);const t=P.lines[cur].t;if(t!=null)audio.currentTime=Math.max(0,t-3);renderSync()};
-$('syncRestart').onclick=()=>{if(!confirm('למחוק את כל הזמנים ולהתחיל מההתחלה?'))return;P.lines.forEach(l=>{l.t=null;l.e=null;l.cf=null});cur=0;audio.currentTime=0;audio.pause();$('tapBtn').textContent='▶ התחלה';save();renderSync()};
+$('syncRestart').onclick=async()=>{if(!await yes('למחוק את כל הזמנים ולהתחיל מההתחלה?'))return;P.lines.forEach(l=>{l.t=null;l.e=null;l.cf=null});cur=0;audio.currentTime=0;audio.pause();$('tapBtn').textContent='▶ התחלה';save();renderSync()};
 $('syncList').addEventListener('click',e=>{if(lnDragEnded)return;const ed=e.target.closest('[data-edit]');if(ed){e.stopPropagation();openEdit(+ed.dataset.edit);return}
  if(e.target.closest('.edit'))return;const r=e.target.closest('.ln');if(!r)return;selectLine(+r.dataset.i,true)});
 // ---- edit a line right here (text / add a line after / delete) ----
@@ -631,13 +642,13 @@ function openEdit(i){const row=document.querySelector(`#syncList .ln[data-i="${i
  row.appendChild(box);const inp=box.querySelector('input');inp.focus();inp.select();
  inp.addEventListener('keydown',ev=>{ev.stopPropagation();if(ev.key==='Enter')act('save');if(ev.key==='Escape')renderSync()});
  box.addEventListener('click',ev=>{ev.stopPropagation();const b=ev.target.closest('[data-a]');if(b)act(b.dataset.a)});
- function act(a){const L=lyricLines();const ot=l.text,och=!!l.chorus;const k=nthLyric(ot,occOf(i));
+ async function act(a){const L=lyricLines();const ot=l.text,och=!!l.chorus;const k=nthLyric(ot,occOf(i));
   if(a==='x')return renderSync();
   if(a==='save'){const nt=inp.value.trim();if(!nt)return toast('השורה ריקה – אפשר למחוק אותה');if(nt===l.text)return renderSync();
    P.lines.forEach(x=>{if(x.text===ot&&!!x.chorus===och)x.text=nt});if(k<0){save();return renderSync()}
    L[k]=L[k].replace(ot,nt);return commitLyrics(L)}
-  if(a==='add'){const nt=(prompt('הטקסט של השורה החדשה:')||'').trim();if(!nt)return;if(k<0)return toast('לא מצאתי את השורה במילים – מוסיפים בשלב "השיר"');L.splice(k+1,0,nt);commitLyrics(L);const ni=P.lines.findIndex((x,j)=>j>i&&x.text===nt);if(ni>=0){sel=ni;renderSync();toast('נוספה שורה – גוררים אותה לציר הזמן')}return}
-  if(a==='del'){if(!confirm(`למחוק את השורה "${l.text}"?`+(l.chorus?' (היא תימחק מכל הפזמונים)':'')))return;if(k<0)return toast('לא מצאתי את השורה במילים – מוחקים בשלב "השיר"');L.splice(k,1);sel=-1;commitLyrics(L)}}}
+  if(a==='add'){const nt=((await askText('הטקסט של השורה החדשה:'))||'').trim();if(!nt)return;if(k<0)return toast('לא מצאתי את השורה במילים – מוסיפים בשלב "השיר"');L.splice(k+1,0,nt);commitLyrics(L);const ni=P.lines.findIndex((x,j)=>j>i&&x.text===nt);if(ni>=0){sel=ni;renderSync();toast('נוספה שורה – גוררים אותה לציר הזמן')}return}
+  if(a==='del'){if(!await yes(`למחוק את השורה "${l.text}"?`+(l.chorus?' (היא תימחק מכל הפזמונים)':'')))return;if(k<0)return toast('לא מצאתי את השורה במילים – מוחקים בשלב "השיר"');L.splice(k,1);sel=-1;commitLyrics(L)}}}
 
 // ---- drag a line from the list onto the timeline (place / move it there) ----
 let lnDrag=null,lnDragEnded=false;
@@ -745,7 +756,8 @@ function alignWords(lines,words,dur){
   const g=idx.filter(k=>good[k]).length/Math.max(1,idx.length);const f=Wd[pair[tm[0]]],z=Wd[pair[tm[tm.length-1]]];
   if(z.e<=f.s)return;res[li]={t:f.s,e:z.e,cf:g,n:idx.length}});
  // keep order: drop a placement that goes backwards
- let last=-1;res.forEach((r,k)=>{if(!r)return;if(r.t<last-0.05){res[k]=null;return}last=r.t});
+ let last=-1,lastK=-1;res.forEach((r,k)=>{if(!r)return;if(r.t<last-0.05){res[k]=null;return}
+  if(lastK>=0&&r.t<last+0.6){if(r.cf<=res[lastK].cf){res[k]=null;return}res[lastK]=null}last=r.t;lastK=k});
  // fill missing lines between neighbours, by word count
  for(let k=0;k<res.length;k++){if(res[k])continue;let a=k;while(a<res.length&&!res[a])a++;// k..a-1 missing
   const prevE=k>0&&res[k-1]?res[k-1].e:0;const nextT=a<res.length?res[a].t:Math.min(dur,prevE+(a-k)*3.5);
@@ -769,8 +781,8 @@ function whisperPrompt(){const seen=new Set(),out=[];let len=0;for(const l of P.
 let autoBusy=false;
 async function autoAlign(opt){opt=opt||{};if(autoBusy)return;if(!audioBuf){if(opt.silent)throw new Error('חסר גייד');return toast('קודם מעלים גייד')}if(!P.lines.length){if(opt.silent)throw new Error('חסרות מילים');return toast('קודם מדביקים מילים')}
  if(!API||API.indexOf('http')!==0)return toast('הזיהוי האוטומטי עוד לא חובר');
- if(!opt.silent&&P.lines.some(l=>l.t!=null)&&!confirm('הזיהוי יחליף את המיקומים הקיימים של כל השורות. להמשיך?'))return;
- let pass=opt.u?'-':lsGet('kk_pass');if(!pass){try{const pg=await api({action:'ping'});if(!pg.admin||!pg.whisper){openSetup();return toast('קודם מגדירים את הזיהוי (פעם אחת)')}}catch(e){}pass=(prompt('סיסמת צוות:')||'').trim();if(!pass)return}
+ if(!opt.silent&&P.lines.some(l=>l.t!=null)&&!await yes('הזיהוי יחליף את המיקומים הקיימים של כל השורות. להמשיך?'))return;
+ let pass=opt.u?'-':lsGet('kk_pass');if(!pass){try{const pg=await api({action:'ping'});if(!pg.admin||!pg.whisper){openSetup();return toast('קודם מגדירים את הזיהוי (פעם אחת)')}}catch(e){}pass=((await askText('סיסמת צוות:',{password:true,ok:'כניסה'}))||'').trim();if(!pass)return}
  const msg=s=>{$('autoMsg').textContent=s;if(opt.onMsg)opt.onMsg(s)};autoBusy=true;$('autoBtn').disabled=true;
  try{msg('מכין את השמע…');const wav=await voiceWav(audioBuf);if(wav.size>24e6)throw new Error('הגייד ארוך מדי לזיהוי (מעל 12 דקות)');
   msg('מזהה את השירה… (בערך חצי דקה)');const r=await api({action:opt.u?'kk_u_transcribe':'transcribe',pass,u:opt.u,audio:await b64(wav),mime:'audio/wav',name:(P.title||'guide')+'.wav',prompt:whisperPrompt()});
@@ -807,10 +819,10 @@ function show(i){const F=flow();step=Math.max(0,Math.min(F.length-1,i));const ke
 function toTop(){try{if(window.frameElement){const r=window.frameElement.getBoundingClientRect();const ins=siteInset();if(r.top<ins||r.top>window.parent.innerHeight*0.6)window.parent.scrollBy({top:r.top-ins-12,behavior:'smooth'});return}}catch(e){}window.scrollTo({top:0,behavior:'smooth'})}
 $('steps').addEventListener('click',e=>{const g=e.target.dataset.go;if(g!=null)show(+g)});
 $('prev').onclick=()=>show(step-1);
-$('next').onclick=()=>{const key=flow()[step][0];
+$('next').onclick=async()=>{const key=flow()[step][0];
  if(key==='song'&&!P.lines.length)return toast('קודם מדביקים את מילות השיר');
  if(key==='people'&&!P.people.length)return toast('מוסיפים לפחות משתתף אחד');
- if(key==='split'){const r=checkSplit();if(r.issues.length&&!confirm(POLICY+'\n\nלהמשיך עם החלוקה הזאת בכל זאת?'))return;if(r.empty&&!confirm('יש '+r.empty+' שורות שלא שייכתם לאף אחד. להמשיך בכל זאת?'))return}
+ if(key==='split'){const r=checkSplit();if(r.issues.length&&!await yes(POLICY+'\n\nלהמשיך עם החלוקה הזאת בכל זאת?'))return;if(r.empty&&!await yes('יש '+r.empty+' שורות שלא שייכתם לאף אחד. להמשיך בכל זאת?'))return}
  show(step+1)};
 document.querySelectorAll('input[name=mode]').forEach(r=>r.onchange=()=>{mode=r.value;show(0)});
 
@@ -829,7 +841,7 @@ function linkOf(k){return pageURL()+'#k='+k}
 async function staffApi(body){const pass=lsGet('kk_pass');if(!pass)throw new Error('צריך להתחבר כצוות');const r=await api({...body,pass});if(!r.ok&&/סיסמה/.test(r.error||''))lsSet('kk_pass','');return r}
 function projData(){const o=JSON.parse(JSON.stringify({...P,img:null}));delete o.cloud;return o}
 function renderStaffBar(){const c=P.cloud;$('cloudInfo').innerHTML=c&&c.k?`☁ <b>${esc(c.name||'לקוח')}</b> · ${c.recDate?'הקלטה '+esc(c.recDate.split('-').reverse().join('/')):'בלי תאריך'} <button class="small ic" id="cloudCopy">🔗 העתקת לינק</button>`:'פרויקט מקומי – עוד לא נשמר ללקוח';const cc=$('cloudCopy');if(cc)cc.onclick=()=>copyLink(c.k)}
-async function copyLink(k){const u=linkOf(k);try{await navigator.clipboard.writeText(u);toast('הלינק הועתק')}catch(e){prompt('העתיקו את הלינק:',u)}}
+async function copyLink(k){const u=linkOf(k);try{await navigator.clipboard.writeText(u);toast('הלינק הועתק')}catch(e){askText('העתיקו את הלינק:',{value:u,ok:'סגירה',copy:true})}}
 // save to the cloud + link (staff)
 $('cloudSave').onclick=()=>{if(!P.lines.length)return toast('קודם מכינים את השיר (מילים וגייד)');if(!audioBlob)return toast('חסר גייד');const c=P.cloud||{};
  showPanel(`<b>שמירה ולינק ללקוח</b><p class="hint">השיר נשמר אצלנו בגוגל, והלקוח מקבל לינק שפותח רק את השיר שלו – עד סוף יום ההקלטה.</p>
@@ -853,10 +865,10 @@ function renderList(items){showPanel(`<div class="row"><b>לקוחות (${items.
  $('panelBox').onclick=async e=>{const b=e.target.closest('[data-a]');if(!b)return;const k=b.closest('[data-k]').dataset.k;const a=b.dataset.a;
   if(a==='copy')return copyLink(k);
   if(a==='send'){await sendToClient(k,b);try{const l=await staffApi({action:'kk_list'});renderList(l.items)}catch(err){}return}
-  if(a==='open'){if(P.lines.length&&!(P.cloud&&P.cloud.k===k)&&!confirm('לפתוח את השיר של הלקוח במקום הפרויקט שפתוח עכשיו? (פרויקט שלא נשמר ללקוח יימחק מהמכשיר)'))return;b.disabled=true;b.textContent='טוען…';try{const r=await staffApi({action:'kk_load',k});if(!r.ok)throw new Error(r.error);await applyCloud(r);P.cloud={k,name:r.name,recDate:r.state.recDate,orderId:(items.find(x=>x.k===k)||{}).orderId||''};save();if(audioBlob)DB.put('audio',audioBlob);renderStaffBar();hidePanel();show(0);toast('נפתח: '+(r.name||''))}catch(err){toast('✗ '+(err.message||err))}return}
+  if(a==='open'){if(P.lines.length&&!(P.cloud&&P.cloud.k===k)&&!await yes('לפתוח את השיר של הלקוח במקום הפרויקט שפתוח עכשיו? (פרויקט שלא נשמר ללקוח יימחק מהמכשיר)'))return;b.disabled=true;b.textContent='טוען…';try{const r=await staffApi({action:'kk_load',k});if(!r.ok)throw new Error(r.error);await applyCloud(r);P.cloud={k,name:r.name,recDate:r.state.recDate,orderId:(items.find(x=>x.k===k)||{}).orderId||''};save();if(audioBlob)DB.put('audio',audioBlob);renderStaffBar();hidePanel();show(0);toast('נפתח: '+(r.name||''))}catch(err){toast('✗ '+(err.message||err))}return}
   const body={action:'kk_meta',k};if(a==='ext')body.extendDays=7;if(a==='close')body.closed=true;if(a==='reopen')body.closed=false;b.disabled=true;
   try{const r=await staffApi(body);if(!r.ok)throw new Error(r.error);const l=await staffApi({action:'kk_list'});renderList(l.items)}catch(err){toast('✗ '+(err.message||err));b.disabled=false}}}
-$('cloudNew').onclick=async()=>{if(P.lines.length&&!confirm('להתחיל שיר חדש? הפרויקט שפתוח עכשיו יימחק מהמכשיר'+(P.cloud&&P.cloud.k?' (אצל הלקוח הוא נשאר שמור)':'')+'.'))return;
+$('cloudNew').onclick=async()=>{if(P.lines.length&&!await yes('להתחיל שיר חדש? הפרויקט שפתוח עכשיו יימחק מהמכשיר'+(P.cloud&&P.cloud.k?' (אצל הלקוח הוא נשאר שמור)':'')+'.'))return;
  Object.assign(P,{title:'',lyrics:'',lines:[],bpm:0,beat0:0,people:[],assign:{},bg:{type:'theme',v:'party'},ratio:'h',img:null,cloud:null});audioBlob=null;audioBuf=null;peaks=null;audio.removeAttribute('src');$('title').value='';$('lyrics').value='';$('drop').classList.remove('has');$('drop').textContent='גוררים לכאן את קובץ הגייד (mp3 / wav) או לוחצים לבחירה';reparse();await DB.put('audio',null);save();renderStaffBar();show(0)};
 async function applyCloud(r){const pr=r.project||{};Object.assign(P,{title:'',lyrics:'',lines:[],bpm:0,beat0:0,people:[],assign:{},bg:{type:'theme',v:'party'},ratio:'h'},pr);
  P.img=r.img?new Blob([Uint8Array.from(atob(r.img),c=>c.charCodeAt(0))],{type:'image/jpeg'}):null;await loadImg();
@@ -882,7 +894,7 @@ $('intakeBtn').onclick=()=>{showPanel(`<b>📥 גייד חדש ללקוח</b><p 
  $('iFind').onclick=async()=>{const id=$('iOrder').value.replace(/\D/g,'');if(!id)return;$('iFindMsg').textContent='מחפש בקאלה…';try{const r=await api({action:'kk_order',orderId:id,pass:lsGet('kk_pass')},KALA_API);if(!r.ok)throw new Error(r.error);meta={orderId:id,product:r.product||'',maxP:r.maxP||0,minP:r.minP||0};if(r.name)$('iName').value=r.name;if(r.date&&!$('iDate').value)$('iDate').value=r.date;$('iFindMsg').textContent=`✓ ${r.name||''}${r.product?' · '+r.product:''}${r.maxP?` (${r.minP?r.minP+'–':'עד '}${r.maxP} משתתפים)`:''}${r.date?' · תאריך בקאלה: '+r.date.split('-').reverse().join('/'):''}`}catch(e){$('iFindMsg').textContent='✗ '+(e.message||e)}};
  $('iGo').onclick=async()=>{const say=s=>{$('iMsg').textContent=s};const id=$('iOrder').value.replace(/\D/g,''),name=$('iName').value.trim(),f=$('iAudio').files[0],ly=$('iLyrics').value.trim();
   if(!id)return say('חסר מספר הזמנה');if(!meta.orderId||meta.orderId!==id)return say('לוחצים "חיפוש" כדי לאתר את ההזמנה בקאלה');if(!name)return say('חסר שם');if(!ly)return say('חסרות מילים');if(!f)return say('חסר קובץ גייד');
-  if(P.lines.length&&!(P.cloud&&P.cloud.k)&&!confirm('הפרויקט שפתוח עכשיו לא נשמר ללקוח ויוחלף. להמשיך?'))return;
+  if(P.lines.length&&!(P.cloud&&P.cloud.k)&&!await yes('הפרויקט שפתוח עכשיו לא נשמר ללקוח ויוחלף. להמשיך?'))return;
   $('iGo').disabled=true;
   try{say('טוען את הגייד…');Object.assign(P,{title:$('iTitle').value.trim()||name,lyrics:ly,lines:[],bpm:0,beat0:0,people:[],assign:{},bg:{type:'theme',v:'party'},ratio:'h',img:null,cloud:null});
    $('title').value=P.title;$('lyrics').value=ly;reparse();if(!P.lines.length)throw new Error('לא הצלחתי לקרוא את המילים');P.bg.v=suggestTheme();await setAudio(f,true);if(!audioBuf)throw new Error('לא הצלחתי לקרוא את קובץ הגייד');
@@ -894,7 +906,7 @@ $('intakeBtn').onclick=()=>{showPanel(`<b>📥 גייד חדש ללקוח</b><p 
    if(!$('iSend').checked){say('✓ הלינק נוצר (לא נשלח). אפשר לשלוח מ"☁ שמירה ולינק ללקוח".');return}
    say('שולח ללקוח…');const s=await staffApi({action:'kk_send',k:r.k});if(!s.ok)throw new Error(s.error);say(s.already?'הלינק כבר נשלח ללקוח בעבר.':'✓ הלינק נשלח ללקוח בוואטסאפ.');
   }catch(e){say('✗ '+(e.message||e))}finally{$('iGo').disabled=false}}};
-async function sendToClient(k,btn){if(!confirm('לשלוח ללקוח את הלינק בוואטסאפ עכשיו?'))return;if(btn)btn.disabled=true;try{const s=await staffApi({action:'kk_send',k});if(!s.ok)throw new Error(s.error);toast(s.already?'הלינק כבר נשלח בעבר':'✓ נשלח ללקוח')}catch(e){toast('✗ '+(e.message||e))}finally{if(btn)btn.disabled=false}}
+async function sendToClient(k,btn){if(!await yes('לשלוח ללקוח את הלינק בוואטסאפ עכשיו?'))return;if(btn)btn.disabled=true;try{const s=await staffApi({action:'kk_send',k});if(!s.ok)throw new Error(s.error);toast(s.already?'הלינק כבר נשלח בעבר':'✓ נשלח ללקוח')}catch(e){toast('✗ '+(e.message||e))}finally{if(btn)btn.disabled=false}}
 // client: a video needs a full split
 function clientCanExport(){if(!K)return true;const g=verseGaps();if(!P.people.length){toast('קודם מוסיפים את המשתתפים ומחלקים את השורות');show(0);return false}if(g.length){toast(`נשארו ${g.length} שורות בלי משתתף – משלימים את החלוקה ואז יוצרים סרטון`);show(1);return false}return true}
 // ---------- personal upload link (#u=KEY): guide + lyrics + phone -> everything automatic ----------
@@ -927,12 +939,12 @@ function renderUps(items){showPanel(`<div class="row"><b>לינקים להעלא
  $('cX').onclick=hidePanel;
  $('upAdd').onclick=async()=>{const n=$('upNew').value.trim();if(!n)return;try{const r=await staffApi({action:'kk_up_create',name:n});if(!r.ok)throw new Error(r.error);const l=await staffApi({action:'kk_up_list'});renderUps(l.items);copyText(upLink(r.key))}catch(e){toast('✗ '+(e.message||e))}};
  $('panelBox').onclick=async e=>{const b=e.target.closest('[data-u]');if(!b)return;const key=b.closest('[data-key]').dataset.key;if(b.dataset.u==='copy')return copyText(upLink(key));
-  if(b.dataset.u==='off'&&!confirm('להשבית את הלינק? מי שיש לו אותו לא יוכל להעלות יותר.'))return;try{const r=await staffApi({action:'kk_up_set',key,active:b.dataset.u==='on'});if(!r.ok)throw new Error(r.error);const l=await staffApi({action:'kk_up_list'});renderUps(l.items)}catch(err){toast('✗ '+(err.message||err))}}}
-async function copyText(u){try{await navigator.clipboard.writeText(u);toast('הלינק הועתק')}catch(e){prompt('העתיקו את הלינק:',u)}}
+  if(b.dataset.u==='off'&&!await yes('להשבית את הלינק? מי שיש לו אותו לא יוכל להעלות יותר.'))return;try{const r=await staffApi({action:'kk_up_set',key,active:b.dataset.u==='on'});if(!r.ok)throw new Error(r.error);const l=await staffApi({action:'kk_up_list'});renderUps(l.items)}catch(err){toast('✗ '+(err.message||err))}}}
+async function copyText(u){try{await navigator.clipboard.writeText(u);toast('הלינק הועתק')}catch(e){askText('העתיקו את הלינק:',{value:u,ok:'סגירה',copy:true})}}
 // staff: songs waiting for a check
 async function refreshReview(){try{const r=await staffApi({action:'kk_list'});if(!r.ok)return;const n=r.items.filter(x=>x.needsReview).length;const b=$('reviewBadge');b.hidden=!n;b.textContent=`⚠ ${n} שירים ממתינים לבדיקה`;b.onclick=()=>renderList(r.items)}catch(e){}}
 
-$('staffLogin').onclick=async()=>{const pw=(prompt('סיסמת צוות:')||'').trim();if(!pw)return;try{const r=await api({action:'login',pass:pw});if(!r.ok)throw new Error(r.error);lsSet('kk_pass',pw);location.reload()}catch(e){toast('✗ '+(e.message||e))}};
+$('staffLogin').onclick=async()=>{const pw=((await askText('סיסמת צוות:',{password:true,ok:'כניסה'}))||'').trim();if(!pw)return;try{const r=await api({action:'login',pass:pw});if(!r.ok)throw new Error(r.error);lsSet('kk_pass',pw);location.reload()}catch(e){toast('✗ '+(e.message||e))}};
 
 // ---------- boot ----------
 (async()=>{

@@ -73,7 +73,7 @@ function kkAlert_(subject, lines) {
 }
 function kkAlertSong_(subject, k, e, why) {
   return kkAlert_(subject, [why, '', 'לקוח/ה: ' + (e.name || '-'), 'טלפון: ' + (e.phone || '-'), 'הזמנה בקאלה: ' + (e.orderId || 'לא נמצאה'), 'מוצר: ' + (e.product || '-'), 'תאריך הקלטה: ' + (e.recDate ? e.recDate.split('-').reverse().join('/') : '-'), 'שם השיר: ' + (e.title || '-'), 'הועלה ע"י: ' + (e.uploaderName || 'צוות'), '',
-    'מה עושים: נכנסים לעמוד הקריוקי ← כניסת צוות ← 📋 לקוחות. פותחים את השיר, בודקים את הסנכרון, משלימים מספר הזמנה ב"☁ שמירה ולינק ללקוח" ושולחים.', KK_PAGE]);
+    'מה עושים: נכנסים לעמוד הקריוקי ← כניסת צוות ← 📋 לקוחות. פותחים את השיר, בודקים את הסנכרון' + (e.orderId ? '' : ', משלימים מספר הזמנה ב"☁ שמירה ולינק ללקוח"') + ' ושולחים.', KK_PAGE]);
 }
 /** Run once from the editor (approves sending email, then sends a test email to the studio). */
 function kkTestAlert() { kkAlert_('בדיקה: התראות הקריוקי עובדות ✓', ['זו הודעת בדיקה ממערכת הקריוקי. מעכשיו יגיעו לכאן התראות כשגייד לא משויך ללקוח או כשלינק לא נשלח.']); Logger.log(PropertiesService.getScriptProperties().getProperty('KK_ALERT_ERR') || 'sent'); }

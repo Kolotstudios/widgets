@@ -78,7 +78,7 @@ input:focus-visible,textarea:focus-visible,button:focus-visible,select:focus-vis
 .mopt small{display:block;color:var(--muted);font-size:12px}
 .slider{display:grid;grid-template-columns:1fr auto;gap:2px 12px;align-items:center}
 .slider input{grid-column:1/-1;width:100%;accent-color:var(--accent)}
-.slider output{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.slider output{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
 .sliders{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
 audio{width:100%}
 .status{font-size:14px;color:var(--muted);min-height:1.4em}
@@ -177,8 +177,8 @@ h3{font:700 15px var(--f-body);margin:0;color:var(--muted);letter-spacing:.02em}
           <div class="slider"><label for="nrMix">ניקוי רעשים</label><output id="nrMixOut"></output><input type="range" id="nrMix" min="0" max="100" step="1" value="70"></div>
           <div class="slider" id="aiWrap" hidden><label for="aiMix">ניקוי AI לרעשים משתנים</label><output id="aiMixOut"></output><input type="range" id="aiMix" min="0" max="100" step="1" value="0"></div>
           <div class="slider"><label for="deess">דה-אסר (ש/ס)</label><output id="deessOut"></output><input type="range" id="deess" min="0" max="100" step="1" value="60"></div>
-          <div class="slider"><label for="highs">גבוהים 8–10K</label><output id="highsOut"></output><input type="range" id="highs" min="-6" max="6" step="0.5" value="1"></div>
-          <div class="slider"><label for="mids">מיד 450Hz</label><output id="midsOut"></output><input type="range" id="mids" min="-6" max="3" step="0.5" value="-2.5"></div>
+          <div class="slider"><label for="highs">גבוהים <span dir="ltr">8–10K</span></label><output id="highsOut"></output><input type="range" id="highs" min="-6" max="6" step="0.5" value="1"></div>
+          <div class="slider"><label for="mids">מיד <span dir="ltr">450Hz</span></label><output id="midsOut"></output><input type="range" id="mids" min="-6" max="3" step="0.5" value="-2.5"></div>
           <div class="slider"><label for="voiceDb">עוצמת קול</label><output id="voiceDbOut"></output><input type="range" id="voiceDb" min="-6" max="6" step="0.5" value="0"></div>
         </div>
       </div>
@@ -229,7 +229,7 @@ h3{font:700 15px var(--f-body);margin:0;color:var(--muted);letter-spacing:.02em}
       <button class="playbtn" id="playBtn" type="button" aria-label="השמעת המיקס">▶</button>
       <div class="tp-main">
         <input type="range" id="seek" min="0" max="1000" step="1" value="0" aria-label="מיקום בהשמעה">
-        <div class="tp-row"><span id="tpTime">0:00 / 0:00</span><span id="tpState">המיקס המלא, עם כל ההגדרות</span></div>
+        <div class="tp-row"><span id="tpTime" dir="ltr">0:00 / 0:00</span><span id="tpState">המיקס המלא, עם כל ההגדרות</span></div>
       </div>
     </div>
   </section>
@@ -1243,7 +1243,7 @@ function exportMix(){
     var gn=pk>0?0.89/pk:1;for(i=0;i<a.length;i++){a[i]*=gn;b[i]*=gn}
     $("#dlWav").href=URL.createObjectURL(encodeWav(a,b,OUT_SR));$("#result").hidden=false;$("#dlMp3").hidden=true;
     $("#resultNote").textContent="אורך הקובץ: "+fmtDur(out.duration)+". הקובץ נשמע בדיוק כמו ההשמעה למעלה.";
-    st.textContent="";btn.disabled=false;
+    st.textContent="";btn.disabled=false;$("#tpState").textContent="המיקס המלא, עם כל ההגדרות";
     encodeMp3(a,b,OUT_SR).then(function(blob){if(blob){$("#dlMp3").href=URL.createObjectURL(blob);$("#dlMp3").hidden=false}});
   }).catch(function(err){st.textContent=err&&err.message||"משהו השתבש ביצירת הקובץ.";btn.disabled=false});
 }

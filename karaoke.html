@@ -49,8 +49,11 @@ button.ic{padding:4px 9px;border-radius:9px}
 #tlWrap.drop{outline:3px dashed #ff4d6d;outline-offset:2px}
 .sechdr{font-size:13px;font-weight:800;color:var(--accent);margin:8px 4px 0;letter-spacing:.02em}
 .ln .sec{font-size:12px;color:var(--muted)}
-.fixbox{margin-top:10px;border:1.5px solid var(--line);border-radius:12px;padding:8px 12px;background:var(--bg)}.fixbox summary{cursor:pointer;font-weight:600}
-#fixList{display:grid;gap:6px;max-height:420px;overflow:auto}.fx{display:grid;grid-template-columns:auto 1fr auto;gap:6px;align-items:center;padding:6px 8px;border:1px solid var(--line);border-radius:10px;background:var(--paper)}.fx.ch{border-color:var(--accent)}.fx .sec{font-size:12px;color:var(--muted)}.fx .d{font-size:12px;color:var(--accent);direction:ltr}.fx .acts{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}.fx .acts button{padding:4px 9px;font-size:13px}
+.fixbox{margin-top:10px}#fxPanel{border:1.5px solid var(--accent);border-radius:14px;padding:10px 12px;background:var(--bg);display:grid;gap:8px}
+.fxrow{display:flex;align-items:center;gap:8px}.fxrow .sp{flex:1}
+.fxcur{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center}.fxtext{text-align:center;font-weight:700;line-height:1.35;min-height:2.7em;display:flex;align-items:center;justify-content:center;gap:6px}.fxtext .sec{font-size:12px;color:var(--muted);font-weight:400}
+.fxbtns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.fxbtns button{padding:12px 6px;font-size:16px}
+#fxShift b{color:var(--accent);direction:ltr;unicode-bidi:isolate}
 .ln.playing{box-shadow:inset -4px 0 0 #ff4d6d}
 .ln.cur{border-color:var(--accent);background:var(--soft)}
 .ln.chorus .tx::after{content:" · פזמון";font-size:12px;color:var(--muted)}
@@ -240,9 +243,16 @@ body.locked #fixBox,body.locked [data-step="people"] .row,body.locked [data-step
     <h2>הסרטון</h2>
     <div class="stage"><canvas id="preview" width="1280" height="720"></canvas></div>
     <div class="row"><button class="primary" id="pPlay">▶ צפייה</button><input type="range" id="pSeek" min="0" max="1000" value="0" style="flex:1"><span id="pTime" class="tm" style="direction:ltr">0:00</span></div>
-    <details id="fixBox" class="fixbox"><summary>🎯 שורה לא מתוזמנת? תיקון תזמון</summary>
-      <p class="hint">אם הכתובית של שורה מופיעה לפני השירה או אחריה – מזיזים אותה כאן ברבע שנייה בכל לחיצה (עד 3 שניות). ▶ מנגן מאותה שורה כדי לבדוק. ↺ מחזיר למקור.</p>
-      <div id="fixList"></div></details>
+    <div id="fixBox" class="fixbox">
+      <button id="fxOpen" class="small">🎯 שורה לא מתוזמנת? תיקון תזמון</button>
+      <div id="fxPanel" hidden>
+        <div class="fxrow"><b>🎯 תיקון תזמון</b><span class="sp"></span><button class="small" id="fxClose">✓ סיום</button></div>
+        <p class="hint" style="margin:0">מנגנים, וכשרואים כתובית שלא בזמן – עוצרים. השורה שעל המסך מופיעה כאן, ומזיזים אותה ברבע שנייה בכל לחיצה.</p>
+        <div class="fxcur"><button class="small" data-f="prev">→ הקודמת</button><div id="fxText" class="fxtext"></div><button class="small" data-f="next">הבאה ←</button></div>
+        <div class="fxbtns"><button data-f="-1">⏪ להקדים</button><button data-f="play" class="primary">▶ לבדוק</button><button data-f="1">לאחר ⏩</button></div>
+        <div class="fxrow"><span id="fxShift" class="hint"></span><span class="sp"></span><button class="small" data-f="0" id="fxReset" hidden>↺ חזרה למקור</button></div>
+      </div>
+    </div>
     <div class="grid2">
       <button class="big" id="expLow">⬇ סרטון קטן לוואטסאפ</button>
       <button class="big primary" id="expHigh">⬇ סרטון באיכות גבוהה</button>
@@ -556,16 +566,25 @@ function brand(c,W,H,S,t,dur,lastEnd){c.textAlign='left';c.textBaseline='bottom'
 // ---------- preview ----------
 const pv=$('preview'),pc=pv.getContext('2d');let pvTL=null,pvRaf=0;
 function sizePreview(){if(P.ratio==='v'){pv.width=720;pv.height=1280;pv.style.maxWidth='360px';pv.style.margin='0 auto'}else{pv.width=1280;pv.height=720;pv.style.maxWidth='';pv.style.margin=''}}
-function drawPreview(){pvTL=timeline();drawFrame(pc,pv.width,pv.height,audio.currentTime||0,pvTL);const d=pvTL.dur||1;$('pSeek').value=Math.round((audio.currentTime||0)/d*1000);$('pTime').textContent=fmt(audio.currentTime)+' / '+fmt(d)}
+function drawPreview(){if(fxOn)setTimeout(fxSync,0);pvTL=timeline();drawFrame(pc,pv.width,pv.height,audio.currentTime||0,pvTL);const d=pvTL.dur||1;$('pSeek').value=Math.round((audio.currentTime||0)/d*1000);$('pTime').textContent=fmt(audio.currentTime)+' / '+fmt(d)}
 function pvLoop(){drawPreview();if(!audio.paused)pvRaf=requestAnimationFrame(pvLoop)}
-$('pPlay').onclick=async()=>{if(!audioURL)return toast('אין עדיין גייד');if(audio.paused){await audio.play();$('pPlay').textContent='⏸ עצירה';pvLoop()}else{audio.pause();$('pPlay').textContent='▶ צפייה'}};
-$('pSeek').oninput=()=>{const d=timeline().dur||0;audio.currentTime=$('pSeek').value/1000*d;drawPreview()};
+$('pPlay').onclick=async()=>{if(!audioURL)return toast('אין עדיין גייד');fxHold=null;if(audio.paused){await audio.play();$('pPlay').textContent='⏸ עצירה';pvLoop()}else{audio.pause();$('pPlay').textContent='▶ צפייה'}};
+$('pSeek').oninput=()=>{fxHold=null;const d=timeline().dur||0;audio.currentTime=$('pSeek').value/1000*d;drawPreview()};
 audio.addEventListener('ended',()=>{$('pPlay').textContent='▶ צפייה'});
 // ---- small timing fixes by the client: shift one line by 1/4 s (max 3 s from the studio's placement), order is kept ----
 const FIX_STEP=0.25,FIX_MAX=3;
-function renderFix(){const box=$('fixList');if(!box)return;box.innerHTML=P.lines.map((l,i)=>{if(l.t==null)return '';const sh=l.t0!=null?+(l.t-l.t0).toFixed(2):0;
- return `<div class="fx${sh?' ch':''}" data-i="${i}"><span class="sec">${i+1}</span><span>${esc(l.text)} <span class="d">${sh?(sh>0?'+':'')+sh+'s':''}</span></span><span class="acts"><button class="small" data-f="play" title="ניגון מהשורה">▶</button><button class="small" data-f="-1" title="הכתובית מאחרת – להקדים">⏪ להקדים</button><button class="small" data-f="1" title="הכתובית מקדימה – לאחר">לאחר ⏩</button>${sh?'<button class="small" data-f="0" title="חזרה למקור">↺</button>':''}</span></div>`}).join('')}
-function playFrom(t){audio.currentTime=Math.max(0,t);audio.play().then(()=>{$('pPlay').textContent='⏸ עצירה';pvLoop()}).catch(()=>drawPreview())}
+let fxOn=false,fxSel=-1,fxHold=null;
+function lineAt(t){let k=-1;P.lines.forEach((l,i)=>{if(l.t!=null&&l.t<=t+0.05)k=i});if(k<0)k=P.lines.findIndex(l=>l.t!=null);return k}
+function stepLine(i,d){let j=i+d;while(j>=0&&j<P.lines.length&&P.lines[j].t==null)j+=d;return j>=0&&j<P.lines.length?j:i}
+function renderFix(){if(!fxOn)return;const l=P.lines[fxSel];if(!l){$('fxText').textContent='מנגנים ועוצרים על השורה שרוצים לתקן';return}
+ const sh=l.t0!=null?+(l.t-l.t0).toFixed(2):0;$('fxText').innerHTML=`<span class="sec">${fxSel+1}</span><span>${esc(l.text)}</span>`;
+ $('fxShift').innerHTML=sh?`הוזזה: <b>${sh>0?'+':''}${sh}s</b>`:'בזמן המקורי';$('fxReset').hidden=!sh}
+function fxSync(){if(!fxOn)return;if(fxHold&&(audio.paused||audio.currentTime<fxHold.until)){if(fxHold.i!==fxSel){fxSel=fxHold.i;renderFix()}return}fxHold=null;const i=lineAt(audio.currentTime||0);if(i!==fxSel){fxSel=i;renderFix()}}
+function playFrom(t,holdI){if(holdI!=null){const l=P.lines[holdI];fxHold={i:holdI,until:(l.e!=null?l.e:l.t+2)+0.4}}audio.currentTime=Math.max(0,t);audio.play().then(()=>{$('pPlay').textContent='⏸ עצירה';pvLoop()}).catch(()=>drawPreview())}
+function fxCompact(on){const pvc=$('preview');if(on){let h=360;try{h=Math.round(visBox().h*0.42)}catch(e){}pvc.style.maxHeight=Math.max(180,h)+'px';pvc.style.width='auto';pvc.style.maxWidth='100%';pvc.style.margin='0 auto'}else{pvc.style.maxHeight='';pvc.style.width='';sizePreview()}
+ try{if(window.frameElement){const fr=window.frameElement.getBoundingClientRect(),sr=pvc.closest('.stage').getBoundingClientRect();window.parent.scrollBy({top:fr.top+sr.top-siteInset()-8,behavior:'smooth'})}}catch(e){}}
+$('fxOpen').onclick=()=>{fxOn=true;$('fxOpen').hidden=true;$('fxPanel').hidden=false;fxHold=null;fxSel=lineAt(audio.currentTime||0);renderFix();fxCompact(true)};
+$('fxClose').onclick=()=>{fxOn=false;fxHold=null;$('fxPanel').hidden=true;$('fxOpen').hidden=false;fxCompact(false)};
 function nudgeLine(i,d){const l=P.lines[i];if(!l||l.t==null)return;const t0=l.t0!=null?l.t0:l.t,e0=l.e0!=null?l.e0:l.e;
  let nt=d==null?t0:+(l.t+d).toFixed(2);if(Math.abs(nt-t0)>FIX_MAX+1e-6)return toast('אפשר להזיז שורה עד 3 שניות. לתיקון גדול יותר פנו לאולפן');
  let pi=i-1;while(pi>=0&&P.lines[pi].t==null)pi--;let ni=i+1;while(ni<P.lines.length&&P.lines[ni].t==null)ni++;const prev=pi>=0?P.lines[pi]:null,next=ni<P.lines.length?P.lines[ni]:null;
@@ -573,8 +592,11 @@ function nudgeLine(i,d){const l=P.lines[i];if(!l||l.t==null)return;const t0=l.t0
  if(l.t0==null){l.t0=l.t;l.e0=l.e}const len=Math.max(0.4,(e0!=null?e0:l.e)-t0);l.t=nt;l.e=+(next?Math.min(nt+len,next.t-0.02):nt+len).toFixed(2);
  if(prev&&prev.e!=null&&prev.e>nt-0.02)prev.e=+Math.max(prev.t+0.3,nt-0.02).toFixed(2);
  if(Math.abs(l.t-l.t0)<0.01){l.t=l.t0;if(l.e0!=null)l.e=next?Math.min(l.e0,next.t-0.02):l.e0;delete l.t0;delete l.e0}
- save();cloudPush();renderFix();playFrom(l.t-1.5)}
-$('fixList').onclick=e=>{const b=e.target.closest('[data-f]');if(!b)return;const i=+b.closest('[data-i]').dataset.i;const f=b.dataset.f;if(f==='play')return playFrom(P.lines[i].t-1.5);nudgeLine(i,f==='0'?null:+f*FIX_STEP)};
+ save();cloudPush();renderFix();playFrom(l.t-1.5,i)}
+$('fxPanel').onclick=e=>{const b=e.target.closest('[data-f]');if(!b)return;const f=b.dataset.f;let i=fxSel;if(i<0||!P.lines[i])i=lineAt(audio.currentTime||0);if(i<0)return;
+ if(f==='prev'||f==='next'){audio.pause();$('pPlay').textContent='▶ צפייה';const j=stepLine(i,f==='prev'?-1:1);fxSel=j;fxHold={i:j,until:Infinity};audio.currentTime=P.lines[j].t+0.05;drawPreview();renderFix();return}
+ if(f==='play')return playFrom(P.lines[i].t-1.5,i);
+ nudgeLine(i,f==='0'?null:+f*FIX_STEP)};
 function clientTimes(){const o={};P.lines.forEach((l,i)=>{if(l.t0!=null||l.e0!=null)o[i]={t:l.t,e:l.e}});return o}
 
 // ---------- export ----------
@@ -835,6 +857,7 @@ const CLIENT=[['people','1. מי שר'],['split','2. מי שר מה'],['look','3
 let mode=new URLSearchParams(location.search).has('staff')?'staff':'client';let step=0;
 const flow=()=>mode==='staff'?STAFF:CLIENT;
 function show(i){const F=flow();step=Math.max(0,Math.min(F.length-1,i));const key=F[step][0];
+ if(key!=='video'&&fxOn)$('fxClose').click();
  document.querySelectorAll('[data-step]').forEach(s=>s.hidden=s.dataset.step!==key);
  $('steps').innerHTML=F.map(([k,n],j)=>`<button data-go="${j}" class="${j===step?'on':j<step?'done':''}">${n}</button>`).join('');
  $('prev').style.visibility=step?'visible':'hidden';$('next').hidden=step===F.length-1;

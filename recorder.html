@@ -229,6 +229,8 @@ h3{font:700 15px var(--f-body);margin:0;color:var(--muted);letter-spacing:.02em}
         <p class="note" id="editNote" hidden></p>
         <div id="blessers" style="display:grid;gap:12px"></div>
         <button class="btn" id="addBlesser" type="button" hidden>+ הוספת מברך</button>
+        <p class="note" id="incNote" hidden></p>
+        <p class="note" id="priceNote" hidden></p>
       </div>
     </div>
     <aside class="col-side">
@@ -723,7 +725,7 @@ function renderSetup(){
   $("#modeNote").textContent=MODE_NOTES[S.mode];
   $("#textTitle").textContent=S.mode==="drasha"?"טקסט הדרשה":(S.mode==="family"?"המברכים":"טקסט הברכה");
   var lockedText=CLOUD.on&&S.textLocked&&!(S.editsLeft>0),editing=CLOUD.on&&S.textLocked&&S.editsLeft>0;
-  $("#addBlesser").hidden=lockedText||!(S.mode==="family"&&S.blessers.length<(S.maxBlessers||5));
+  $("#addBlesser").hidden=S.mode==="drasha"||S.blessers.length>=(S.maxBlessers||5);
   $("#sampleBtn").hidden=lockedText||editing;
   $("#editNote").hidden=!(CLOUD.on&&S.textLocked);
   $("#editNote").textContent=lockedText?"נגמרו השינויים בטקסט. לשינוי נוסף פנו לאולפני קולות.":
@@ -733,15 +735,17 @@ function renderSetup(){
   S.blessers.forEach(function(b,i){
     var d=document.createElement("div");d.className="blesser";
     var head=document.createElement("div");head.className="row between";
-    var lab=document.createElement("label");lab.htmlFor="n_"+b.id;lab.textContent=S.mode==="family"?("מברך "+(i+1)):(S.mode==="drasha"?"שם בעל/ת השמחה":"מי מברך?");
+    var lab=document.createElement("label");lab.htmlFor="n_"+b.id;lab.textContent=S.blessers.length>1?("מברך "+(i+1)):(S.mode==="drasha"?"שם בעל/ת השמחה":"מי מברך?");
     head.appendChild(lab);
-    if(!lockedText&&S.mode==="family"&&S.blessers.length>1){var del=document.createElement("button");del.type="button";del.className="btn small ghost";del.textContent="הסרה";del.onclick=function(){S.blessers.splice(i,1);saveText();renderSetup()};head.appendChild(del)}
+    var ro=lockedText&&b.si!=null;
+    if(S.mode!=="drasha"&&!ro&&!S.localOnly&&API){var gb=document.createElement("button");gb.type="button";gb.className="btn small";gb.textContent=wc(b.text)?"✨ ברכה אחרת מהמחולל":"✨ לכתוב ברכה במחולל";gb.onclick=function(){openGenerator(b)};head.appendChild(gb)}
+    if((b.si==null||!lockedText)&&S.blessers.length>1){var del=document.createElement("button");del.type="button";del.className="btn small ghost";del.textContent="הסרה";del.onclick=function(){S.blessers.splice(i,1);saveText();renderSetup()};head.appendChild(del)}
     var inp=document.createElement("input");inp.type="text";inp.id="n_"+b.id;inp.value=b.name;inp.placeholder=S.mode==="drasha"?"למשל: איתי":"למשל: אבא ואמא";
     inp.oninput=function(){b.name=inp.value;saveText();renderPreview();editState()};
     var ta=document.createElement("textarea");ta.id="t_"+b.id;ta.value=b.text;ta.placeholder="מדביקים כאן את הטקסט. כל שורה חדשה היא פסקה.";
-    ta.oninput=function(){b.text=ta.value;saveText();cnt.textContent=countInfo(b.text);renderPreview();editState()};
+    ta.oninput=function(){b.text=ta.value;saveText();cnt.textContent=countInfo(b.text);renderPreview();editState();payUI()};
     var cnt=document.createElement("p");cnt.className="note";cnt.textContent=countInfo(b.text);
-    if(lockedText){inp.readOnly=true;ta.readOnly=true}
+    if(ro){inp.readOnly=true;ta.readOnly=true}
     d.append(head,inp,ta,cnt);box.appendChild(d);
   });
   renderPreview();setStep(1);editState();
@@ -750,7 +754,12 @@ function renderSetup(){
 function textSnap(list){return JSON.stringify((list||S.blessers).filter(function(b){return wc(b.text)>0}).map(function(b){return b.text.trim()}))}
 function nameSnap(){return JSON.stringify(S.blessers.map(function(b){return b.name}))}
 function markSaved(){S.savedSnap=textSnap();S.savedNames=nameSnap();S.savedSet=S.blessers.map(function(b){return {obj:b,name:b.name,text:b.text}})}
-function textDirty(){return CLOUD.on&&S.textLocked&&S.savedSnap!=null&&textSnap()!==S.savedSnap}
+// only changing or removing a saved blessing costs an edit; a new blesser is free
+function textDirty(){
+  if(!(CLOUD.on&&S.textLocked&&S.savedSet)) return false;
+  return S.savedSet.some(function(x){if(!wc(x.text)) return false;return S.blessers.indexOf(x.obj)<0||x.obj.text.trim()!==x.text.trim()});
+}
+function newBlessers(){return S.blessers.some(function(b){return b.si==null&&wc(b.text)>0})}
 function editState(){
   var btn=$("#toRecord");if(!btn) return;var dirty=textDirty();
   btn.lastChild.textContent=dirty?"אישור השינוי ומעבר להקלטה":(S.blessers.some(function(b){return b.takes&&b.takes.some(Boolean)})?"להמשך ההקלטה":"למסך ההקלטה");
@@ -778,47 +787,82 @@ document.querySelectorAll(".seg button").forEach(function(b){b.onclick=function(
   MLIB.cat="fit";defaultMusic();renderMusic();
   saveText();renderSetup();
 }});
-$("#addBlesser").onclick=function(){S.blessers.push(newBlesser("",""));saveText();renderSetup()};
+$("#addBlesser").onclick=function(){S.blessers.push(newBlesser("",""));if(S.mode==="blessing") S.mode="family";saveText();renderSetup();payUI()};
 $("#undoEdit").onclick=function(){
   if(!S.savedSet) return;
   S.blessers=S.savedSet.map(function(x){x.obj.name=x.name;x.obj.text=x.text;return x.obj});saveText();renderSetup();
 };
 $("#sampleBtn").onclick=function(){S.blessers=SAMPLES[S.mode].map(function(x){return newBlesser(x.name,x.text)});saveText();renderSetup()};
+function okBlessers(){return S.blessers.filter(function(b){return wc(b.text)>0})}
+// first save: a free draft that keeps the recording in the cloud
+function createDraft(ok){
+  CLOUD.dev=CLOUD.dev||devId();
+  var qp=new URLSearchParams(location.search),forName=(qp.get("for")||"").trim(),dn=((ok[0]||{}).name||"").trim();
+  return cloudApi("rc_c_draft",{mode:S.mode,name:forName?(dn?dn+" ל"+forName:forName):dn,src:qp.get("src")||"",blessers:ok.map(function(b){return {name:b.name,text:b.text}})}).then(function(r){
+    if(!r.ok) throw new Error(r.error||"לא הצלחנו לשמור בענן.");
+    CLOUD.on=true;CLOUD.k=r.k;CLOUD.draft=true;CLOUD.paid=false;CLOUD.paidBlessers=null;CLOUD.code=r.code;CLOUD.fixedMode=true;S.editsLeft=5;S.maxBlessers=S.mode==="drasha"?1:5;
+    try{history.replaceState(null,"",location.pathname+"#k="+r.k)}catch(e){location.hash="k="+r.k}
+    try{localStorage.setItem(DRAFT_LS,JSON.stringify({k:r.k,at:Date.now()}))}catch(e){}
+    S.blessers=ok;S.blessers.forEach(function(b,j){resplit(b);b.si=j});markSaved();
+    payUI();cloudSettingsSoon();return true;
+  });
+}
+function needsSave(){return CLOUD.on&&(!S.textLocked||textDirty()||newBlessers()||nameSnap()!==S.savedNames||S.blessers.some(function(b){return b.si==null}))}
+function saveCloudText(ok){
+  // pending uploads use sentence numbers, so they go out before the text changes
+  return cloudFlush().then(function(){
+    return cloudApi("rc_c_text",{mode:S.mode,blessers:ok.map(function(b){return {name:b.name,text:b.text,from:b.si!=null?b.si:-1,sentences:splitText(b.text).sentences}})});
+  }).then(function(r){
+    if(!r.ok){if(r.noEdits){S.editsLeft=0;renderSetup()}throw new Error(r.error||"לא הצלחנו לשמור את הטקסט.")}
+    S.blessers=ok;S.blessers.forEach(function(b,j){resplit(b);b.si=j});
+    if(S.mode!=="drasha") S.mode=ok.length>1?"family":"blessing";
+    if(r.editsLeft!=null) S.editsLeft=r.editsLeft;markSaved();payUI();return true;
+  });
+}
+function saveAll(){
+  var ok=okBlessers();
+  if(!CLOUD.on&&API&&!S.localOnly) return createDraft(ok);
+  if(needsSave()&&ok.length) return saveCloudText(ok);
+  if(!CLOUD.on){S.blessers=ok.length?ok:S.blessers;S.blessers.forEach(resplit)}
+  return Promise.resolve(true);
+}
 $("#toRecord").onclick=function(){
-  var ok=S.blessers.filter(function(b){return wc(b.text)>0});
-  if(!ok.length){$("#setupStatus").textContent="צריך טקסט לפני שמקליטים. אפשר לטעון טקסט לדוגמה.";return}
-  if(!CLOUD.on&&API&&!S.localOnly){
-    var bt=$("#toRecord");bt.disabled=true;$("#setupStatus").textContent="פותחים לך הקלטה שנשמרת אוטומטית…";
-    CLOUD.dev=CLOUD.dev||devId();
-    var qp=new URLSearchParams(location.search),forName=(qp.get("for")||"").trim(),dn=(ok[0].name||"").trim();
-    cloudApi("rc_c_draft",{mode:S.mode,name:forName?(dn?dn+" ל"+forName:forName):dn,src:new URLSearchParams(location.search).get("src")||"",blessers:ok.map(function(b){return {name:b.name,text:b.text}})}).then(function(r){
-      bt.disabled=false;
-      if(!r.ok){S.localOnly=true;$("#setupStatus").textContent=(r.error||"לא הצלחנו לשמור בענן.")+" אפשר להמשיך להקליט ולשמוע, בלי שמירה.";return}
-      CLOUD.on=true;CLOUD.k=r.k;CLOUD.draft=true;CLOUD.paid=false;CLOUD.code=r.code;CLOUD.fixedMode=true;S.editsLeft=5;
-      try{history.replaceState(null,"",location.pathname+"#k="+r.k)}catch(e){location.hash="k="+r.k}
-      try{localStorage.setItem(DRAFT_LS,JSON.stringify({k:r.k,at:Date.now()}))}catch(e){}
-      S.blessers=ok;S.blessers.forEach(function(b,j){resplit(b);b.si=j});markSaved();
-      payUI();cloudSettingsSoon();$("#setupStatus").textContent="";goRecord();
-    }).catch(function(){bt.disabled=false;S.localOnly=true;$("#setupStatus").textContent="אין חיבור לשרת כרגע. אפשר להמשיך להקליט ולשמוע, בלי שמירה."});
-    return;
-  }
-  if(CLOUD.on&&(!S.textLocked||textDirty()||nameSnap()!==S.savedNames)){
-    var btn=$("#toRecord");btn.disabled=true;$("#setupStatus").textContent="שומרים את הטקסט…";
-    // pending uploads use sentence numbers, so they go out before the text changes
-    cloudFlush().then(function(){
-      return cloudApi("rc_c_text",{mode:S.mode,blessers:ok.map(function(b){return {name:b.name,text:b.text,from:b.si!=null?b.si:-1,sentences:splitText(b.text).sentences}})});
-    }).then(function(r){
-      btn.disabled=false;
-      if(!r.ok){$("#setupStatus").textContent=r.error||"לא הצלחנו לשמור את הטקסט.";if(r.noEdits){S.editsLeft=0;renderSetup()}return}
-      S.blessers=ok;S.blessers.forEach(function(b,j){resplit(b);b.si=j});
-      if(r.editsLeft!=null) S.editsLeft=r.editsLeft;markSaved();
-      $("#setupStatus").textContent="";goRecord();
-    }).catch(function(){btn.disabled=false;$("#setupStatus").textContent="אין חיבור לאינטרנט. בודקים את החיבור ומנסים שוב."});
-    return;
-  }
-  S.blessers=ok;S.blessers.forEach(resplit);
-  goRecord();
+  var ok=okBlessers();
+  if(!ok.length){$("#setupStatus").textContent="צריך טקסט לפני שמקליטים. אפשר לטעון טקסט לדוגמה או לכתוב ברכה במחולל.";return}
+  var bt=$("#toRecord");bt.disabled=true;$("#setupStatus").textContent=CLOUD.on?"שומרים את הטקסט…":"פותחים לך הקלטה שנשמרת אוטומטית…";
+  saveAll().then(function(){bt.disabled=false;$("#setupStatus").textContent="";$("#incNote").hidden=true;goRecord()}).catch(function(err){
+    bt.disabled=false;
+    if(!CLOUD.on){S.localOnly=true;$("#setupStatus").textContent=((err&&err.message)||"אין חיבור לשרת כרגע.")+" אפשר ללחוץ שוב כדי להקליט ולשמוע, בלי שמירה.";return}
+    $("#setupStatus").textContent=err&&/[\u0590-\u05FF]/.test(err.message)?err.message:"אין חיבור לאינטרנט. בודקים את החיבור ומנסים שוב.";
+  });
 };
+// write a blessing for one blesser in the generator; it comes back into this recording (#k=…&slot=…&t=…)
+function openGenerator(b){
+  var st=$("#setupStatus");st.textContent="שומרים ועוברים למחולל…";
+  saveAll().then(function(){
+    var ok=okBlessers(),slot=ok.indexOf(b);if(slot<0) slot=ok.length;
+    location.href=GEN_URL+"?rec=1&k="+CLOUD.k+"&slot="+slot;
+  }).catch(function(err){st.textContent=(err&&err.message)||"לא הצלחנו לשמור. מנסים שוב."});
+}
+function takeIncoming(){
+  var h=new URLSearchParams(location.hash.slice(1)),t=h.get("t");if(!t) return null;
+  var inc={slot:+h.get("slot")||0,text:t,name:h.get("n")||""};
+  try{history.replaceState(null,"",location.pathname+"#k="+CLOUD.k)}catch(e){}
+  return inc;
+}
+function applyIncoming(inc){
+  if(!inc) return false;
+  var max=S.maxBlessers||5,note=$("#incNote");
+  if(inc.slot>=S.blessers.length||!S.blessers[inc.slot]){
+    if(S.blessers.length===1&&!wc(S.blessers[0].text)) inc.slot=0;
+    else if(S.blessers.length>=max){note.hidden=false;note.textContent="אי אפשר להוסיף עוד מברך להקלטה הזו (עד "+max+").";return true}
+    else{S.blessers.push(newBlesser(inc.name,""));inc.slot=S.blessers.length-1}
+  }
+  var b=S.blessers[inc.slot];b.text=inc.text;if(inc.name) b.name=inc.name;
+  if(S.mode==="blessing"&&S.blessers.length>1) S.mode="family";
+  note.hidden=false;note.textContent="הברכה מהמחולל נכנסה כמברך "+(inc.slot+1)+". בודקים את הטקסט ולוחצים על הכפתור כדי לשמור ולהקליט.";
+  return true;
+}
 function goRecord(){
   showReview();
   var first=S.blessers.filter(function(b){return b.takes.some(function(t){return !t})})[0];
@@ -1562,7 +1606,7 @@ function addWatermark(ctx,N,T,when0,offset){
     N.sources.push(s);
   }
 }
-function needWatermark(){return !(CLOUD.on&&CLOUD.paid)}
+function needWatermark(){return !CLOUD.on||needPay()}
 function applySet(N,set,ctx,smooth){
   var p=function(param,v){if(smooth) param.setTargetAtTime(v,ctx.currentTime,0.03);else param.value=v};
   var a=set.aiMix,m=set.nrMix;
@@ -1667,7 +1711,7 @@ function exportMix(){
 }
 function submitMix(){
   var btn=$("#renderBtn"),st=$("#renderStatus"),fin=null,mp3=null;
-  if(!CLOUD.paid){togglePay(true);return}
+  if(needPay()){togglePay(true);return}
   btn.disabled=true;$("#result").hidden=true;
   cloudFlush().then(function(){
     if(CLOUD.failed) throw new Error("חלק מההקלטות עוד לא נשמרו. בודקים את החיבור ומנסים שוב.");
@@ -1694,23 +1738,27 @@ function setSubmittedUI(){
 }
 $("#renderBtn").onclick=function(){if(CLOUD.on) submitMix();else window.open(PAY_URL,"_blank","noopener")};
 function payUI(){
-  var unpaid=CLOUD.on&&!CLOUD.paid;
+  var unpaid=needPay();
   $("#modeBadge").textContent=!CLOUD.on?"מצב הדגמה: ההקלטות לא נשמרות":(unpaid?"הקלטת ניסיון בחינם · נשמרת אוטומטית":"ההקלטות נשמרות אוטומטית");
   $("#demoNote").hidden=!(unpaid||!CLOUD.on);
   if(!CLOUD.submitted) $("#renderBtn").textContent=!CLOUD.on?"להזמנת הקובץ הסופי":(unpaid?"לקבלת הקובץ הסופי, בלי צליל הסימון":"יצירת הקובץ והורדה");
   if(!unpaid) $("#payBox").hidden=true;
   $("#payCode").textContent=CLOUD.code||"";
-  var pr=PRICES[S.mode];$("#payPrice").textContent=pr?"המחיר: "+pr:"";$("#payPrice").hidden=!pr;
+  $("#payPrice").textContent=priceText();
+  try{var c=JSON.parse(localStorage.getItem("kolot_rec_contact")||"null");if(c){if(!$("#payName").value) $("#payName").value=c.name||"";if(!$("#payPhone").value) $("#payPhone").value=c.phone||""}}catch(e){}
+  var pn=$("#priceNote");if(pn){pn.hidden=CLOUD.on&&!CLOUD.draft;pn.textContent=(CLOUD.on&&CLOUD.paid&&!extraDue())?"":"המחיר לקובץ הסופי: "+priceText()+". מקליטים ושומעים בחינם."}
 }
 function togglePay(show){
   $("#payBox").hidden=!show;if(show){payUI();$("#payBox").scrollIntoView({behavior:"smooth",block:"center"})}
 }
 var PAYPOLL=null;
 function pollPaid(){
-  if(!CLOUD.on||CLOUD.paid) return;
+  if(!CLOUD.on||!needPay()) return;
   cloudApi("rc_c_state").then(function(r){
-    if(r.ok&&r.state&&r.state.paid){
-      CLOUD.paid=true;clearInterval(PAYPOLL);PAYPOLL=null;payUI();
+    if(!r.ok||!r.state) return;
+    CLOUD.paid=r.state.paid;CLOUD.paidBlessers=r.state.paidBlessers;
+    if(!needPay()){
+      clearInterval(PAYPOLL);PAYPOLL=null;payUI();
       $("#renderStatus").textContent="התשלום התקבל, תודה! אפשר ליצור את הקובץ הסופי.";
       if(MIXP.playing&&!MIXP.solo) restartIfPlaying();
     }
@@ -1726,8 +1774,9 @@ $("#payGo").onclick=function(){
   cloudApi("rc_c_contact",{name:name,phone:phone}).then(function(r){
     $("#payGo").disabled=false;
     if(!r.ok){if(w) w.close();$("#payStatus").textContent=r.error||"לא הצלחנו לשמור את הפרטים.";return}
-    if(w) w.location.href=PAY_URL;else window.open(PAY_URL,"_blank","noopener");
-    $("#payStatus").textContent="עמוד התשלום נפתח בלשונית חדשה. אחרי התשלום הקובץ הסופי ייפתח כאן, אפשר להשאיר את הדף פתוח או לחזור אליו מהקישור.";
+    try{localStorage.setItem("kolot_rec_contact",JSON.stringify({name:name,phone:phone}))}catch(e){}
+    var url=payLink();if(w) w.location.href=url;else window.open(url,"_blank","noopener");
+    $("#payStatus").textContent="עמוד התשלום נפתח בלשונית חדשה, עם ההזמנה שלך כבר בעגלה. כדאי לכתוב בשדה \"הערות\" את קוד ההקלטה "+(CLOUD.code||"")+". אחרי התשלום הקובץ הסופי ייפתח כאן, אפשר להשאיר את הדף פתוח או לחזור אליו מהקישור.";
     startPayPoll();
   }).catch(function(){if(w) w.close();$("#payGo").disabled=false;$("#payStatus").textContent="אין חיבור לאינטרנט. מנסים שוב."});
 };
@@ -1741,7 +1790,26 @@ var API="https://kolot-recorder.kolot-studios.workers.dev";
 var CLOUD={on:false,k:null,dev:null,q:[],busy:false,failed:0,submitted:false,fixedMode:false,setT:null,paid:true,draft:false,code:""};
 // payment: free drafts record and play with a soft chime; the clean file opens once the studio marks the draft paid
 var PAY_URL="https://kolot.kala-crm.co.il/"+encodeURIComponent("רכישה");
-var PRICES={blessing:"",family:"200 ₪ · עד 5 מברכים",drasha:"120 ₪"};
+// prices in ₪ – keep in sync with PRICE_* in cloudflare/recorder-worker.js
+var PRICING={base:150,extra:50,drasha:120};
+// Kala products (page ids): one product per number of blessers, a top-up for one more blesser, and a drasha
+var KALA_BASE="https://kolot.kala-crm.co.il/",KALA_IDS={pack:[0,0,0,0,0],extra:0,drasha:0};
+var GEN_URL="https://kolotstudios.github.io/widgets/blessing.html";
+function nBlessers(){return Math.max(1,Math.min(5,S.blessers.filter(function(b){return wc(b.text)>0}).length))}
+function priceFor(mode,n){return mode==="drasha"?PRICING.drasha:PRICING.base+PRICING.extra*Math.max(0,n-1)}
+function extraDue(){return CLOUD.on&&CLOUD.draft&&CLOUD.paid&&CLOUD.paidBlessers!=null?Math.max(0,nBlessers()-CLOUD.paidBlessers):0}
+function needPay(){return CLOUD.on&&(!CLOUD.paid||extraDue()>0)}
+function payLink(){
+  var id=extraDue()?KALA_IDS.extra:(S.mode==="drasha"?KALA_IDS.drasha:KALA_IDS.pack[nBlessers()-1]);
+  return id?KALA_BASE+"order/cart_buy?id="+id:PAY_URL;
+}
+function priceText(){
+  var x=extraDue();
+  if(x) return "השלמה על "+(x===1?"מברך נוסף":x+" מברכים נוספים")+": "+PRICING.extra*x+" ₪"+(x>1?" (בעגלה משנים את הכמות ל־"+x+")":"");
+  if(S.mode==="drasha") return "דרשה: "+PRICING.drasha+" ₪";
+  var n=nBlessers();
+  return (n===1?"ברכה אחת":n+" מברכים")+": "+priceFor(S.mode,n)+" ₪"+(n>1?" ("+PRICING.base+" ₪ ועוד "+(n-1)+" × "+PRICING.extra+" ₪)":"");
+}
 var DRAFT_LS="kolot_rec_draft";
 function devId(){
   var v=null;try{v=localStorage.getItem("kolot_rec_dev")}catch(e){}
@@ -1831,13 +1899,14 @@ function cloudOpen(){
     S.mode=r.mode;CLOUD.fixedMode=true;S.maxBlessers=r.maxBlessers;S.textLocked=r.textLocked;
     S.blessers=(r.blessers&&r.blessers.length?r.blessers:[{name:"",text:""}]).map(function(b,j){var x=newBlesser(b.name,b.text);if(r.blessers&&r.blessers.length) x.si=j;return x});
     S.editsLeft=r.editsLeft!=null?r.editsLeft:0;markSaved();
-    CLOUD.paid=r.paid!==false;CLOUD.draft=!!r.draft;CLOUD.code=r.code||"";payUI();
+    CLOUD.paid=r.paid!==false;CLOUD.draft=!!r.draft;CLOUD.code=r.code||"";CLOUD.paidBlessers=r.state&&r.state.paidBlessers!=null?r.state.paidBlessers:null;
     if(CLOUD.draft){try{localStorage.setItem(DRAFT_LS,JSON.stringify({k:CLOUD.k,at:Date.now()}))}catch(e){}}
-    if(r.contact&&!CLOUD.paid) startPayPoll();
+    if(r.contact&&needPay()) startPayPoll();
+    var inc=takeIncoming();
     if(r.state&&r.state.status!=="open") CLOUD.submitted=true;
     if(r.settings) applySettings(r.settings,r.music);
     MLIB.cat="fit";defaultMusic();renderMusic();
-    if(!r.takes.length){$("#gate").hidden=true;$("#setup").hidden=false;renderSetup();return}
+    if(!r.takes.length){applyIncoming(inc);$("#gate").hidden=true;$("#setup").hidden=false;renderSetup();payUI();return}
     S.blessers.forEach(resplit);
     var ids=r.takes.map(function(t){return t.f}).concat(Object.keys(r.rooms).map(function(k){return r.rooms[k]}));
     $("#gateMsg").textContent="מורידים "+r.takes.length+" הקלטות…";
@@ -1852,7 +1921,9 @@ function cloudOpen(){
         b.vers=b.vers||[];b.vers[i]=(t.vers&&t.vers.length?t.vers:[t]).map(function(v){return v.f===t.f?tk:{lazy:true,f:v.f,n:v.n,pre:v.pre,sid:v.sid,flags:v.flags||[],uploaded:true,dur:0,pending:null}});
         if(b.vers[i].indexOf(tk)<0) b.vers[i].push(tk);
       });
-      $("#gate").hidden=true;showReview();allTakes().forEach(ensureClean);
+      $("#gate").hidden=true;allTakes().forEach(ensureClean);
+      if(applyIncoming(inc)){$("#review").hidden=true;$("#setup").hidden=false;renderSetup();payUI();window.scrollTo(0,0)}
+      else{showReview();payUI()}
       if(CLOUD.submitted) setSubmittedUI();
     });
   }).catch(function(){gate("אין חיבור לאינטרנט. בודקים את החיבור ומרעננים את הדף.",true)});
@@ -1898,7 +1969,7 @@ setInterval(function(){
 },1000);
 
 /* ---------- visible errors (prototype) ---------- */
-var VERSION="2026-11-04k";
+var VERSION="2026-11-04l";
 function reportErr(msg){
   var el=document.getElementById("errBox");
   if(!el){el=document.createElement("p");el.id="errBox";el.className="note warn";el.style.cssText="position:fixed;inset:auto 8px calc(8px + env(safe-area-inset-bottom,0px)) 8px;z-index:99;background:var(--paper);border:1px solid var(--warn);border-radius:10px;padding:8px 10px;margin:0";document.body.appendChild(el)}

@@ -793,7 +793,12 @@ const REC_ON=false,REC_URL='https://kolotstudios.github.io/widgets/recorder.html
 const recEnabled=(()=>{if(REC_ON)return true;let q=location.search;try{q+=window.parent.location.search}catch(e){}return /[?&]rec=1\b/.test(q)})();
 function recHref(){const t=fullText();if(!t.trim())return '#';const self=$('from').value==='self';
  const p=new URLSearchParams({mode:self?'drasha':'blessing',name:self?$('name').value.trim():($('sign').value||'').trim(),for:$('name').value.trim(),text:t,src:'gen'});return REC_URL+'?'+p.toString()}
-if(recEnabled){$('recBox').hidden=false;$('recLink').addEventListener('click',e=>{const h=recHref();if(h==='#'){e.preventDefault();return}e.currentTarget.href=h;track('blessing_record_self',{blessing_event:val('ev')})})}
+// coming from a recording (?k=…&slot=…): the button sends this blessing back into that recording as one more blesser
+const RET=(()=>{let q=location.search;try{if(!/[?&]k=/.test(q))q=window.parent.location.search}catch(e){}const p=new URLSearchParams(q);const k=p.get('k');return k&&/^[a-f0-9]{20,40}$/.test(k)?{k,slot:+p.get('slot')||0}:null})();
+function retHref(){const t=fullText();if(!t.trim())return '#';const nm=($('sign').value||'').trim();return REC_URL+'#k='+RET.k+'&slot='+RET.slot+'&n='+encodeURIComponent(nm)+'&t='+encodeURIComponent(t)}
+if(RET){$('recBox').hidden=false;const l=$('recLink');l.textContent='להוספת הברכה להקלטה ←';l.target='_top';$('recBox').querySelector('b').textContent='הברכה מוכנה? מוסיפים אותה להקלטה';$('recBox').querySelector('p').textContent='הברכה תיכנס להקלטה שלכם כמברך נוסף. אפשר לחזור לכאן ולכתוב ברכה לכל מברך.';
+ l.addEventListener('click',e=>{const h=retHref();if(h==='#'){e.preventDefault();return}e.currentTarget.href=h;track('blessing_add_to_recording',{blessing_event:val('ev')})})}
+else if(recEnabled){$('recBox').hidden=false;$('recLink').addEventListener('click',e=>{const h=recHref();if(h==='#'){e.preventDefault();return}e.currentTarget.href=h;track('blessing_record_self',{blessing_event:val('ev')})})}
 $('leadWa').addEventListener('click',()=>track('blessing_lead_whatsapp',{blessing_event:val('ev')}));
 $('again').addEventListener('click',()=>track('blessing_regenerate'));
 

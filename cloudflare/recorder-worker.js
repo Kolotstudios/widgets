@@ -13,6 +13,7 @@
  * Storage layout: e/<k>.json (entry), p/<k>.json (project), f/<k>/<name> (audio).
  */
 const MAX_TAKES = 10, MAX_UPLOADS = 600, DAYS = 30, MAX_DEVICES = 2, MAX_EDITS = 5,
+  PRICE_BASE = 150, PRICE_EXTRA = 50, PRICE_DRASHA = 120, // ₪ – keep in sync with PRICING in recorder.html
   DRAFT_DAYS = 14, PAID_DAYS = 14, MAX_DRAFTS_PER_DAY = 8, MAX_FINALS = 20;
 const H = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type', 'Content-Type': 'application/json; charset=utf-8' };
 const out = (o) => new Response(JSON.stringify(o), { headers: H });
@@ -36,7 +37,10 @@ async function getBin(env, key) { const o = await env.BUCKET.get(key); return o 
 function tok() { const a = new Uint8Array(14); crypto.getRandomValues(a); return [...a].map(x => x.toString(16).padStart(2, '0')).join(''); }
 async function sha(s) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)); return btoa(String.fromCharCode(...new Uint8Array(h))).replace(/[+/=]/g, '').slice(0, 32); }
 const isPaid = (e) => e.paid !== false;
-const state = (e) => ({ paid: isPaid(e), draft: !!e.draft, status: e.status || 'open', expires: e.expires, expired: Date.now() > e.expires, device: !!((e.devices && e.devices.length) || e.device), devices: (e.devices || (e.device ? [e.device] : [])).length });
+const priceOf = (mode, n) => mode === 'drasha' ? PRICE_DRASHA : PRICE_BASE + PRICE_EXTRA * Math.max(0, (n | 0) - 1);
+// drafts are paid per blesser: more blessers than were paid for need a top-up before the final file
+const extraDue = (e) => (e.draft && isPaid(e) && e.paidBlessers != null) ? Math.max(0, (e.nb | 0) - e.paidBlessers) : 0;
+const state = (e) => ({ paid: isPaid(e), draft: !!e.draft, nb: e.nb | 0, paidBlessers: e.paidBlessers == null ? null : e.paidBlessers, extraDue: extraDue(e), price: priceOf(e.mode, e.nb || 1), status: e.status || 'open', expires: e.expires, expired: Date.now() > e.expires, device: !!((e.devices && e.devices.length) || e.device), devices: (e.devices || (e.device ? [e.device] : [])).length });
 
 /* ---------- router ---------- */
 async function handle(d, env, ip) {
@@ -64,10 +68,12 @@ async function draft(d, env, ip) {
   await putJ(env, rk, { day, n: n + 1 });
   const mode = ['blessing', 'family', 'drasha'].includes(d.mode) ? d.mode : 'blessing', k = tok();
   const code = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000)), h = await sha('kolot-rec|' + dev);
-  const e = { created: now, updated: now, name: String(d.name || '').slice(0, 80), orderId: '', mode, maxBlessers: mode === 'family' ? 5 : 1,
+  const e = { created: now, updated: now, name: String(d.name || '').slice(0, 80), orderId: '', mode, maxBlessers: mode === 'drasha' ? 1 : 5,
     expires: now + DRAFT_DAYS * 86400000, status: 'open', draft: true, paid: false, code, src: String(d.src || '').slice(0, 20), devices: [h], device: h, devAt: now };
   const blessers = (d.blessers || []).slice(0, e.maxBlessers).map(b => ({ name: String(b.name || '').slice(0, 60), text: String(b.text || '').slice(0, 6000) }));
-  await putJ(env, 'p/' + k, { mode, blessers, textLocked: false });
+  e.nb = blessers.filter(b => b.text.trim()).length;
+  if (mode !== 'drasha') e.mode = e.nb > 1 ? 'family' : 'blessing';
+  await putJ(env, 'p/' + k, { mode: e.mode, blessers, textLocked: false });
   await putJ(env, 'e/' + k, e);
   return { ok: true, k, code };
 }
@@ -101,7 +107,8 @@ async function client(d, env) {
     if (!nb.length) return { ok: false, error: 'חסר טקסט' };
     const maxEdits = e.maxEdits == null ? MAX_EDITS : e.maxEdits;
     if (pr.textLocked) {
-      const changed = nb.length !== (pr.blessers || []).length || nb.some((b, j) => b.text !== ((pr.blessers || [])[j] || {}).text);
+      // a change or removal of an existing blessing costs an edit; adding a new blesser is free
+      const changed = (pr.blessers || []).some((ob, j) => !nb[j] || nb[j].text !== ob.text);
       if (changed) {
         if ((e.editsUsed || 0) >= maxEdits) return { ok: false, noEdits: true, error: 'נגמרו השינויים בטקסט לקישור הזה. לשינוי נוסף פנו לאולפני קולות.' };
         // takes follow their sentence: same blesser (by its previous index) and same sentence text
@@ -118,7 +125,8 @@ async function client(d, env) {
         pr.history = (pr.history || []).concat([{ at: Date.now(), blessers: pr.blessers }]).slice(-12);
       }
     } else pr.mode = ['blessing', 'family', 'drasha'].includes(d.mode) ? d.mode : (pr.mode || 'blessing');
-    pr.blessers = nb;
+    if (pr.mode !== 'drasha') pr.mode = nb.length > 1 ? 'family' : 'blessing';
+    pr.blessers = nb; e.mode = pr.mode; e.nb = nb.filter(b => b.text.trim()).length;
     await putJ(env, 'p/' + k, pr); e.updated = Date.now(); await putJ(env, 'e/' + k, e);
     return { ok: true, editsLeft: Math.max(0, maxEdits - (e.editsUsed || 0)) };
   }
@@ -154,12 +162,14 @@ async function client(d, env) {
     const phone = String(d.phone || '').replace(/\D/g, '').slice(0, 13);
     if (phone.length < 9) return { ok: false, error: 'צריך מספר טלפון תקין.' };
     e.contact = { name: String(d.name || '').slice(0, 60), phone, at: Date.now() };
+    e.due = isPaid(e) ? { n: e.nb | 0, amount: PRICE_EXTRA * extraDue(e), topUp: true, at: Date.now() } : { n: e.nb | 0, amount: priceOf(e.mode, e.nb || 1), at: Date.now() };
     if (!e.name) e.name = e.contact.name;
     e.updated = Date.now(); await putJ(env, 'e/' + k, e); return { ok: true, code: e.code || '' };
   }
   if (d.action === 'rc_c_settings') { pr.settings = d.settings || {}; pr.music = String(d.music || '').slice(0, 40); await putJ(env, 'p/' + k, pr); return { ok: true }; }
   if (d.action === 'rc_c_submit') {
     if (!isPaid(e)) return { ok: false, unpaid: true, error: 'הקובץ הסופי נפתח אחרי התשלום.' };
+    if (extraDue(e)) return { ok: false, unpaid: true, extra: extraDue(e), error: 'נוספו מברכים אחרי התשלום. כדי לקבל את הקובץ צריך להשלים ' + PRICE_EXTRA * extraDue(e) + ' ₪.' };
     if (!d.mp3) return { ok: false, error: 'חסר קובץ' };
     if ((e.finals | 0) >= MAX_FINALS) return { ok: false, error: 'הגעתם למספר הקבצים המרבי. פנו לאולפני קולות.' };
     e.final = await putBin(env, 'f/' + k + '/final.mp3', d.mp3, 'audio/mpeg'); e.finals = (e.finals | 0) + 1;
@@ -184,7 +194,7 @@ async function staff(d, env) {
     do {
       const l = await env.BUCKET.list({ prefix: 'e/', cursor }); cursor = l.truncated ? l.cursor : undefined;
       const es = await Promise.all(l.objects.map(o => getJ(env, o.key).then(e => [o.key.slice(2), e])));
-      es.forEach(([k, e]) => { if (e) items.push({ k, name: e.name || '', orderId: e.orderId || '', mode: e.mode || '', created: e.created, updated: e.updated || e.created, takes: Object.keys(e.takes || {}).length, edits: e.editsUsed || 0, final: !!e.final, finals: e.finals | 0, code: e.code || '', contact: e.contact || null, src: e.src || '', state: state(e) }); });
+      es.forEach(([k, e]) => { if (e) items.push({ k, name: e.name || '', orderId: e.orderId || '', mode: e.mode || '', created: e.created, updated: e.updated || e.created, takes: Object.keys(e.takes || {}).length, edits: e.editsUsed || 0, final: !!e.final, finals: e.finals | 0, code: e.code || '', contact: e.contact || null, due: e.due || null, src: e.src || '', state: state(e) }); });
     } while (cursor);
     return { ok: true, items: items.sort((a, b) => b.updated - a.updated) };
   }
@@ -215,7 +225,11 @@ async function staff(d, env) {
     }
     if (d.resetDevice) { e.device = null; e.devices = []; e.devAt = null; }
     if (d.reopen) e.status = 'open';
-    if (typeof d.paid === 'boolean') { e.paid = d.paid; if (d.paid) { e.paidAt = Date.now(); e.expires = Math.max(e.expires, Date.now() + PAID_DAYS * 86400000); } }
+    if (typeof d.paid === 'boolean') {
+      e.paid = d.paid;
+      if (d.paid) { e.paidAt = Date.now(); e.paidBlessers = Math.max(e.paidBlessers | 0, e.due ? e.due.n | 0 : e.nb | 0, 1); e.expires = Math.max(e.expires, Date.now() + PAID_DAYS * 86400000); }
+      else e.paidBlessers = null;
+    }
     if (d.done) e.status = 'done';
     if (d.extendDays) e.expires = Math.max(Date.now(), e.expires) + (d.extendDays | 0) * 86400000;
     if (d.unlockText) e.editsUsed = 0;

@@ -220,6 +220,7 @@ h3{font:700 15px var(--f-body);margin:0;color:var(--muted);letter-spacing:.02em}
       </div>
       <div class="card">
         <div class="row between"><h2 id="textTitle">הטקסט</h2><button class="btn small" id="sampleBtn" type="button">טען טקסט לדוגמה</button></div>
+        <p class="note" id="editNote" hidden></p>
         <div id="blessers" style="display:grid;gap:12px"></div>
         <button class="btn" id="addBlesser" type="button" hidden>+ הוספת מברך</button>
       </div>
@@ -238,6 +239,7 @@ h3{font:700 15px var(--f-body);margin:0;color:var(--muted);letter-spacing:.02em}
           <li><b>טעיתם?</b> "מההתחלה" ומקריאים שוב, ואפשר לתקן כל משפט אחר כך</li>
         </ul>
         <button class="btn primary big" id="toRecord" type="button"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:20px;height:20px"><circle cx="12" cy="12" r="6" fill="currentColor" stroke="none"/></svg>למסך ההקלטה</button>
+        <button class="btn ghost" id="undoEdit" type="button" hidden>ביטול השינויים בטקסט</button>
         <p class="status" id="setupStatus"></p>
       </div>
       <p class="note ver" id="verNote"></p>
@@ -248,7 +250,7 @@ h3{font:700 15px var(--f-body);margin:0;color:var(--muted);letter-spacing:.02em}
   <section id="review" class="wrap" style="gap:18px" hidden>
     <div class="row between">
       <div class="row" style="gap:8px"><h2>ההקלטות שלך</h2><span class="pill" id="cloudPill" hidden></span></div>
-      <button class="btn small ghost" id="backToText" type="button">→ חזרה לטקסט</button>
+      <button class="btn small ghost" id="backToText" type="button">עריכת הטקסט</button>
     </div>
     <div id="takes" style="display:grid;gap:14px"></div>
 
@@ -323,6 +325,7 @@ h3{font:700 15px var(--f-body);margin:0;color:var(--muted);letter-spacing:.02em}
       </details>
 
       <button class="btn primary big" id="renderBtn" type="button">הורדת הקובץ הסופי</button>
+      <p class="note" id="demoNote" hidden>זה מצב הדגמה: אפשר להקליט ולשמוע את התוצאה עם המוסיקה. הקובץ הסופי מתקבל אחרי רכישה, עם קישור אישי להקלטה.</p>
       <p class="status" id="renderStatus"></p>
       <div id="result" hidden style="display:grid;gap:10px">
         <div class="row">
@@ -701,9 +704,12 @@ function renderSetup(){
   document.querySelectorAll(".seg button").forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.mode===S.mode))});
   $("#modeNote").textContent=MODE_NOTES[S.mode];
   $("#textTitle").textContent=S.mode==="drasha"?"טקסט הדרשה":(S.mode==="family"?"המברכים":"טקסט הברכה");
-  var lockedText=CLOUD.on&&S.textLocked;
+  var lockedText=CLOUD.on&&S.textLocked&&!(S.editsLeft>0),editing=CLOUD.on&&S.textLocked&&S.editsLeft>0;
   $("#addBlesser").hidden=lockedText||!(S.mode==="family"&&S.blessers.length<(S.maxBlessers||5));
-  $("#sampleBtn").hidden=lockedText;
+  $("#sampleBtn").hidden=lockedText||editing;
+  $("#editNote").hidden=!(CLOUD.on&&S.textLocked);
+  $("#editNote").textContent=lockedText?"נגמרו השינויים בטקסט. לשינוי נוסף פנו לאולפני קולות.":
+    "אפשר לתקן את הטקסט גם אחרי שההקלטה התחילה: נשארו "+S.editsLeft+" שינויים. משפטים שלא השתנו נשמרים, ומשפטים חדשים או מתוקנים מקליטים מחדש.";
   document.querySelectorAll(".seg button").forEach(function(b){b.disabled=lockedText||(CLOUD.on&&CLOUD.fixedMode&&b.dataset.mode!==S.mode)});
   var box=$("#blessers");box.innerHTML="";
   S.blessers.forEach(function(b,i){
@@ -713,14 +719,26 @@ function renderSetup(){
     head.appendChild(lab);
     if(!lockedText&&S.mode==="family"&&S.blessers.length>1){var del=document.createElement("button");del.type="button";del.className="btn small ghost";del.textContent="הסרה";del.onclick=function(){S.blessers.splice(i,1);saveText();renderSetup()};head.appendChild(del)}
     var inp=document.createElement("input");inp.type="text";inp.id="n_"+b.id;inp.value=b.name;inp.placeholder=S.mode==="drasha"?"למשל: איתי":"למשל: אבא ואמא";
-    inp.oninput=function(){b.name=inp.value;saveText();renderPreview()};
+    inp.oninput=function(){b.name=inp.value;saveText();renderPreview();editState()};
     var ta=document.createElement("textarea");ta.id="t_"+b.id;ta.value=b.text;ta.placeholder="מדביקים כאן את הטקסט. כל שורה חדשה היא פסקה.";
-    ta.oninput=function(){b.text=ta.value;saveText();cnt.textContent=countInfo(b.text);renderPreview()};
+    ta.oninput=function(){b.text=ta.value;saveText();cnt.textContent=countInfo(b.text);renderPreview();editState()};
     var cnt=document.createElement("p");cnt.className="note";cnt.textContent=countInfo(b.text);
-    if(lockedText){inp.readOnly=true;ta.readOnly=true;cnt.textContent="הטקסט ננעל כשההקלטה התחילה. לשינוי פנו לאולפני קולות."}
+    if(lockedText){inp.readOnly=true;ta.readOnly=true}
     d.append(head,inp,ta,cnt);box.appendChild(d);
   });
-  renderPreview();setStep(1);
+  renderPreview();setStep(1);editState();
+}
+// text saved on the server (after recording started a change costs one of the edits)
+function textSnap(list){return JSON.stringify((list||S.blessers).filter(function(b){return wc(b.text)>0}).map(function(b){return b.text.trim()}))}
+function nameSnap(){return JSON.stringify(S.blessers.map(function(b){return b.name}))}
+function markSaved(){S.savedSnap=textSnap();S.savedNames=nameSnap();S.savedSet=S.blessers.map(function(b){return {obj:b,name:b.name,text:b.text}})}
+function textDirty(){return CLOUD.on&&S.textLocked&&S.savedSnap!=null&&textSnap()!==S.savedSnap}
+function editState(){
+  var btn=$("#toRecord");if(!btn) return;var dirty=textDirty();
+  btn.lastChild.textContent=dirty?"אישור השינוי ומעבר להקלטה":(S.blessers.some(function(b){return b.takes&&b.takes.some(Boolean)})?"להמשך ההקלטה":"למסך ההקלטה");
+  $("#undoEdit").hidden=!dirty;
+  if(dirty) $("#setupStatus").textContent="האישור ישתמש בשינוי אחד מתוך "+S.editsLeft+" שנשארו.";
+  else if(/^האישור ישתמש/.test($("#setupStatus").textContent)) $("#setupStatus").textContent="";
 }
 function renderPreview(){
   var pv=$("#pv");if(!pv) return;pv.innerHTML="";var total=0;
@@ -743,20 +761,29 @@ document.querySelectorAll(".seg button").forEach(function(b){b.onclick=function(
   saveText();renderSetup();
 }});
 $("#addBlesser").onclick=function(){S.blessers.push(newBlesser("",""));saveText();renderSetup()};
+$("#undoEdit").onclick=function(){
+  if(!S.savedSet) return;
+  S.blessers=S.savedSet.map(function(x){x.obj.name=x.name;x.obj.text=x.text;return x.obj});saveText();renderSetup();
+};
 $("#sampleBtn").onclick=function(){S.blessers=SAMPLES[S.mode].map(function(x){return newBlesser(x.name,x.text)});saveText();renderSetup()};
 $("#toRecord").onclick=function(){
   var ok=S.blessers.filter(function(b){return wc(b.text)>0});
   if(!ok.length){$("#setupStatus").textContent="צריך טקסט לפני שמקליטים. אפשר לטעון טקסט לדוגמה.";return}
-  S.blessers=ok;S.blessers.forEach(resplit);
-  if(CLOUD.on&&!S.textLocked){
+  if(CLOUD.on&&(!S.textLocked||textDirty()||nameSnap()!==S.savedNames)){
     var btn=$("#toRecord");btn.disabled=true;$("#setupStatus").textContent="שומרים את הטקסט…";
-    cloudApi("rc_c_text",{mode:S.mode,blessers:S.blessers.map(function(b){return {name:b.name,text:b.text}})}).then(function(r){
+    // pending uploads use sentence numbers, so they go out before the text changes
+    cloudFlush().then(function(){
+      return cloudApi("rc_c_text",{mode:S.mode,blessers:ok.map(function(b){return {name:b.name,text:b.text,from:b.si!=null?b.si:-1,sentences:splitText(b.text).sentences}})});
+    }).then(function(r){
       btn.disabled=false;
-      if(!r.ok){$("#setupStatus").textContent=r.error||"לא הצלחנו לשמור את הטקסט.";return}
+      if(!r.ok){$("#setupStatus").textContent=r.error||"לא הצלחנו לשמור את הטקסט.";if(r.noEdits){S.editsLeft=0;renderSetup()}return}
+      S.blessers=ok;S.blessers.forEach(function(b,j){resplit(b);b.si=j});
+      if(r.editsLeft!=null) S.editsLeft=r.editsLeft;markSaved();
       $("#setupStatus").textContent="";goRecord();
     }).catch(function(){btn.disabled=false;$("#setupStatus").textContent="אין חיבור לאינטרנט. בודקים את החיבור ומנסים שוב."});
     return;
   }
+  S.blessers=ok;S.blessers.forEach(resplit);
   goRecord();
 };
 function goRecord(){
@@ -1655,7 +1682,7 @@ function cloudPump(){
         $("#renderStatus").textContent=r.error||"ההקלטה לא נשמרה.";queueReview();
       }
       if(r.locked||r.closed||r.submitted) gate(r.error,true);
-    } else if(job.type==="take"){job.t.uploaded=true;if(r.n) job.t.n=r.n}
+    } else if(job.type==="take"){job.t.uploaded=true;if(r.n) job.t.n=r.n;if(!S.textLocked){S.textLocked=true;if(S.editsLeft==null) S.editsLeft=5}}
     cloudPill();cloudPump();
   }).catch(function(){
     CLOUD.busy=false;CLOUD.failed++;cloudPill();
@@ -1690,7 +1717,8 @@ function cloudOpen(){
   cloudApi("rc_c_open").then(function(r){
     if(!r.ok){gate(r.error||"לא הצלחנו לפתוח את הקישור.",true);return}
     S.mode=r.mode;CLOUD.fixedMode=true;S.maxBlessers=r.maxBlessers;S.textLocked=r.textLocked;
-    S.blessers=(r.blessers&&r.blessers.length?r.blessers:[{name:"",text:""}]).map(function(b){return newBlesser(b.name,b.text)});
+    S.blessers=(r.blessers&&r.blessers.length?r.blessers:[{name:"",text:""}]).map(function(b,j){var x=newBlesser(b.name,b.text);if(r.blessers&&r.blessers.length) x.si=j;return x});
+    S.editsLeft=r.editsLeft!=null?r.editsLeft:0;markSaved();
     if(r.state&&r.state.status!=="open") CLOUD.submitted=true;
     if(r.settings) applySettings(r.settings,r.music);
     MLIB.cat="fit";defaultMusic();renderMusic();
@@ -1703,7 +1731,7 @@ function cloudOpen(){
       Object.keys(r.rooms).forEach(function(sid){var f=files[r.rooms[sid]];if(f) S.rooms[sid]=unwav(f).f});
       r.takes.forEach(function(t){
         var b=S.blessers[t.b],f=files[t.f];if(!b||!f) return;
-        var i=t.i;if(b.sentences[i]!==t.s){var j=b.sentences.indexOf(t.s);if(j>=0) i=j}
+        var i=t.i;if(t.s&&b.sentences[i]!==t.s){var j=b.sentences.indexOf(t.s);if(j<0) return;i=j}
         if(i>=b.sentences.length) return;
         var w=unwav(f),tk={raw:w.f,pre:t.pre,sr:w.sr,sid:t.sid,dur:2,flags:t.flags||[],uploaded:true,n:t.n,pending:null};b.takes[i]=tk;
         b.vers=b.vers||[];b.vers[i]=(t.vers&&t.vers.length?t.vers:[t]).map(function(v){return v.f===t.f?tk:{lazy:true,f:v.f,n:v.n,pre:v.pre,sid:v.sid,flags:v.flags||[],uploaded:true,dur:0,pending:null}});
@@ -1755,7 +1783,7 @@ setInterval(function(){
 },1000);
 
 /* ---------- visible errors (prototype) ---------- */
-var VERSION="2026-11-04g";
+var VERSION="2026-11-04h";
 function reportErr(msg){
   var el=document.getElementById("errBox");
   if(!el){el=document.createElement("p");el.id="errBox";el.className="note warn";el.style.cssText="position:fixed;inset:auto 8px calc(8px + env(safe-area-inset-bottom,0px)) 8px;z-index:99;background:var(--paper);border:1px solid var(--warn);border-radius:10px;padding:8px 10px;margin:0";document.body.appendChild(el)}
@@ -1772,7 +1800,12 @@ if(hk){
   CLOUD.on=true;CLOUD.k=hk;CLOUD.dev=devId();
   $("#modeBadge").textContent="ההקלטות נשמרות אוטומטית";$("#renderBtn").textContent="סיום ושליחה לאולפן";
   if(!API) gate("המערכת עוד לא חוברה לשרת.",true);else cloudOpen();
-} else {loadText();renderSetup()}
+} else {
+  loadText();renderSetup();
+  $("#renderBtn").textContent="להזמנת הקובץ הסופי";
+  $("#renderBtn").onclick=function(){window.open("https://kolot.kala-crm.co.il/"+encodeURIComponent("רכישה"),"_blank","noopener")};
+  $("#demoNote").hidden=false;
+}
 if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){$("#setupStatus").textContent="הדפדפן הזה לא מאפשר הקלטה. כדאי לפתוח את הקישור ב-Chrome או ב-Safari.";$("#toRecord").disabled=true}
 })();
 </script>

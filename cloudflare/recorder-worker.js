@@ -5,10 +5,11 @@
  *
  * A project = one order. The client link carries a random key (#k=...). The first two devices that open the link
  * (e.g. a phone and a computer) are bound to it; a third device gets "locked" until the studio resets it.
- * Text locks after the first recording. Every take of a sentence is kept (up to MAX_TAKES) so the client can pick a version.
+ * After the first recording the text can still be changed up to MAX_EDITS times; takes of unchanged sentences follow
+ * their sentence, takes of removed sentences are archived. Every take of a sentence is kept (up to MAX_TAKES) so the client can pick a version.
  * Storage layout: e/<k>.json (entry), p/<k>.json (project), f/<k>/<name> (audio).
  */
-const MAX_TAKES = 10, MAX_UPLOADS = 600, DAYS = 30, MAX_DEVICES = 2;
+const MAX_TAKES = 10, MAX_UPLOADS = 600, DAYS = 30, MAX_DEVICES = 2, MAX_EDITS = 5;
 const H = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type', 'Content-Type': 'application/json; charset=utf-8' };
 const out = (o) => new Response(JSON.stringify(o), { headers: H });
 
@@ -70,10 +71,31 @@ async function client(d, env) {
   }
   if ((e.status || 'open') !== 'open') return { ok: false, submitted: true, error: 'ההקלטה כבר נשלחה לאולפן. לשינויים פנו לאולפני קולות.' };
   if (d.action === 'rc_c_text') {
-    if (pr.textLocked) return { ok: false, error: 'הטקסט ננעל אחרי תחילת ההקלטה.' };
-    pr.mode = ['blessing', 'family', 'drasha'].includes(d.mode) ? d.mode : (pr.mode || 'blessing');
-    pr.blessers = (d.blessers || []).slice(0, e.maxBlessers || 5).map(b => ({ name: String(b.name || '').slice(0, 60), text: String(b.text || '').slice(0, 6000) }));
-    await putJ(env, 'p/' + k, pr); e.updated = Date.now(); await putJ(env, 'e/' + k, e); return { ok: true };
+    const src = (d.blessers || []).slice(0, e.maxBlessers || 5);
+    const nb = src.map(b => ({ name: String(b.name || '').slice(0, 60), text: String(b.text || '').slice(0, 6000) }));
+    if (!nb.length) return { ok: false, error: 'חסר טקסט' };
+    const maxEdits = e.maxEdits == null ? MAX_EDITS : e.maxEdits;
+    if (pr.textLocked) {
+      const changed = nb.length !== (pr.blessers || []).length || nb.some((b, j) => b.text !== ((pr.blessers || [])[j] || {}).text);
+      if (changed) {
+        if ((e.editsUsed || 0) >= maxEdits) return { ok: false, noEdits: true, error: 'נגמרו השינויים בטקסט לקישור הזה. לשינוי נוסף פנו לאולפני קולות.' };
+        // takes follow their sentence: same blesser (by its previous index) and same sentence text
+        const old = e.takes || {}, nt = {}, used = new Set();
+        src.forEach((b, j) => {
+          const from = Number.isInteger(b.from) ? b.from : -1; if (from < 0) return;
+          (b.sentences || []).slice(0, 300).forEach((sen, i) => {
+            const hit = Object.keys(old).find(key => !used.has(key) && +key.split(':')[0] === from && old[key].s === String(sen));
+            if (hit) { used.add(hit); nt[j + ':' + i] = old[hit]; }
+          });
+        });
+        e.archived = (e.archived || []).concat(Object.keys(old).filter(key => !used.has(key)).map(key => ({ key, ...old[key], archivedAt: Date.now() }))).slice(-300);
+        e.takes = nt; e.editsUsed = (e.editsUsed || 0) + 1;
+        pr.history = (pr.history || []).concat([{ at: Date.now(), blessers: pr.blessers }]).slice(-12);
+      }
+    } else pr.mode = ['blessing', 'family', 'drasha'].includes(d.mode) ? d.mode : (pr.mode || 'blessing');
+    pr.blessers = nb;
+    await putJ(env, 'p/' + k, pr); e.updated = Date.now(); await putJ(env, 'e/' + k, e);
+    return { ok: true, editsLeft: Math.max(0, maxEdits - (e.editsUsed || 0)) };
   }
   if (d.action === 'rc_c_room') {
     const sid = String(d.sid || '').replace(/[^a-z0-9]/g, '').slice(0, 12); if (!sid || !d.wav) return { ok: false, error: 'bad room' };
@@ -88,7 +110,7 @@ async function client(d, env) {
     if (e.uploads > MAX_UPLOADS) return { ok: false, error: 'הגעתם למספר ההקלטות המרבי. פנו לאולפני קולות.' };
     const old = e.takes[key], n = old ? Math.max(old.n | 0, ...(old.vers || []).map(v => v.n | 0)) + 1 : 1;
     if (n > MAX_TAKES) return { ok: false, limit: true, error: 'אפשר להקליט כל משפט עד ' + MAX_TAKES + ' פעמים. לעזרה פנו לאולפני קולות.' };
-    const f = await putBin(env, 'f/' + k + '/' + b + '-' + i + '-' + n + '.wav', d.wav, 'audio/wav');
+    const f = await putBin(env, 'f/' + k + '/' + b + '-' + i + '-' + n + '-' + tok().slice(0, 6) + '.wav', d.wav, 'audio/wav');
     const v = { f, n, pre: d.pre | 0, sid: String(d.sid || '').slice(0, 12), flags: (d.flags || []).slice(0, 4), at: Date.now() };
     const vers = old ? (old.vers || [{ f: old.f, n: old.n, pre: old.pre, sid: old.sid, flags: old.flags, at: old.at }]) : [];
     vers.push(v);
@@ -116,7 +138,8 @@ async function client(d, env) {
 function view(k, e, pr) {
   const takes = Object.entries(e.takes || {}).map(([x, t]) => { const p = x.split(':'); return { b: +p[0], i: +p[1], f: t.f, n: t.sel || t.n, pre: t.pre, sid: t.sid, flags: t.flags, s: t.s, vers: (t.vers || []).map(v => ({ f: v.f, n: v.n, pre: v.pre, sid: v.sid, flags: v.flags })) }; });
   return { ok: true, name: e.name || '', mode: pr.mode || e.mode || 'blessing', maxBlessers: e.maxBlessers || 5, blessers: pr.blessers || [], textLocked: !!pr.textLocked,
-    settings: pr.settings || null, music: pr.music || '', takes, rooms: e.rooms || {}, state: state(e), maxTakes: MAX_TAKES };
+    settings: pr.settings || null, music: pr.music || '', takes, rooms: e.rooms || {}, state: state(e), maxTakes: MAX_TAKES,
+    editsLeft: Math.max(0, (e.maxEdits == null ? MAX_EDITS : e.maxEdits) - (e.editsUsed || 0)), maxEdits: e.maxEdits == null ? MAX_EDITS : e.maxEdits };
 }
 
 /* ---------- studio ---------- */
@@ -126,7 +149,7 @@ async function staff(d, env) {
     do {
       const l = await env.BUCKET.list({ prefix: 'e/', cursor }); cursor = l.truncated ? l.cursor : undefined;
       const es = await Promise.all(l.objects.map(o => getJ(env, o.key).then(e => [o.key.slice(2, -5), e])));
-      es.forEach(([k, e]) => { if (e) items.push({ k, name: e.name || '', orderId: e.orderId || '', mode: e.mode || '', created: e.created, updated: e.updated || e.created, takes: Object.keys(e.takes || {}).length, final: !!e.final, state: state(e) }); });
+      es.forEach(([k, e]) => { if (e) items.push({ k, name: e.name || '', orderId: e.orderId || '', mode: e.mode || '', created: e.created, updated: e.updated || e.created, takes: Object.keys(e.takes || {}).length, edits: e.editsUsed || 0, final: !!e.final, state: state(e) }); });
     } while (cursor);
     return { ok: true, items: items.sort((a, b) => b.updated - a.updated) };
   }
@@ -150,7 +173,7 @@ async function staff(d, env) {
     if (d.reopen) e.status = 'open';
     if (d.done) e.status = 'done';
     if (d.extendDays) e.expires = Math.max(Date.now(), e.expires) + (d.extendDays | 0) * 86400000;
-    if (d.unlockText) { const pr = (await getJ(env, 'p/' + k)) || {}; pr.textLocked = false; await putJ(env, 'p/' + k, pr); }
+    if (d.unlockText) e.editsUsed = 0;
     e.updated = Date.now(); await putJ(env, 'e/' + k, e); return { ok: true, state: state(e) };
   }
   return { ok: false, error: 'unknown action' };

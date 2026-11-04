@@ -876,7 +876,7 @@ $('next').onclick=async()=>{const key=flow()[step][0];
 document.querySelectorAll('input[name=mode]').forEach(r=>r.onchange=()=>{mode=r.value;show(0)});
 
 // ---------- embedded on the site: auto height ----------
-try{if(window.frameElement){document.documentElement.classList.add('embedded');const fit=()=>{try{window.frameElement.style.height=Math.ceil(document.documentElement.scrollHeight)+'px'}catch(e){}};new ResizeObserver(fit).observe(document.body);setInterval(fit,1500)}}catch(e){}
+try{if(window.frameElement){document.documentElement.classList.add('embedded');const fit=()=>{try{let b=0;for(const el of document.body.children){const cs=getComputedStyle(el);if(cs.position==='absolute'||cs.position==='fixed'||cs.display==='none')continue;const r=el.getBoundingClientRect();if(r.height)b=Math.max(b,r.bottom+window.scrollY+(parseFloat(cs.marginBottom)||0))}const h=Math.ceil(b+(parseFloat(getComputedStyle(document.body).paddingBottom)||0)+8);if(h>200&&Math.abs(parseFloat(window.frameElement.style.height||0)-h)>2)window.frameElement.style.height=h+'px'}catch(e){}};new ResizeObserver(fit).observe(document.body);setInterval(fit,1500)}}catch(e){}
 // ---------- cloud: client links (stage 2) ----------
 const isStaff=()=>!!lsGet('kk_pass');
 function hashK(){let h='';try{h=window.frameElement?window.parent.location.hash:location.hash}catch(e){h=location.hash}const m=h.match(/[#&]k=([a-f0-9]{20,40})/);return m?m[1]:''}

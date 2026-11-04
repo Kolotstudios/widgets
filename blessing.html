@@ -271,6 +271,11 @@ html.embedded .wrap{padding-block:12px 16px}
         <b>רוצים להקליט את הברכה הזאת באולפן?</b>
         <p>באולפני קולות הברכה נשמעת אחרת: מיקרופון מקצועי, הדרכה בהקלטה, מוזיקת רקע ועריכה מלאה. מקבלים קובץ מוכן להשמעה באירוע.</p>
         <a class="leadBtn" id="leadWa" href="#" target="_blank" rel="noopener">שלחו לנו את הברכה בוואטסאפ ←</a>
+        <div id="recBox" hidden style="display:grid;gap:6px;border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
+          <b>או מקליטים לבד, מהטלפון</b>
+          <p>הברכה עולה על המסך משפט אחרי משפט, הקול מתנקה אוטומטית ונכנסת מוזיקת רקע. מקליטים ושומעים בחינם, ומשלמים רק כדי לקבל את הקובץ.</p>
+          <a class="leadBtn" id="recLink" href="#" target="_blank" rel="noopener" style="background:var(--accent,#6b2fb3)">להקלטה מהטלפון ←</a>
+        </div>
       </div>
       <p class="note">לוחצים על משפט כדי לסמן אותו: אפשר לכתוב בו ישירות, לבקש ניסוח אחר או למחוק. הזמן מחושב לפי קריאה רגועה, בערך 2 מילים בשנייה. הפרטים נשמרים אוטומטית במכשיר שלכם. <button type="button" class="linkBtn" id="reset">התחלה מחדש</button></p>
     </div>
@@ -783,6 +788,12 @@ let started=false;$('f').addEventListener('input',()=>{if(!started){started=true
 $('f').addEventListener('submit',()=>{if($('name').value.trim())track('blessing_generate',{blessing_event:val('ev'),blessing_from:$('from').value,blessing_length:val('len'),blessing_style:val('style')})});
 $('copy').addEventListener('click',()=>track('blessing_copy'));
 $('wa').addEventListener('click',()=>track('blessing_share_whatsapp'));
+// self-recording link: hidden until the studio turns it on (REC_ON), testable with ?rec=1 on the page
+const REC_ON=false,REC_URL='https://kolotstudios.github.io/widgets/recorder.html';
+const recEnabled=(()=>{if(REC_ON)return true;let q=location.search;try{q+=window.parent.location.search}catch(e){}return /[?&]rec=1\b/.test(q)})();
+function recHref(){const t=fullText();if(!t.trim())return '#';const self=$('from').value==='self';
+ const p=new URLSearchParams({mode:self?'drasha':'blessing',name:self?$('name').value.trim():($('sign').value||'').trim(),for:$('name').value.trim(),text:t,src:'gen'});return REC_URL+'?'+p.toString()}
+if(recEnabled){$('recBox').hidden=false;$('recLink').addEventListener('click',e=>{const h=recHref();if(h==='#'){e.preventDefault();return}e.currentTarget.href=h;track('blessing_record_self',{blessing_event:val('ev')})})}
 $('leadWa').addEventListener('click',()=>track('blessing_lead_whatsapp',{blessing_event:val('ev')}));
 $('again').addEventListener('click',()=>track('blessing_regenerate'));
 

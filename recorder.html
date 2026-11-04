@@ -145,6 +145,11 @@ h3{font:700 15px var(--f-body);margin:0;color:var(--muted);letter-spacing:.02em}
 .adv{border-top:1px solid var(--line);padding-top:12px}
 .adv summary{cursor:pointer;font-weight:700;color:var(--muted);list-style-position:inside}
 .adv[open] summary{margin-bottom:6px}
+.paybox{border:1.5px solid var(--accent);border-radius:14px;padding:16px;display:grid;gap:10px;background:var(--soft)}
+.paybox .fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:480px){.paybox .fields{grid-template-columns:1fr}}
+.paybox .code{font-size:20px;font-weight:700;letter-spacing:.08em;direction:ltr;unicode-bidi:isolate}
+.banner{border:1.5px solid var(--accent);background:var(--soft);border-radius:14px;padding:12px 14px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .transport{position:sticky;bottom:0;z-index:20;display:flex;gap:12px;align-items:center;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin-bottom:env(safe-area-inset-bottom,0px);box-shadow:0 -4px 18px rgba(0,0,0,.08)}
 .playbtn{flex:none;width:48px;height:48px;border-radius:50%;border:0;background:var(--accent);color:var(--accent-ink);font-size:18px;cursor:pointer}
 .tp-main{flex:1;min-width:0;display:grid;gap:2px}
@@ -218,6 +223,7 @@ h3{font:700 15px var(--f-body);margin:0;color:var(--muted);letter-spacing:.02em}
         </div>
         <p class="note" id="modeNote"></p>
       </div>
+      <div class="banner" id="resumeBox" hidden><span>יש לך הקלטה שהתחלת ועוד לא סיימת.</span><a class="btn small primary" id="resumeLink" href="#">להמשיך אותה</a></div>
       <div class="card">
         <div class="row between"><h2 id="textTitle">הטקסט</h2><button class="btn small" id="sampleBtn" type="button">טען טקסט לדוגמה</button></div>
         <p class="note" id="editNote" hidden></p>
@@ -325,7 +331,19 @@ h3{font:700 15px var(--f-body);margin:0;color:var(--muted);letter-spacing:.02em}
       </details>
 
       <button class="btn primary big" id="renderBtn" type="button">הורדת הקובץ הסופי</button>
-      <p class="note" id="demoNote" hidden>זה מצב הדגמה: אפשר להקליט ולשמוע את התוצאה עם המוסיקה. הקובץ הסופי מתקבל אחרי רכישה, עם קישור אישי להקלטה.</p>
+      <p class="note" id="demoNote" hidden>אפשר להקליט ולשמוע את התוצאה בחינם. בהשמעה יש צליל סימון עדין, והקובץ הסופי הנקי נפתח אחרי התשלום.</p>
+      <div class="paybox" id="payBox" hidden>
+        <h3 style="color:var(--ink)">קבלת הקובץ הסופי</h3>
+        <p class="note" id="payPrice"></p>
+        <p class="note">קוד ההקלטה שלך: <span class="code" id="payCode"></span></p>
+        <div class="fields">
+          <div><label for="payName">שם מלא</label><input type="text" id="payName" autocomplete="name"></div>
+          <div><label for="payPhone">טלפון</label><input type="text" id="payPhone" inputmode="tel" autocomplete="tel" dir="ltr"></div>
+        </div>
+        <button class="btn primary" id="payGo" type="button">למעבר לתשלום</button>
+        <p class="status" id="payStatus"></p>
+        <p class="note">ההקלטה נשמרת אצלנו. כדי לחזור אליה מכל זמן: <button class="btn small" id="copyMyLink" type="button">העתקת הקישור להקלטה</button></p>
+      </div>
       <p class="status" id="renderStatus"></p>
       <div id="result" hidden style="display:grid;gap:10px">
         <div class="row">
@@ -769,6 +787,21 @@ $("#sampleBtn").onclick=function(){S.blessers=SAMPLES[S.mode].map(function(x){re
 $("#toRecord").onclick=function(){
   var ok=S.blessers.filter(function(b){return wc(b.text)>0});
   if(!ok.length){$("#setupStatus").textContent="צריך טקסט לפני שמקליטים. אפשר לטעון טקסט לדוגמה.";return}
+  if(!CLOUD.on&&API&&!S.localOnly){
+    var bt=$("#toRecord");bt.disabled=true;$("#setupStatus").textContent="פותחים לך הקלטה שנשמרת אוטומטית…";
+    CLOUD.dev=CLOUD.dev||devId();
+    var qp=new URLSearchParams(location.search),forName=(qp.get("for")||"").trim(),dn=(ok[0].name||"").trim();
+    cloudApi("rc_c_draft",{mode:S.mode,name:forName?(dn?dn+" ל"+forName:forName):dn,src:new URLSearchParams(location.search).get("src")||"",blessers:ok.map(function(b){return {name:b.name,text:b.text}})}).then(function(r){
+      bt.disabled=false;
+      if(!r.ok){S.localOnly=true;$("#setupStatus").textContent=(r.error||"לא הצלחנו לשמור בענן.")+" אפשר להמשיך להקליט ולשמוע, בלי שמירה.";return}
+      CLOUD.on=true;CLOUD.k=r.k;CLOUD.draft=true;CLOUD.paid=false;CLOUD.code=r.code;CLOUD.fixedMode=true;S.editsLeft=5;
+      try{history.replaceState(null,"",location.pathname+"#k="+r.k)}catch(e){location.hash="k="+r.k}
+      try{localStorage.setItem(DRAFT_LS,JSON.stringify({k:r.k,at:Date.now()}))}catch(e){}
+      S.blessers=ok;S.blessers.forEach(function(b,j){resplit(b);b.si=j});markSaved();
+      payUI();cloudSettingsSoon();$("#setupStatus").textContent="";goRecord();
+    }).catch(function(){bt.disabled=false;S.localOnly=true;$("#setupStatus").textContent="אין חיבור לשרת כרגע. אפשר להמשיך להקליט ולשמוע, בלי שמירה."});
+    return;
+  }
   if(CLOUD.on&&(!S.textLocked||textDirty()||nameSnap()!==S.savedNames)){
     var btn=$("#toRecord");btn.disabled=true;$("#setupStatus").textContent="שומרים את הטקסט…";
     // pending uploads use sentence numbers, so they go out before the text changes
@@ -1499,9 +1532,31 @@ function buildGraph(ctx,T,music,set,when0,offset){
     pts.forEach(function(p){if(p[0]>offset) duck.gain.linearRampToValueAtTime(p[1],when0+p[0]-offset)});
     ms.connect(duck);duck.connect(N.mus);N.mus.connect(master);ms.start(when0,offset);N.sources.push(ms);
   }
+  if(set.wm) addWatermark(ctx,N,T,when0,offset);
   applySet(N,set,ctx,false);
   return N;
 }
+// soft two-note chime every 13 s while the recording is not paid yet
+var CHIME={};
+function chimeBuf(ctx){
+  var sr=ctx.sampleRate;if(CHIME[sr]) return CHIME[sr];
+  var len=Math.round(sr*1.7),b=ctx.createBuffer(1,len,sr),d=b.getChannelData(0);
+  [[1568,0,1],[2093,0.17,0.8]].forEach(function(n){
+    var st=Math.round(n[1]*sr);
+    for(var i=st;i<len;i++){var t=(i-st)/sr,e=Math.exp(-t*3.2)*Math.min(1,t*400);d[i]+=n[2]*e*(Math.sin(2*Math.PI*n[0]*t)+0.25*Math.sin(2*Math.PI*n[0]*2.01*t))*0.3}
+  });
+  return CHIME[sr]=b;
+}
+function addWatermark(ctx,N,T,when0,offset){
+  var b=chimeBuf(ctx),g=ctx.createGain();g.gain.value=0.35;g.connect(N.master);
+  for(var t=3;t<T.total;t+=13){
+    if(t+1.7<=offset) continue;
+    var s=ctx.createBufferSource();s.buffer=b;s.connect(g);
+    if(t<offset) s.start(when0,offset-t);else s.start(when0+(t-offset));
+    N.sources.push(s);
+  }
+}
+function needWatermark(){return !(CLOUD.on&&CLOUD.paid)}
 function applySet(N,set,ctx,smooth){
   var p=function(param,v){if(smooth) param.setTargetAtTime(v,ctx.currentTime,0.03);else param.value=v};
   var a=set.aiMix,m=set.nrMix;
@@ -1540,7 +1595,8 @@ function startLive(offset,solo,label){
     var ctx=r[0],T=r[1].T;
     MIXP.ctx=ctx;MIXP.T=T;MIXP.solo=solo||null;MIXP.label=label||"המיקס המלא, עם כל ההגדרות";
     MIXP.offset=Math.min(offset,Math.max(0,T.total-0.5));MIXP.when0=ctx.currentTime+0.06;
-    MIXP.nodes=buildGraph(ctx,T,r[1].music,settings(),MIXP.when0,MIXP.offset);
+    var set=settings();set.wm=needWatermark();
+    MIXP.nodes=buildGraph(ctx,T,r[1].music,set,MIXP.when0,MIXP.offset);
     MIXP.playing=true;MIXP.busy=false;
     $("#playBtn").textContent="❚❚";$("#playBtn").setAttribute("aria-label","עצירה");$("#tpState").textContent=MIXP.label;
     tick();
@@ -1604,33 +1660,83 @@ function exportMix(){
   }).catch(function(err){st.textContent=err&&err.message||"משהו השתבש ביצירת הקובץ.";btn.disabled=false});
 }
 function submitMix(){
-  var btn=$("#renderBtn"),st=$("#renderStatus");
-  btn.disabled=true;
+  var btn=$("#renderBtn"),st=$("#renderStatus"),fin=null,mp3=null;
+  if(!CLOUD.paid){togglePay(true);return}
+  btn.disabled=true;$("#result").hidden=true;
   cloudFlush().then(function(){
     if(CLOUD.failed) throw new Error("חלק מההקלטות עוד לא נשמרו. בודקים את החיבור ומנסים שוב.");
     return renderFinal(st);
   }).then(function(f){
-    st.textContent="מכינים MP3…";
+    st.textContent="מכינים MP3…";fin=f;
     return encodeMp3(f.a,f.b,OUT_SR);
   }).then(function(blob){
     if(!blob) throw new Error("לא הצלחנו להכין MP3. מנסים שוב.");
-    st.textContent="שולחים לאולפן…";
+    st.textContent="שומרים עותק באולפן…";mp3=blob;
     return blobB64(blob).then(function(b64){return cloudApi("rc_c_submit",{mp3:b64,settings:settings(),music:S.music})});
   }).then(function(r){
-    if(!r.ok) throw new Error(r.error||"השליחה נכשלה.");
-    CLOUD.submitted=true;setSubmittedUI();
-  }).catch(function(err){st.textContent=err&&err.message||"השליחה נכשלה.";btn.disabled=false});
+    if(!r.ok){if(r.unpaid){CLOUD.paid=false;payUI()}throw new Error(r.error||"השמירה נכשלה.")}
+    $("#dlMp3").href=URL.createObjectURL(mp3);$("#dlMp3").hidden=false;
+    $("#dlWav").href=URL.createObjectURL(encodeWav(fin.a,fin.b,OUT_SR));$("#result").hidden=false;
+    $("#resultNote").textContent="אורך הקובץ: "+fmtDur(fin.duration)+". עותק נשמר גם אצלנו באולפן. אם תשנו משהו, אפשר ליצור את הקובץ שוב.";
+    st.textContent="הקובץ מוכן ✓";btn.disabled=false;btn.textContent="יצירת הקובץ מחדש";
+  }).catch(function(err){st.textContent=err&&err.message||"השמירה נכשלה.";btn.disabled=false});
 }
 function setSubmittedUI(){
-  var btn=$("#renderBtn");btn.disabled=true;btn.textContent="נשלח לאולפן ✓";
-  $("#renderStatus").textContent="תודה! ההקלטה הגיעה לאולפני קולות. נעבור עליה ונחזור אליכם עם הקובץ הסופי.";
+  var btn=$("#renderBtn");btn.disabled=true;btn.textContent="ההקלטה נסגרה";
+  $("#renderStatus").textContent="ההקלטה הזו נסגרה. לשינויים או לקובץ נוסף פנו לאולפני קולות.";
   document.querySelectorAll("#takes .btn").forEach(function(b){if(b.textContent!=="▶") b.disabled=true});
 }
-$("#renderBtn").onclick=function(){if(CLOUD.on) submitMix();else exportMix()};
+$("#renderBtn").onclick=function(){if(CLOUD.on) submitMix();else window.open(PAY_URL,"_blank","noopener")};
+function payUI(){
+  var unpaid=CLOUD.on&&!CLOUD.paid;
+  $("#modeBadge").textContent=!CLOUD.on?"מצב הדגמה: ההקלטות לא נשמרות":(unpaid?"הקלטת ניסיון בחינם · נשמרת אוטומטית":"ההקלטות נשמרות אוטומטית");
+  $("#demoNote").hidden=!(unpaid||!CLOUD.on);
+  if(!CLOUD.submitted) $("#renderBtn").textContent=!CLOUD.on?"להזמנת הקובץ הסופי":(unpaid?"לקבלת הקובץ הסופי, בלי צליל הסימון":"יצירת הקובץ והורדה");
+  if(!unpaid) $("#payBox").hidden=true;
+  $("#payCode").textContent=CLOUD.code||"";
+  var pr=PRICES[S.mode];$("#payPrice").textContent=pr?"המחיר: "+pr:"";$("#payPrice").hidden=!pr;
+}
+function togglePay(show){
+  $("#payBox").hidden=!show;if(show){payUI();$("#payBox").scrollIntoView({behavior:"smooth",block:"center"})}
+}
+var PAYPOLL=null;
+function pollPaid(){
+  if(!CLOUD.on||CLOUD.paid) return;
+  cloudApi("rc_c_state").then(function(r){
+    if(r.ok&&r.state&&r.state.paid){
+      CLOUD.paid=true;clearInterval(PAYPOLL);PAYPOLL=null;payUI();
+      $("#renderStatus").textContent="התשלום התקבל, תודה! אפשר ליצור את הקובץ הסופי.";
+      if(MIXP.playing&&!MIXP.solo) restartIfPlaying();
+    }
+  }).catch(function(){});
+}
+function startPayPoll(){if(!PAYPOLL) PAYPOLL=setInterval(function(){if(!document.hidden) pollPaid()},15000)}
+document.addEventListener("visibilitychange",function(){if(!document.hidden&&CLOUD.on&&!CLOUD.paid&&PAYPOLL) pollPaid()});
+$("#payGo").onclick=function(){
+  var name=$("#payName").value.trim(),phone=$("#payPhone").value.replace(/\D/g,"");
+  if(phone.length<9){$("#payStatus").textContent="צריך מספר טלפון, כדי שנזהה את התשלום שלך.";return}
+  var w=window.open("about:blank","_blank");
+  $("#payGo").disabled=true;$("#payStatus").textContent="רגע…";
+  cloudApi("rc_c_contact",{name:name,phone:phone}).then(function(r){
+    $("#payGo").disabled=false;
+    if(!r.ok){if(w) w.close();$("#payStatus").textContent=r.error||"לא הצלחנו לשמור את הפרטים.";return}
+    if(w) w.location.href=PAY_URL;else window.open(PAY_URL,"_blank","noopener");
+    $("#payStatus").textContent="עמוד התשלום נפתח בלשונית חדשה. אחרי התשלום הקובץ הסופי ייפתח כאן, אפשר להשאיר את הדף פתוח או לחזור אליו מהקישור.";
+    startPayPoll();
+  }).catch(function(){if(w) w.close();$("#payGo").disabled=false;$("#payStatus").textContent="אין חיבור לאינטרנט. מנסים שוב."});
+};
+$("#copyMyLink").onclick=function(){
+  var u=location.origin+location.pathname+"#k="+CLOUD.k,b=this;
+  (navigator.clipboard?navigator.clipboard.writeText(u):Promise.reject()).then(function(){b.textContent="הועתק ✓"}).catch(function(){prompt("הקישור להקלטה:",u)});
+};
 
 /* ---------- cloud: project link, device lock, uploads ---------- */
 var API="https://kolot-recorder.kolot-studios.workers.dev";
-var CLOUD={on:false,k:null,dev:null,q:[],busy:false,failed:0,submitted:false,fixedMode:false,setT:null};
+var CLOUD={on:false,k:null,dev:null,q:[],busy:false,failed:0,submitted:false,fixedMode:false,setT:null,paid:true,draft:false,code:""};
+// payment: free drafts record and play with a soft chime; the clean file opens once the studio marks the draft paid
+var PAY_URL="https://kolot.kala-crm.co.il/"+encodeURIComponent("רכישה");
+var PRICES={blessing:"",family:"200 ₪ · עד 5 מברכים",drasha:"120 ₪"};
+var DRAFT_LS="kolot_rec_draft";
 function devId(){
   var v=null;try{v=localStorage.getItem("kolot_rec_dev")}catch(e){}
   if(!v){var m=document.cookie.match(/(?:^|; )kolot_rec_dev=([a-f0-9]{32})/);if(m) v=m[1]}
@@ -1719,6 +1825,9 @@ function cloudOpen(){
     S.mode=r.mode;CLOUD.fixedMode=true;S.maxBlessers=r.maxBlessers;S.textLocked=r.textLocked;
     S.blessers=(r.blessers&&r.blessers.length?r.blessers:[{name:"",text:""}]).map(function(b,j){var x=newBlesser(b.name,b.text);if(r.blessers&&r.blessers.length) x.si=j;return x});
     S.editsLeft=r.editsLeft!=null?r.editsLeft:0;markSaved();
+    CLOUD.paid=r.paid!==false;CLOUD.draft=!!r.draft;CLOUD.code=r.code||"";payUI();
+    if(CLOUD.draft){try{localStorage.setItem(DRAFT_LS,JSON.stringify({k:CLOUD.k,at:Date.now()}))}catch(e){}}
+    if(r.contact&&!CLOUD.paid) startPayPoll();
     if(r.state&&r.state.status!=="open") CLOUD.submitted=true;
     if(r.settings) applySettings(r.settings,r.music);
     MLIB.cat="fit";defaultMusic();renderMusic();
@@ -1775,7 +1884,7 @@ function encodeMp3(L,R,sr){
 
 window.addEventListener("beforeunload",function(e){if(CLOUD.on&&!CLOUD.q.length&&!CLOUD.busy) return;if(S.blessers.some(function(b){return b.takes.some(Boolean)})){e.preventDefault();e.returnValue=""}});
 
-window.__kolotDebug={CLOUD:CLOUD,cloudQueue:cloudQueue,cloudFlush:cloudFlush,submitMix:submitMix,cloudOpen:cloudOpen,unwav:unwav,wavMono:wavMono,setApi:function(u){API=u},S:S,quickCheck:quickCheck,ensureClean:ensureClean,DSP:DSP,render:exportMix,startLive:startLive,stopLive:stopLive,MIXP:MIXP,settings:settings,showReview:showReview,renderReview:renderReview,splitText:splitText,resplit:resplit,musicBuffer:musicBuffer,setMusic:setMusic,MLIB:MLIB,duckPoints:duckPoints,buildTimeline:buildTimeline,versOf:versOf};
+window.__kolotDebug={CLOUD:CLOUD,cloudQueue:cloudQueue,cloudFlush:cloudFlush,submitMix:submitMix,cloudOpen:cloudOpen,unwav:unwav,wavMono:wavMono,setApi:function(u){API=u},S:S,quickCheck:quickCheck,ensureClean:ensureClean,DSP:DSP,startLive:startLive,stopLive:stopLive,MIXP:MIXP,settings:settings,showReview:showReview,renderReview:renderReview,splitText:splitText,resplit:resplit,musicBuffer:musicBuffer,setMusic:setMusic,MLIB:MLIB,duckPoints:duckPoints,buildTimeline:buildTimeline,versOf:versOf,pollPaid:pollPaid};
 
 /* ---------- live processing timers ---------- */
 setInterval(function(){
@@ -1783,7 +1892,7 @@ setInterval(function(){
 },1000);
 
 /* ---------- visible errors (prototype) ---------- */
-var VERSION="2026-11-04h";
+var VERSION="2026-11-04i";
 function reportErr(msg){
   var el=document.getElementById("errBox");
   if(!el){el=document.createElement("p");el.id="errBox";el.className="note warn";el.style.cssText="position:fixed;inset:auto 8px calc(8px + env(safe-area-inset-bottom,0px)) 8px;z-index:99;background:var(--paper);border:1px solid var(--warn);border-radius:10px;padding:8px 10px;margin:0";document.body.appendChild(el)}
@@ -1798,13 +1907,12 @@ applyPreset("natural",true);applyLevel("normal",true);
 var hk=(location.hash.match(/k=([a-f0-9]{20,40})/)||[])[1];
 if(hk){
   CLOUD.on=true;CLOUD.k=hk;CLOUD.dev=devId();
-  $("#modeBadge").textContent="ההקלטות נשמרות אוטומטית";$("#renderBtn").textContent="סיום ושליחה לאולפן";
+  payUI();
   if(!API) gate("המערכת עוד לא חוברה לשרת.",true);else cloudOpen();
 } else {
-  loadText();renderSetup();
-  $("#renderBtn").textContent="להזמנת הקובץ הסופי";
-  $("#renderBtn").onclick=function(){window.open("https://kolot.kala-crm.co.il/"+encodeURIComponent("רכישה"),"_blank","noopener")};
-  $("#demoNote").hidden=false;
+  CLOUD.dev=devId();loadText();renderSetup();payUI();
+  try{var dr=JSON.parse(localStorage.getItem(DRAFT_LS)||"null");
+    if(dr&&dr.k&&Date.now()-dr.at<14*86400000){$("#resumeBox").hidden=false;$("#resumeLink").href=location.pathname+"#k="+dr.k;$("#resumeLink").onclick=function(e){e.preventDefault();location.replace(location.pathname+"#k="+dr.k);location.reload()}}}catch(e){}
 }
 if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){$("#setupStatus").textContent="הדפדפן הזה לא מאפשר הקלטה. כדאי לפתוח את הקישור ב-Chrome או ב-Safari.";$("#toRecord").disabled=true}
 })();

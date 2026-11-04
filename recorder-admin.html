@@ -7,48 +7,74 @@
 <title>ניהול מקליט הברכות</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700&family=Assistant:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap">
 <style>
-/* Layout: one working column — login, new-link form, then the list of projects. */
+/* Layout: header, login, new-link card, then the list of recordings as cards with filters. Same look as the recorder. */
 :root{
-  --bg:#f7f3f8;--paper:#ffffff;--ink:#251b2e;--muted:#6f6479;--line:#e6dcea;--accent:#6b2fb3;--accent-ink:#ffffff;--soft:#efe6f8;--gold:#a0782a;
-  --ok:#2c8553;--warn:#a85a14;--bad:#b3263b;
-  --f-display:"Frank Ruhl Libre","David Libre",Georgia,serif;--f-body:"Assistant",system-ui,"Segoe UI",Arial,sans-serif;color-scheme:light}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#16111c;--paper:#201929;--ink:#f0eaf5;--muted:#a99db6;--line:#382d45;--accent:#b78bf0;--accent-ink:#1b1325;--soft:#2d2340;--gold:#d6b066;--ok:#5cc58a;--warn:#e39a52;--bad:#ff7a8c;color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#16111c;--paper:#201929;--ink:#f0eaf5;--muted:#a99db6;--line:#382d45;--accent:#b78bf0;--accent-ink:#1b1325;--soft:#2d2340;--gold:#d6b066;--ok:#5cc58a;--warn:#e39a52;--bad:#ff7a8c;color-scheme:dark}
+  --bg:#f7f3f8;--paper:#ffffff;--ink:#251b2e;--muted:#6f6479;--line:#e6dcea;--accent:#6b2fb3;--accent-ink:#ffffff;--soft:#efe6f8;
+  --ok:#2c8553;--ok-soft:#e3f3ea;--warn:#a85a14;--warn-soft:#fbeedd;--bad:#b3263b;
+  --f:"Rubik",system-ui,"Segoe UI",Arial,sans-serif;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#16111c;--paper:#201929;--ink:#f0eaf5;--muted:#a99db6;--line:#382d45;--accent:#b78bf0;--accent-ink:#1b1325;--soft:#2d2340;--ok:#5cc58a;--ok-soft:#1d3327;--warn:#e39a52;--warn-soft:#3a2a18;--bad:#ff7a8c;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#16111c;--paper:#201929;--ink:#f0eaf5;--muted:#a99db6;--line:#382d45;--accent:#b78bf0;--accent-ink:#1b1325;--soft:#2d2340;--ok:#5cc58a;--ok-soft:#1d3327;--warn:#e39a52;--warn-soft:#3a2a18;--bad:#ff7a8c;color-scheme:dark}
 [hidden]{display:none!important}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--f-body);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
-.wrap{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
-.brand{font-size:13px;letter-spacing:.08em;color:var(--gold);font-weight:700}
-h1{font-family:var(--f-display);font-size:30px;margin:0}
-h2{font-family:var(--f-display);font-size:21px;margin:0}
-.card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--f);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:calc(18px + env(safe-area-inset-top,0px)) 40px}
+.wrap{max-width:900px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+header{display:grid;gap:4px}
+.brand{font-size:14px;color:var(--accent);font-weight:600}
+h1{font-size:clamp(24px,4.6vw,30px);font-weight:700;margin:0;line-height:1.2}
+h2{font-size:19px;font-weight:600;margin:0}
+.sub{color:var(--muted);margin:0}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
-label{font-weight:600;font-size:14px;display:grid;gap:4px}
-input,select{font:16px var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 11px;width:100%}
-.btn{border:1px solid var(--line);background:var(--paper);color:var(--ink);font:600 14px var(--f-body);padding:8px 13px;border-radius:10px;cursor:pointer}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.btn.danger{color:var(--bad);border-color:var(--bad)}
-.btn:disabled{opacity:.45}
+label{font-weight:500;font-size:14px;display:grid;gap:4px}
+input,select{font:16px var(--f);color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:10px;padding:9px 11px;width:100%}
+.btn{border:1.5px solid var(--line);background:var(--paper);color:var(--ink);font:500 14px var(--f);padding:8px 14px;border-radius:12px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn.okb{background:var(--ok);border-color:var(--ok);color:#fff;font-weight:600}
+.btn.danger{color:var(--bad)}
+.btn.danger:hover{border-color:var(--bad)}
+.btn:disabled{opacity:.45;cursor:default}
 :focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.between{justify-content:space-between}
 .note{font-size:13px;color:var(--muted);margin:0}
-.status{font-size:14px;min-height:1.3em;color:var(--muted)}
-.link{direction:ltr;unicode-bidi:isolate;font-size:13px;background:var(--soft);padding:8px 10px;border-radius:8px;word-break:break-all;user-select:all}
-.item{border-top:1px solid var(--line);padding:12px 0;display:grid;gap:8px}
-.item:first-child{border-top:0}
-.item .top{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
-.name{font-weight:700}
-.meta{font-size:13px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap}
-.chip{font-size:12px;font-weight:700;padding:1px 9px;border-radius:99px;border:1px solid currentColor}
-.s-open{color:var(--accent)}.s-submitted{color:var(--warn)}.s-done{color:var(--ok)}.s-expired{color:var(--muted)}
+.status{font-size:14px;min-height:1.3em;color:var(--muted);margin:0}
+.link{direction:ltr;unicode-bidi:isolate;font-size:13px;background:var(--soft);padding:8px 10px;border-radius:10px;word-break:break-all;user-select:all}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media (max-width:560px){.stats{grid-template-columns:repeat(2,1fr)}}
+.stat{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:grid;gap:2px}
+.stat b{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
+.stat span{font-size:13px;color:var(--muted)}
+.stat.hot{border-color:var(--warn);background:var(--warn-soft)}
+.filters{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.filters button{flex:none;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);font:500 14px var(--f);padding:6px 14px;border-radius:999px;cursor:pointer}
+.filters button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+#items{display:grid;gap:10px}
+.item{border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:10px;background:var(--paper)}
+.item.attn{border-color:var(--warn);box-shadow:inset 3px 0 0 var(--warn)}
+.item .top{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center}
+.name{font-weight:600;font-size:17px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.meta{font-size:13px;color:var(--muted);display:flex;gap:6px 14px;flex-wrap:wrap}
+.contact{display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:14px;background:var(--soft);border-radius:10px;padding:8px 10px}
+.contact a{color:var(--accent);font-weight:600}
+.chip{font-size:12px;font-weight:600;padding:2px 10px;border-radius:99px;background:var(--soft);color:var(--accent);white-space:nowrap}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}
+.chip.warn{background:var(--warn-soft);color:var(--warn)}
+.chip.mute{background:transparent;border:1px solid var(--line);color:var(--muted)}
+.more summary{cursor:pointer;font-size:13px;color:var(--muted);list-style:none;display:inline-flex}
+.more summary::-webkit-details-marker{display:none}
+.more[open] summary{margin-bottom:8px}
 audio{width:100%}
+.ltr{direction:ltr;unicode-bidi:isolate}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header><div class="brand">אולפני קולות</div><h1>ניהול מקליט הברכות</h1></header>
+  <header><div class="brand">אולפני קולות</div><h1>ניהול מקליט הברכות</h1><p class="sub">קישורים ללקוחות, הקלטות ניסיון שממתינות לתשלום, וקבצים סופיים.</p></header>
+  <div class="stats" id="stats" hidden></div>
 
   <section class="card" id="login">
     <h2 id="loginTitle">כניסה</h2>
@@ -59,7 +85,7 @@ audio{width:100%}
   </section>
 
   <section class="card" id="create" hidden>
-    <h2>קישור הקלטה חדש</h2>
+    <h2>קישור הקלטה חדש (ללקוח ששילם)</h2>
     <div class="grid">
       <label>שם הלקוח<input id="cName" placeholder="למשל: משפחת לוי – בר מצווה של איתי"></label>
       <label>מספר הזמנה בקאלה<input id="cOrder" inputmode="numeric" placeholder="16588"></label>
@@ -76,7 +102,9 @@ audio{width:100%}
   </section>
 
   <section class="card" id="list" hidden>
-    <div class="row" style="justify-content:space-between"><h2>הקלטות</h2><button class="btn" id="refresh" type="button">רענון</button></div>
+    <div class="row between"><h2>הקלטות</h2><button class="btn" id="refresh" type="button">רענון</button></div>
+    <div class="filters" id="filters" role="group" aria-label="סינון"></div>
+    <input type="search" id="q" placeholder="חיפוש לפי שם, טלפון או קוד">
     <div id="items"></div>
     <p class="status" id="listStatus"></p>
   </section>
@@ -99,7 +127,7 @@ function copy(text,btn){
   if(navigator.clipboard) navigator.clipboard.writeText(text).then(done,function(){prompt("העתקה:",text)});else prompt("העתקה:",text);
 }
 function msgFor(name,k){
-  return "שלום"+(name?" "+name.split(/[–-]/)[0].trim():"")+"! 🎙️\nזה הקישור להקלטת הברכה מהנייד, של אולפני קולות:\n"+linkFor(k)+"\nפותחים אותו בטלפון שממנו מקליטים (הקישור ננעל למכשיר הראשון שפותח אותו), מקליטים משפט אחרי משפט, וכשמסיימים לוחצים \"סיום ושליחה לאולפן\".";
+  return "שלום"+(name?" "+name.split(/[–-]/)[0].trim():"")+"! 🎙️\nזה הקישור להקלטת הברכה מהנייד, של אולפני קולות:\n"+linkFor(k)+"\nפותחים אותו בטלפון שממנו מקליטים (הקישור ננעל למכשיר הראשון שפותח אותו), מקליטים משפט אחרי משפט, וכשמסיימים לוחצים \"יצירת הקובץ והורדה\".";
 }
 function boot(){
   if(!API){$("#loginStatus").textContent="המערכת עוד לא חוברה לשרת.";$("#loginBtn").disabled=true;return}
@@ -140,57 +168,106 @@ $("#copyLink").onclick=function(){copy(linkFor(lastK),this)};
 $("#copyMsg").onclick=function(){copy(msgFor(lastName,lastK),this)};
 $("#refresh").onclick=load;
 var MODES={blessing:"ברכה",family:"ברכות משפחה",drasha:"דרשה"};
+var ITEMS=[],FILTER="all";
+var FILTERS=[["all","הכול"],["waiting","ממתינים לתשלום"],["drafts","ניסיון בחינם"],["paid","שולמו"],["final","עם קובץ סופי"]];
 function statusOf(it){
-  if(it.state.status==="done") return ["s-done","הושלם"];
-  if(it.state.status==="submitted") return ["s-submitted","הוגש – ממתין לאישור"];
-  if(it.state.expired) return ["s-expired","פג תוקף"];
-  return ["s-open",it.takes?"בהקלטה":"טרם התחיל"];
+  if(it.state.status==="done") return ["ok","הושלם"];
+  if(it.state.expired) return ["mute","פג תוקף"];
+  if(!it.state.paid) return it.contact?["warn","ביקש לשלם"]:["","ניסיון בחינם"];
+  if(it.final) return ["ok","קובץ מוכן"];
+  return ["",it.takes?"בהקלטה":"טרם התחיל"];
 }
+function waiting(it){return !it.state.paid&&!!it.contact&&!it.state.expired}
 function fmtDate(t){return new Date(t).toLocaleDateString("he-IL",{day:"numeric",month:"numeric",hour:"2-digit",minute:"2-digit"})}
 function load(){
   $("#listStatus").textContent="טוען…";
   call("rc_list").then(function(r){
     if(!r.ok){$("#listStatus").textContent=r.error;return}
-    $("#listStatus").textContent=r.items.length?"":"עוד אין קישורים.";
-    var box=$("#items");box.innerHTML="";
-    r.items.forEach(function(it){
-      var el=document.createElement("div");el.className="item";
-      var st=statusOf(it);
-      var top=document.createElement("div");top.className="top";
-      var nm=document.createElement("span");nm.className="name";nm.textContent=it.name||"(ללא שם)";
-      var ch=document.createElement("span");ch.className="chip "+st[0];ch.textContent=st[1];
-      top.append(nm,ch);
-      var meta=document.createElement("div");meta.className="meta";
-      [MODES[it.mode]||it.mode,it.orderId?"הזמנה "+it.orderId:"",it.takes+" משפטים",it.edits?(it.edits+" שינויי טקסט"):"",it.state.device?("נפתח ב-"+(it.state.devices||1)+" מכשירים"):"עוד לא נפתח","עודכן "+fmtDate(it.updated),"בתוקף עד "+new Date(it.state.expires).toLocaleDateString("he-IL")]
-        .filter(Boolean).forEach(function(t){var s=document.createElement("span");s.textContent=t;meta.appendChild(s)});
-      var acts=document.createElement("div");acts.className="row";
-      var btn=function(t,fn,cls){var b=document.createElement("button");b.type="button";b.className="btn "+(cls||"");b.textContent=t;b.onclick=function(){fn(b)};acts.appendChild(b);return b};
-      btn("העתקת קישור",function(b){copy(linkFor(it.k),b)});
-      btn("העתקת הודעה",function(b){copy(msgFor(it.name,it.k),b)});
-      if(it.final) btn("▶ הקובץ שהוגש",function(b){
-        b.disabled=true;b.textContent="טוען…";
-        call("rc_final",{k:it.k}).then(function(x){
-          b.remove();if(!x.ok) return;
-          var bin=atob(x.mp3),u=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i);
-          var url=URL.createObjectURL(new Blob([u],{type:"audio/mpeg"}));
-          var au=document.createElement("audio");au.controls=true;au.src=url;
-          var a=document.createElement("a");a.className="btn";a.href=url;a.download=(it.name||it.k)+".mp3";a.textContent="הורדת MP3";
-          el.append(au,a);
-        });
-      });
-      if(it.state.device) btn("איפוס מכשיר",function(){meta_(it.k,{resetDevice:true})});
-      if(it.state.status!=="open") btn("פתיחה מחדש להקלטה",function(){meta_(it.k,{reopen:true})});
-      if(it.state.status==="submitted") btn("סימון כהושלם",function(){meta_(it.k,{done:true})});
-      btn("+14 ימים",function(){meta_(it.k,{extendDays:14})});
-      btn("עוד 5 שינויי טקסט",function(){meta_(it.k,{unlockText:true})});
-      var del=btn("מחיקה",function(b){
-        if(b.dataset.sure){meta_(it.k,{remove:true});return}
-        b.dataset.sure="1";b.textContent="ללחוץ שוב למחיקה";setTimeout(function(){delete b.dataset.sure;b.textContent="מחיקה"},3000);
-      },"danger");
-      el.append(top,meta,acts);box.appendChild(el);
-    });
+    ITEMS=r.items;renderStats();renderList();
   }).catch(function(e){$("#listStatus").textContent=e.message});
 }
+function renderStats(){
+  var n=function(f){return ITEMS.filter(f).length};
+  var w=n(waiting);
+  var data=[[w,"ממתינים לתשלום",w>0],[n(function(it){return !it.state.paid&&!it.state.expired}),"הקלטות ניסיון פתוחות"],[n(function(it){return it.state.paid&&it.state.status==="open"&&!it.state.expired}),"קישורים פעילים"],[n(function(it){return it.final}),"קבצים סופיים"]];
+  var box=$("#stats");box.hidden=false;box.innerHTML="";
+  data.forEach(function(d){var el=document.createElement("div");el.className="stat"+(d[2]?" hot":"");var b=document.createElement("b");b.textContent=d[0];var s=document.createElement("span");s.textContent=d[1];el.append(b,s);box.appendChild(el)});
+  var fb=$("#filters");fb.innerHTML="";
+  FILTERS.forEach(function(f){var b=document.createElement("button");b.type="button";b.textContent=f[1];b.setAttribute("aria-pressed",String(f[0]===FILTER));b.onclick=function(){FILTER=f[0];renderStats();renderList()};fb.appendChild(b)});
+}
+function match(it){
+  if(FILTER==="waiting"&&!waiting(it)) return false;
+  if(FILTER==="drafts"&&it.state.paid) return false;
+  if(FILTER==="paid"&&!it.state.paid) return false;
+  if(FILTER==="final"&&!it.final) return false;
+  var q=$("#q").value.trim();if(!q) return true;
+  var hay=[it.name,it.orderId,it.code,it.contact&&it.contact.name,it.contact&&it.contact.phone].join(" ");
+  return hay.indexOf(q)>=0||hay.indexOf(q.replace(/\D/g,"")||"\u0000")>=0;
+}
+function renderList(){
+  var list=ITEMS.filter(match).sort(function(a,b){return (waiting(b)-waiting(a))||(b.updated-a.updated)});
+  $("#listStatus").textContent=ITEMS.length?(list.length?"":"אין הקלטות שמתאימות לסינון."):"עוד אין הקלטות.";
+  var box=$("#items");box.innerHTML="";
+  list.forEach(function(it){
+    var el=document.createElement("div");el.className="item"+(waiting(it)?" attn":"");
+    var st=statusOf(it);
+    var top=document.createElement("div");top.className="top";
+    var nm=document.createElement("span");nm.className="name";nm.textContent=it.name||(it.contact&&it.contact.name)||"(ללא שם)";if(it.state.draft&&it.contact&&it.contact.name&&it.name) nm.textContent=it.contact.name+" · "+it.name;
+    var chips=document.createElement("div");chips.className="chips";
+    var mk=function(cls,t){var c=document.createElement("span");c.className="chip "+cls;c.textContent=t;chips.appendChild(c)};
+    mk(st[0],st[1]);mk("mute",MODES[it.mode]||it.mode);if(it.state.draft&&it.state.paid) mk("ok","שולם");
+    top.append(nm,chips);el.appendChild(top);
+    if(it.contact||it.code){
+      var ct=document.createElement("div");ct.className="contact";
+      if(it.code){var cd=document.createElement("span");cd.innerHTML="קוד: ";var cb=document.createElement("b");cb.className="ltr";cb.textContent=it.code;cd.appendChild(cb);ct.appendChild(cd)}
+      if(it.contact){
+        if(it.contact.name){var cn=document.createElement("span");cn.textContent=it.contact.name;ct.appendChild(cn)}
+        var ph=it.contact.phone||"",intl=ph.replace(/^0/,"972");
+        var pa=document.createElement("a");pa.href="https://wa.me/"+intl;pa.target="_blank";pa.rel="noopener";pa.className="ltr";pa.textContent=ph;ct.appendChild(pa);
+        var ca=document.createElement("span");ca.className="note";ca.textContent="ביקש לשלם "+fmtDate(it.contact.at);ct.appendChild(ca);
+      }
+      el.appendChild(ct);
+    }
+    var meta=document.createElement("div");meta.className="meta";
+    [it.orderId?"הזמנה "+it.orderId:"",it.src==="gen"?"מהמחולל":"",it.takes+" משפטים",it.edits?(it.edits+" שינויי טקסט"):"",it.finals>1?(it.finals+" קבצים"):"",it.state.device?("נפתח ב-"+(it.state.devices||1)+" מכשירים"):"עוד לא נפתח","עודכן "+fmtDate(it.updated),"בתוקף עד "+new Date(it.state.expires).toLocaleDateString("he-IL")]
+      .filter(Boolean).forEach(function(t){var s=document.createElement("span");s.textContent=t;meta.appendChild(s)});
+    el.appendChild(meta);
+    var acts=document.createElement("div");acts.className="row";
+    var btn=function(parent,t,fn,cls){var b=document.createElement("button");b.type="button";b.className="btn "+(cls||"");b.textContent=t;b.onclick=function(){fn(b)};parent.appendChild(b);return b};
+    if(!it.state.paid) btn(acts,"✓ סימון כשולם",function(b){
+      if(b.dataset.sure){meta_(it.k,{paid:true});return}
+      b.dataset.sure="1";b.textContent="ללחוץ שוב לאישור התשלום";setTimeout(function(){delete b.dataset.sure;b.textContent="✓ סימון כשולם"},3000);
+    },"okb");
+    if(it.final) btn(acts,"▶ הקובץ הסופי",function(b){
+      b.disabled=true;b.textContent="טוען…";
+      call("rc_final",{k:it.k}).then(function(x){
+        b.remove();if(!x.ok) return;
+        var bin=atob(x.mp3),u=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i);
+        var url=URL.createObjectURL(new Blob([u],{type:"audio/mpeg"}));
+        var au=document.createElement("audio");au.controls=true;au.src=url;
+        var a=document.createElement("a");a.className="btn";a.href=url;a.download=(it.name||it.k)+".mp3";a.textContent="הורדת MP3";
+        el.append(au,a);
+      });
+    },"primary");
+    btn(acts,"העתקת קישור",function(b){copy(linkFor(it.k),b)});
+    if(it.state.paid) btn(acts,"העתקת הודעה",function(b){copy(msgFor(it.name,it.k),b)});
+    var more=document.createElement("details");more.className="more";var sm=document.createElement("summary");sm.textContent="עוד פעולות ▾";more.appendChild(sm);
+    var mrow=document.createElement("div");mrow.className="row";more.appendChild(mrow);
+    if(it.state.device) btn(mrow,"איפוס מכשיר",function(){meta_(it.k,{resetDevice:true})});
+    if(it.state.status!=="open") btn(mrow,"פתיחה מחדש",function(){meta_(it.k,{reopen:true})});
+    else btn(mrow,"סימון כהושלם",function(){meta_(it.k,{done:true})});
+    btn(mrow,"+14 ימים",function(){meta_(it.k,{extendDays:14})});
+    btn(mrow,"עוד 5 שינויי טקסט",function(){meta_(it.k,{unlockText:true})});
+    if(it.state.draft&&it.state.paid) btn(mrow,"ביטול סימון התשלום",function(){meta_(it.k,{paid:false})});
+    btn(mrow,"מחיקה",function(b){
+      if(b.dataset.sure){meta_(it.k,{remove:true});return}
+      b.dataset.sure="1";b.textContent="ללחוץ שוב למחיקה";setTimeout(function(){delete b.dataset.sure;b.textContent="מחיקה"},3000);
+    },"danger");
+    acts.appendChild(more);
+    el.appendChild(acts);box.appendChild(el);
+  });
+}
+$("#q").addEventListener("input",renderList);
 function meta_(k,data){call("rc_meta",Object.assign({k:k},data)).then(function(r){if(!r.ok) $("#listStatus").textContent=r.error;load()})}
 boot();
 })();

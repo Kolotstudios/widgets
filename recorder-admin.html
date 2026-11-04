@@ -104,6 +104,17 @@ audio{width:100%}
     <p class="status" id="createStatus"></p>
   </section>
 
+  <section class="card" id="kala" hidden>
+    <div class="row between"><h2>חיבור לקאלה</h2><button class="btn" id="kalaShow" type="button">הצגה</button></div>
+    <p class="note">כשלקוח משלם בקאלה על "ברכה מהטלפון" או "דרשה מהטלפון", קאלה מודיעה לכאן וההקלטה שלו נפתחת לבד. הזיהוי לפי קוד ההקלטה בהערות או לפי הטלפון.</p>
+    <div id="kalaBody" hidden style="display:grid;gap:10px">
+      <p class="note">קוד החיבור (מדביקים אותו בקאלה, בתהליך האוטומטי "הקלטה מהטלפון שולמה", במקום הכתוב PASTE_SECRET_HERE):</p>
+      <div class="row"><span class="link" id="kalaSecret" style="flex:1"></span><button class="btn" id="kalaCopy" type="button">העתקה</button></div>
+      <h3 style="margin:6px 0 0;font-size:15px">תשלומים אחרונים מקאלה</h3>
+      <div id="kalaLog" class="meta" style="display:grid;gap:4px"></div>
+    </div>
+  </section>
+
   <section class="card" id="list" hidden>
     <div class="row between"><h2>הקלטות</h2><button class="btn" id="refresh" type="button">רענון</button></div>
     <div class="filters" id="filters" role="group" aria-label="סינון"></div>
@@ -146,7 +157,7 @@ function login(){
   call("rc_login").then(function(r){
     if(!r.ok){$("#loginStatus").textContent=r.error||"סיסמה שגויה";return}
     try{sessionStorage.setItem("kolot_rec_admin",pass)}catch(e){}
-    $("#login").hidden=true;$("#create").hidden=false;$("#list").hidden=false;load();
+    $("#login").hidden=true;$("#create").hidden=false;$("#list").hidden=false;$("#kala").hidden=false;load();
   });
 }
 $("#loginBtn").onclick=function(){
@@ -219,7 +230,7 @@ function renderList(){
     var nm=document.createElement("span");nm.className="name";nm.textContent=it.name||(it.contact&&it.contact.name)||"(ללא שם)";if(it.state.draft&&it.contact&&it.contact.name&&it.name) nm.textContent=it.contact.name+" · "+it.name;
     var chips=document.createElement("div");chips.className="chips";
     var mk=function(cls,t){var c=document.createElement("span");c.className="chip "+cls;c.textContent=t;chips.appendChild(c)};
-    mk(st[0],st[1]);mk("mute",MODES[it.mode]||it.mode);if(it.state.draft&&it.state.paid) mk("ok","שולם");
+    mk(st[0],st[1]);mk("mute",MODES[it.mode]||it.mode);if(it.state.draft&&it.state.paid) mk("ok",it.paidBy==="kala"?"שולם בקאלה":"שולם");
     top.append(nm,chips);el.appendChild(top);
     if(it.contact||it.code){
       var ct=document.createElement("div");ct.className="contact";
@@ -293,6 +304,17 @@ function renderList(){
   });
 }
 $("#q").addEventListener("input",renderList);
+$("#kalaShow").onclick=function(){
+  var b=this;b.disabled=true;
+  call("rc_kala").then(function(r){
+    b.disabled=false;if(!r.ok){$("#listStatus").textContent=r.error;return}
+    $("#kalaBody").hidden=false;b.hidden=true;$("#kalaSecret").textContent=r.secret;
+    var box=$("#kalaLog");box.innerHTML="";
+    if(!r.log.length) box.textContent="עוד לא התקבלו תשלומים.";
+    r.log.forEach(function(x){var el=document.createElement("span");el.textContent=fmtDate(x.at)+" · הזמנה "+x.order_id+" · "+x.price+" ₪ · "+(x.name||x.phone||"")+" · "+(x.matched?"זוהה ונפתח ✓":"לא זוהה – לסמן ידנית");if(!x.matched) el.style.color="var(--warn)";box.appendChild(el)});
+  }).catch(function(e){b.disabled=false;$("#listStatus").textContent=e.message});
+};
+$("#kalaCopy").onclick=function(){copy($("#kalaSecret").textContent,this)};
 function meta_(k,data){call("rc_meta",Object.assign({k:k},data)).then(function(r){if(!r.ok) $("#listStatus").textContent=r.error;load()})}
 boot();
 })();

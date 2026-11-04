@@ -22,10 +22,22 @@ export default {
   async fetch(req, env) {
     if (req.method === 'OPTIONS') return new Response(null, { headers: H });
     if (req.method !== 'POST') return out({ ok: true, service: 'kolot-recorder' });
-    let d; try { d = JSON.parse(await req.text()); } catch (e) { return out({ ok: false, error: 'bad request' }); }
+    const raw = await req.text();
+    let d; try { d = JSON.parse(raw); } catch (e) { d = lenient(raw); if (!d) return out({ ok: false, error: 'bad request' }); }
     try { return out(await handle(d, env, req.headers.get('CF-Connecting-IP') || '')); } catch (err) { return out({ ok: false, error: String((err && err.message) || err).slice(0, 200) }); }
   }
 };
+
+// Kala fills customer text (comments) into the webhook body as is, so a quote or a line break can break the JSON
+function lenient(raw) {
+  if (!/"action"\s*:\s*"kala_paid"/.test(raw)) return null;
+  const o = { action: 'kala_paid' };
+  for (const key of ['secret', 'page_id', 'price', 'quantity', 'order_id', 'mobile', 'phone', 'name']) {
+    const m = raw.match(new RegExp('"' + key + '"\\s*:\\s*"([^"\\n]*)"')); if (m) o[key] = m[1];
+  }
+  const c = raw.match(/"comments"\s*:\s*"([\s\S]*)"\s*}\s*$/); if (c) o.comments = c[1];
+  return o;
+}
 
 /* ---------- storage helpers ---------- */
 async function getJ(env, key) { const o = await env.BUCKET.get(key); return o ? o.json() : null; }
@@ -45,6 +57,7 @@ const state = (e) => ({ paid: isPaid(e), draft: !!e.draft, nb: e.nb | 0, paidBle
 /* ---------- router ---------- */
 async function handle(d, env, ip) {
   if (d.action === 'rc_c_draft') return draft(d, env, ip);
+  if (d.action === 'kala_paid') return kalaPaid(d, env);
   if (d.action === 'rc_ping') { const c = await getJ(env, 'config/admin.json'); return { ok: true, service: 'kolot-recorder', admin: !!c }; }
   if (/^rc_c_/.test(d.action)) return client(d, env);
   const c = await getJ(env, 'config/admin.json');
@@ -55,7 +68,53 @@ async function handle(d, env, ip) {
   }
   if (!c || (await sha(c.salt + String(d.pass || ''))) !== c.hash) return { ok: false, error: 'סיסמה שגויה' };
   if (d.action === 'rc_login') return { ok: true };
+  if (d.action === 'rc_kala') {
+    let cfg = (await getJ(env, 'config/kala.json')) || {};
+    if (!cfg.secret || d.renew) { cfg.secret = 'kk_' + tok() + tok(); cfg.at = Date.now(); await putJ(env, 'config/kala.json', cfg); }
+    return { ok: true, secret: cfg.secret, log: ((await getJ(env, 'config/kala_log.json')) || []).slice(0, 30) };
+  }
   return staff(d, env);
+}
+
+/* ---------- payment from Kala ----------
+ * A Kala automation posts here when one of the recorder products is paid (order product status → "שולם במלואו").
+ * The body carries a shared secret that the studio copies from the admin page into the automation.
+ * The draft is found by the code the customer wrote in the order comments, or by the phone they gave in the recorder. */
+const KALA_PACKS = { 76252: 1, 76253: 2, 76254: 3, 76255: 4, 76256: 5, 76258: 1 }, KALA_EXTRA = 76257;
+const last9 = (p) => String(p || '').replace(/\D/g, '').slice(-9);
+async function kalaPaid(d, env) {
+  const cfg = await getJ(env, 'config/kala.json');
+  if (!cfg || !cfg.secret || String(d.secret || '') !== cfg.secret) return { ok: false, error: 'bad secret' };
+  const pageId = parseInt(d.page_id, 10), qty = Math.max(1, parseInt(d.quantity, 10) || 1);
+  if (!(pageId in KALA_PACKS) && pageId !== KALA_EXTRA) return { ok: true, ignored: true };
+  const orderKey = String(d.order_id || '') + ':' + pageId;
+  const phones = [last9(d.mobile), last9(d.phone)].filter(p => p.length === 9);
+  const codes = String(d.comments || '').match(/\d{6}/g) || [];
+  const cands = [];
+  let cursor;
+  do {
+    const l = await env.BUCKET.list({ prefix: 'e/', cursor }); cursor = l.truncated ? l.cursor : undefined;
+    for (const o of l.objects) {
+      const e = await getJ(env, o.key); if (!e || !e.draft) continue;
+      if ((e.kalaOrders || []).some(x => x.key === orderKey)) return { ok: true, duplicate: true };
+      const byCode = e.code && codes.includes(e.code), byPhone = e.contact && phones.includes(last9(e.contact.phone));
+      if (byCode || byPhone) cands.push({ k: o.key.slice(2), e, score: (byCode ? 2 : 0) + (byPhone ? 1 : 0) });
+    }
+  } while (cursor);
+  const log = (await getJ(env, 'config/kala_log.json')) || [];
+  const entry = { at: Date.now(), order_id: String(d.order_id || ''), page_id: pageId, price: Number(d.price) || 0, qty, name: String(d.name || '').slice(0, 60), phone: phones[0] || '', codes: codes.slice(0, 3) };
+  if (!cands.length) { entry.matched = null; await putJ(env, 'config/kala_log.json', [entry].concat(log).slice(0, 100)); return { ok: true, matched: false }; }
+  // best match: code beats phone; among equals the most recent payment request
+  cands.sort((a, b) => b.score - a.score || ((b.e.contact || {}).at || 0) - ((a.e.contact || {}).at || 0));
+  const { k, e } = cands[0];
+  if (pageId === KALA_EXTRA) e.paidBlessers = Math.max(1, (e.paidBlessers | 0) + qty);
+  else e.paidBlessers = Math.max(e.paidBlessers | 0, KALA_PACKS[pageId]);
+  e.paid = true; e.paidAt = Date.now(); e.paidBy = 'kala'; e.expires = Math.max(e.expires, Date.now() + PAID_DAYS * 86400000);
+  e.kalaOrders = (e.kalaOrders || []).concat([{ key: orderKey, order_id: entry.order_id, page_id: pageId, price: entry.price, at: Date.now() }]).slice(-20);
+  if (!e.orderId && entry.order_id) e.orderId = entry.order_id.replace(/\D/g, '').slice(0, 12);
+  e.updated = Date.now(); await putJ(env, 'e/' + k, e);
+  entry.matched = k; await putJ(env, 'config/kala_log.json', [entry].concat(log).slice(0, 100));
+  return { ok: true, matched: true };
 }
 
 /* ---------- free draft (no key yet) ---------- */
@@ -194,7 +253,7 @@ async function staff(d, env) {
     do {
       const l = await env.BUCKET.list({ prefix: 'e/', cursor }); cursor = l.truncated ? l.cursor : undefined;
       const es = await Promise.all(l.objects.map(o => getJ(env, o.key).then(e => [o.key.slice(2), e])));
-      es.forEach(([k, e]) => { if (e) items.push({ k, name: e.name || '', orderId: e.orderId || '', mode: e.mode || '', created: e.created, updated: e.updated || e.created, takes: Object.keys(e.takes || {}).length, edits: e.editsUsed || 0, final: !!e.final, finals: e.finals | 0, code: e.code || '', contact: e.contact || null, due: e.due || null, src: e.src || '', state: state(e) }); });
+      es.forEach(([k, e]) => { if (e) items.push({ k, name: e.name || '', orderId: e.orderId || '', mode: e.mode || '', created: e.created, updated: e.updated || e.created, takes: Object.keys(e.takes || {}).length, edits: e.editsUsed || 0, final: !!e.final, finals: e.finals | 0, code: e.code || '', contact: e.contact || null, due: e.due || null, paidBy: e.paidBy || '', src: e.src || '', state: state(e) }); });
     } while (cursor);
     return { ok: true, items: items.sort((a, b) => b.updated - a.updated) };
   }

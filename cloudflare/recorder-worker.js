@@ -198,6 +198,15 @@ async function staff(d, env) {
   }
   const k = String(d.k || ''); if (!/^[a-f0-9]{20,40}$/.test(k)) return { ok: false, error: 'לא נמצא' };
   const e = await getJ(env, 'e/' + k); if (!e) return { ok: false, error: 'לא נמצא' };
+  if (d.action === 'rc_takes') {
+    const takes = Object.entries(e.takes || {}).map(([x, t]) => { const p = x.split(':'); return { b: +p[0], i: +p[1], s: t.s || '', f: t.f, n: t.sel || t.n, vers: (t.vers || []).length || 1 }; })
+      .sort((a, b) => a.b - b.b || a.i - b.i);
+    return { ok: true, takes };
+  }
+  if (d.action === 'rc_audio') {
+    const f = String(d.f || ''); if (!f.startsWith('f/' + k + '/')) return { ok: false, error: 'לא נמצא' };
+    const b = await getBin(env, f); return b ? { ok: true, wav: bytesToB64(b) } : { ok: false, error: 'לא נמצא' };
+  }
   if (d.action === 'rc_final') { if (!e.final) return { ok: false, error: 'אין קובץ' }; const b = await getBin(env, e.final); return b ? { ok: true, mp3: bytesToB64(b) } : { ok: false, error: 'אין קובץ' }; }
   if (d.action === 'rc_meta') {
     if (d.remove) {

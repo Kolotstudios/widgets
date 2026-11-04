@@ -68,6 +68,9 @@ input,select{font:16px var(--f);color:var(--ink);background:var(--bg);border:1.5
 .more summary::-webkit-details-marker{display:none}
 .more[open] summary{margin-bottom:8px}
 audio{width:100%}
+.raw{display:grid;gap:8px;border-top:1px solid var(--line);padding-top:10px}
+.rawrow{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;font-size:14px}
+.rawrow audio{grid-column:1/-1}
 .ltr{direction:ltr;unicode-bidi:isolate}
 </style>
 </head>
@@ -253,6 +256,26 @@ function renderList(){
     if(it.state.paid) btn(acts,"העתקת הודעה",function(b){copy(msgFor(it.name,it.k),b)});
     var more=document.createElement("details");more.className="more";var sm=document.createElement("summary");sm.textContent="עוד פעולות ▾";more.appendChild(sm);
     var mrow=document.createElement("div");mrow.className="row";more.appendChild(mrow);
+    if(it.takes) btn(mrow,"האזנה לטייקים הגולמיים",function(b){
+      b.disabled=true;
+      call("rc_takes",{k:it.k}).then(function(x){
+        b.remove();if(!x.ok) return;
+        var box=document.createElement("div");box.className="raw";
+        x.takes.forEach(function(t){
+          var r=document.createElement("div");r.className="rawrow";
+          var tx=document.createElement("span");tx.textContent=(t.i+1)+". "+t.s+(t.vers>1?" (טייק "+t.n+" מתוך "+t.vers+")":"");
+          var pb=document.createElement("button");pb.type="button";pb.className="btn";pb.textContent="▶";
+          pb.onclick=function(){pb.disabled=true;call("rc_audio",{k:it.k,f:t.f}).then(function(y){
+            if(!y.ok){pb.textContent="✕";return}
+            var bin=atob(y.wav),u=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i);
+            var au=document.createElement("audio");au.controls=true;au.src=URL.createObjectURL(new Blob([u],{type:"audio/wav"}));
+            pb.replaceWith(au);au.play().catch(function(){});
+          })};
+          r.append(tx,pb);box.appendChild(r);
+        });
+        el.appendChild(box);
+      });
+    });
     if(it.state.device) btn(mrow,"איפוס מכשיר",function(){meta_(it.k,{resetDevice:true})});
     if(it.state.status!=="open") btn(mrow,"פתיחה מחדש",function(){meta_(it.k,{reopen:true})});
     else btn(mrow,"סימון כהושלם",function(){meta_(it.k,{done:true})});

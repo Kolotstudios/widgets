@@ -266,7 +266,7 @@ h3{font:700 15px var(--f-body);margin:0;color:var(--muted);letter-spacing:.02em}
       <div class="group">
         <h3>סגנון הקול</h3>
         <div class="presets" id="voicePresets" role="group" aria-label="סגנון הקול">
-          <button type="button" class="preset" data-preset="natural" aria-pressed="true"><b>טבעי</b><span>נקי, חם ומדויק. מתאים לרוב הברכות</span></button>
+          <button type="button" class="preset" data-preset="natural" aria-pressed="true"><b>מומלץ</b><span>הסאונד של אולפני קולות. מתאים לרוב הברכות</span></button>
           <button type="button" class="preset" data-preset="warm" aria-pressed="false"><b>קרוב ואינטימי</b><span>פחות הד, הקול צמוד ורך</span></button>
           <button type="button" class="preset" data-preset="hall" aria-pressed="false"><b>אולם חגיגי</b><span>הד ארוך ומרשים, כמו באירוע</span></button>
           <button type="button" class="preset" data-preset="clean" aria-pressed="false"><b>היה רעש ברקע</b><span>ניקוי רעשים חזק יותר</span></button>
@@ -298,32 +298,32 @@ h3{font:700 15px var(--f-body);margin:0;color:var(--muted);letter-spacing:.02em}
         <div class="group">
           <h3>קול</h3>
         <div class="sliders">
-          <div class="slider"><label for="nrMix">ניקוי רעשים</label><output id="nrMixOut"></output><input type="range" id="nrMix" min="0" max="100" step="1" value="70"></div>
-          <div class="slider" id="aiWrap"><label for="aiMix">ניקוי AI לרעשים משתנים</label><output id="aiMixOut"></output><input type="range" id="aiMix" min="0" max="100" step="1" value="0"></div>
-          <div class="slider"><label for="deess">דה-אסר (ש/ס)</label><output id="deessOut"></output><input type="range" id="deess" min="0" max="100" step="1" value="60"></div>
-          <div class="slider"><label for="highs">גבוהים <span dir="ltr">8–10K</span></label><output id="highsOut"></output><input type="range" id="highs" min="-6" max="6" step="0.5" value="1"></div>
-          <div class="slider"><label for="mids">מיד <span dir="ltr">450Hz</span></label><output id="midsOut"></output><input type="range" id="mids" min="-6" max="3" step="0.5" value="-2.5"></div>
-          <div class="slider"><label for="voiceDb">עוצמת קול</label><output id="voiceDbOut"></output><input type="range" id="voiceDb" min="-6" max="6" step="0.5" value="0"></div>
+          <div class="slider"><label for="nrMix">ניקוי רעשים</label><output id="nrMixOut"></output><input type="range" id="nrMix" min="0" max="100" step="1" value="90"></div>
+          <div class="slider" id="aiWrap"><label for="aiMix">ניקוי AI לרעשים משתנים</label><output id="aiMixOut"></output><input type="range" id="aiMix" min="0" max="100" step="1" value="4"></div>
+          <div class="slider"><label for="deess">דה-אסר (ש/ס)</label><output id="deessOut"></output><input type="range" id="deess" min="0" max="100" step="1" value="45"></div>
+          <div class="slider"><label for="highs">גבוהים <span dir="ltr">8–10K</span></label><output id="highsOut"></output><input type="range" id="highs" min="-9" max="6" step="0.5" value="-6"></div>
+          <div class="slider"><label for="mids">מיד <span dir="ltr">450Hz</span></label><output id="midsOut"></output><input type="range" id="mids" min="-8" max="3" step="0.5" value="-4"></div>
+          <div class="slider"><label for="voiceDb">עוצמת קול</label><output id="voiceDbOut"></output><input type="range" id="voiceDb" min="-9" max="6" step="0.5" value="-3"></div>
         </div>
         </div>
         <div class="group">
           <h3>אפקט הד</h3>
         <div class="sliders">
-          <div class="slider"><label for="room">חדר (קצר וטבעי)</label><output id="roomOut"></output><input type="range" id="room" min="0" max="40" step="1" value="10"></div>
-          <div class="slider"><label for="hall">אולם (הד ארוך)</label><output id="hallOut"></output><input type="range" id="hall" min="0" max="40" step="1" value="6"></div>
+          <div class="slider"><label for="room">חדר (קצר וטבעי)</label><output id="roomOut"></output><input type="range" id="room" min="0" max="40" step="1" value="8"></div>
+          <div class="slider"><label for="hall">אולם (הד ארוך)</label><output id="hallOut"></output><input type="range" id="hall" min="0" max="40" step="1" value="3"></div>
         </div>
         </div>
         <div class="group">
           <h3>מוסיקה</h3>
           <div class="sliders">
-          <div class="slider"><label for="lift">הרמת מוסיקה בין ברכות ובסוף</label><output id="liftOut"></output><input type="range" id="lift" min="0" max="8" step="0.5" value="4"></div>
-          <div class="slider"><label for="musicDb">עוצמת מוסיקה</label><output id="musicDbOut"></output><input type="range" id="musicDb" min="-24" max="0" step="1" value="-10"></div>
+          <div class="slider"><label for="lift">הרמת מוסיקה בין ברכות ובסוף</label><output id="liftOut"></output><input type="range" id="lift" min="0" max="8" step="0.5" value="3.5"></div>
+          <div class="slider"><label for="musicDb">עוצמת מוסיקה</label><output id="musicDbOut"></output><input type="range" id="musicDb" min="-30" max="0" step="1" value="-17"></div>
           </div>
         </div>
         <div class="group">
           <h3>תזמון</h3>
         <div class="sliders">
-          <div class="slider"><label for="gap">רווח בין משפטים</label><output id="gapOut"></output><input type="range" id="gap" min="0.3" max="1.4" step="0.05" value="0.6"></div>
+          <div class="slider"><label for="gap">רווח בין משפטים</label><output id="gapOut"></output><input type="range" id="gap" min="0.2" max="1.4" step="0.05" value="0.35"></div>
           <div class="slider"><label for="fade">פייד-אאוט בסוף</label><output id="fadeOut"></output><input type="range" id="fade" min="4" max="25" step="1" value="20"></div>
           <div class="slider" id="famGapWrap" hidden><label for="famGap">רווח בין מברכים</label><output id="famGapOut"></output><input type="range" id="famGap" min="4" max="16" step="1" value="8"></div>
         </div>
@@ -1248,12 +1248,13 @@ document.querySelectorAll("#musicExtra input[name=music]").forEach(function(r){r
 
 /* ---------- presets ---------- */
 var VOICE_PRESETS={
-  natural:{nrMix:65,aiMix:0,deess:60,highs:1,mids:-2.5,voiceDb:0,room:10,hall:4},
-  warm:{nrMix:60,aiMix:0,deess:65,highs:0,mids:-1.5,voiceDb:0,room:6,hall:1},
-  hall:{nrMix:65,aiMix:0,deess:60,highs:1.5,mids:-2.5,voiceDb:0,room:8,hall:16},
-  clean:{nrMix:90,aiMix:35,deess:65,highs:0.5,mids:-2.5,voiceDb:0,room:9,hall:4}
+  // natural = the studio default set by Oren (4.11.2026); the others are variations of it
+  natural:{nrMix:90,aiMix:4,deess:45,highs:-6,mids:-4,voiceDb:-3,room:8,hall:3},
+  warm:{nrMix:85,aiMix:4,deess:50,highs:-6,mids:-3,voiceDb:-3,room:5,hall:1},
+  hall:{nrMix:90,aiMix:4,deess:45,highs:-5,mids:-4,voiceDb:-3,room:8,hall:14},
+  clean:{nrMix:100,aiMix:35,deess:50,highs:-6,mids:-4,voiceDb:-3,room:8,hall:3}
 };
-var MUSIC_LEVELS={soft:-15,normal:-10,loud:-6};
+var MUSIC_LEVELS={soft:-22,normal:-17,loud:-12};
 S.preset="natural";S.mlevel="normal";
 var applying=false;
 function setSlider(id,v){var el=$("#"+id);if(!el) return;el.value=v;el.dispatchEvent(new Event("input"))}
@@ -1262,7 +1263,7 @@ function applyPreset(name,quiet){
   applying=true;Object.keys(p).forEach(function(k){setSlider(k,p[k])});applying=false;
   S.preset=name;markPresets();if(!quiet) cloudSettingsSoon();
 }
-function musicLevelDb(lv){return MUSIC_LEVELS[lv]+(S.mode==="drasha"?-4:0)}
+function musicLevelDb(lv){return MUSIC_LEVELS[lv]+(S.mode==="drasha"?-3:0)}
 function applyLevel(lv,quiet){applying=true;setSlider("musicDb",musicLevelDb(lv));applying=false;S.mlevel=lv;markPresets();if(!quiet) cloudSettingsSoon()}
 function markPresets(){
   document.querySelectorAll("#voicePresets .preset").forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.preset===S.preset))});
@@ -1897,7 +1898,7 @@ setInterval(function(){
 },1000);
 
 /* ---------- visible errors (prototype) ---------- */
-var VERSION="2026-11-04j";
+var VERSION="2026-11-04k";
 function reportErr(msg){
   var el=document.getElementById("errBox");
   if(!el){el=document.createElement("p");el.id="errBox";el.className="note warn";el.style.cssText="position:fixed;inset:auto 8px calc(8px + env(safe-area-inset-bottom,0px)) 8px;z-index:99;background:var(--paper);border:1px solid var(--warn);border-radius:10px;padding:8px 10px;margin:0";document.body.appendChild(el)}

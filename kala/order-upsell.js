@@ -39,7 +39,7 @@ var CSS="#kolot-upsell{margin:14px 0 6px}\n#kolot-upsell .ku-h{font-weight:700;f
       if(have.indexOf(s)>=0) return false;
       if(has(BLESS)&&BLESS.indexOf(s)>=0) return false;   // already recording a blessing or a drasha
       if(has(CLIP)&&s===LYR) return false;                 // every clip except the take-clip includes lyrics and a guide
-      if(s===UPG&&(!has(SONG)||has(CLIP)||has(TAKE))) return false; // the upgrade only makes sense on top of a song
+      if(s===UPG&&(!has([75801,76215])||has(CLIP)||has(TAKE))) return false; // the upgrade is for a basic song or a morning song
       return !!(P[s]||EXTRA[s]);
     }).slice(0,3);
     if(!out.length) return;

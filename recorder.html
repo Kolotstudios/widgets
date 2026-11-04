@@ -111,6 +111,9 @@ input:focus-visible,textarea:focus-visible,button:focus-visible,select:focus-vis
 .pill{font-size:11px;font-weight:700;padding:1px 8px;border-radius:99px;background:var(--soft)}
 .pill.bad{background:transparent;border:1px solid var(--warn);color:var(--warn)}
 .pill.cloud-ok{color:var(--ok)}.pill.cloud-err{color:var(--warn)}
+.vers{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.vers button{border:1.5px solid var(--line);background:var(--paper);color:var(--ink);font:500 13px var(--f-body);padding:3px 10px;border-radius:999px;cursor:pointer}
+.vers button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .pill.miss{background:transparent;border:1px dashed var(--muted);color:var(--muted)}
 .music{display:grid;gap:8px}
 .cats{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
@@ -305,6 +308,7 @@ h3{font:700 15px var(--f-body);margin:0;color:var(--muted);letter-spacing:.02em}
         <div class="group">
           <h3>מוסיקה</h3>
           <div class="sliders">
+          <div class="slider"><label for="lift">הרמת מוסיקה בין ברכות ובסוף</label><output id="liftOut"></output><input type="range" id="lift" min="0" max="8" step="0.5" value="4"></div>
           <div class="slider"><label for="musicDb">עוצמת מוסיקה</label><output id="musicDbOut"></output><input type="range" id="musicDb" min="-24" max="0" step="1" value="-10"></div>
           </div>
         </div>
@@ -313,7 +317,7 @@ h3{font:700 15px var(--f-body);margin:0;color:var(--muted);letter-spacing:.02em}
         <div class="sliders">
           <div class="slider"><label for="gap">רווח בין משפטים</label><output id="gapOut"></output><input type="range" id="gap" min="0.3" max="1.4" step="0.05" value="0.6"></div>
           <div class="slider"><label for="fade">פייד-אאוט בסוף</label><output id="fadeOut"></output><input type="range" id="fade" min="4" max="25" step="1" value="20"></div>
-          <div class="slider" id="famGapWrap" hidden><label for="famGap">רווח בין מברכים</label><output id="famGapOut"></output><input type="range" id="famGap" min="4" max="16" step="1" value="10"></div>
+          <div class="slider" id="famGapWrap" hidden><label for="famGap">רווח בין מברכים</label><output id="famGapOut"></output><input type="range" id="famGap" min="4" max="16" step="1" value="8"></div>
         </div>
         </div>
       </details>
@@ -646,7 +650,7 @@ var MODE_NOTES={
 /* ---------- state ---------- */
 var S={mode:"blessing",blessers:[],musicFile:null,musicFileName:"",rooms:{},aiAvailable:false};
 function uid(){return Math.random().toString(36).slice(2,9)}
-function newBlesser(name,text){return {id:uid(),name:name||"",text:text||"",sentences:[],paraEnd:[],takes:[]}}
+function newBlesser(name,text){return {id:uid(),name:name||"",text:text||"",sentences:[],paraEnd:[],takes:[],vers:[]}}
 
 /* ---------- text splitting ---------- */
 function wc(s){return s.split(/\s+/).filter(Boolean).length}
@@ -675,10 +679,11 @@ function splitText(text){
   return {sentences:out,paraEnd:pe};
 }
 function resplit(b){
-  var old={};b.sentences.forEach(function(s,i){if(b.takes[i]) old[s]=b.takes[i]});
+  var old={},oldV={};b.sentences.forEach(function(s,i){if(b.takes[i]) old[s]=b.takes[i];if(b.vers&&b.vers[i]) oldV[s]=b.vers[i]});
   var r=splitText(b.text);
   b.sentences=r.sentences;b.paraEnd=r.paraEnd;
   b.takes=r.sentences.map(function(s){return old[s]||null});
+  b.vers=r.sentences.map(function(s,i){return oldV[s]||(b.takes[i]?[b.takes[i]]:[])});
 }
 
 /* ---------- persistence of text only ---------- */
@@ -1037,9 +1042,9 @@ function saveSegment(){
   if(end-(P.segStart+head)<sr*0.3) return false;
   var raw=sliceRec(a,end),pre=P.segStart-a+head,q=quickCheck(raw.subarray(pre),sr);
   if(q.silent) return false;
-  var t={raw:raw,pre:pre,sr:sr,sid:P.sid,dur:q.dur,flags:q.flags,cache:{},pending:{}};
+  var t={raw:raw,pre:pre,sr:sr,sid:P.sid,dur:q.dur,flags:q.flags,pending:null};
   var prev=P.b.takes[P.idx];
-  P.b.takes[P.idx]=t;ensureClean(t);
+  P.b.takes[P.idx]=t;versOf(P.b,P.idx).push(t);ensureClean(t);
   cloudQueue({type:"take",t:t,prev:prev,b:S.blessers.indexOf(P.b),i:P.idx,s:P.b.sentences[P.idx]});
   return true;
 }
@@ -1116,6 +1121,16 @@ function renderReview(){
         tk.flags.forEach(function(fl){var p=document.createElement("span");p.className="pill bad";p.textContent=fl;meta.appendChild(p)});
       } else {var p=document.createElement("span");p.className="pill miss";p.textContent="לא הוקלט";meta.appendChild(p)}
       tx.appendChild(meta);
+      var vl=versOf(b,i);
+      if(vl.length>1){
+        var vr=document.createElement("div");vr.className="vers";vr.setAttribute("role","group");vr.setAttribute("aria-label","גרסאות של משפט "+(i+1));
+        vl.forEach(function(v,vi){
+          var c=document.createElement("button");c.type="button";c.textContent="טייק "+(vi+1);c.setAttribute("aria-pressed",String(v===tk));
+          if(v.loading) c.textContent+=" …";
+          c.onclick=function(){selectVersion(b,i,v,vi+1)};vr.appendChild(c);
+        });
+        tx.appendChild(vr);
+      }
       var acts=document.createElement("div");acts.className="acts";
       if(tk){var pl=document.createElement("button");pl.type="button";pl.className="btn small";pl.textContent="▶";pl.setAttribute("aria-label","השמעת משפט "+(i+1));pl.onclick=function(){previewTake(tk,i+1)};acts.appendChild(pl)}
       var re=document.createElement("button");re.type="button";re.className="btn small";re.textContent=tk?"תיקון":"הקלטה";re.onclick=function(){stopLive();openStage(b,i,true)};acts.appendChild(re);
@@ -1127,6 +1142,24 @@ function renderReview(){
   $("#renderBtn").disabled=!all;$("#playBtn").disabled=!all;
   $("#renderStatus").textContent=all?"":"אפשר להשמיע וליצור קובץ אחרי שכל מברך הקליט לפחות משפט אחד.";
 }
+function versOf(b,i){b.vers=b.vers||[];return b.vers[i]||(b.vers[i]=b.takes[i]?[b.takes[i]]:[])}
+function loadVersion(v){
+  if(!v.lazy) return Promise.resolve(v);
+  if(!v.loadP){v.loading=true;queueReview();v.loadP=cloudApi("rc_c_audio",{ids:[v.f]}).then(function(x){
+    var f=x.ok&&x.files&&x.files[v.f];if(!f) throw new Error("לא הצלחנו לטעון את הטייק הזה. בודקים את החיבור ומנסים שוב.");
+    var w=unwav(f);v.raw=w.f;v.sr=w.sr;v.lazy=false;v.loading=false;return v;
+  }).catch(function(e){v.loading=false;v.loadP=null;queueReview();throw e})}
+  return v.loadP;
+}
+function selectVersion(b,i,v,num){
+  stopLive();stopPlaying();
+  var bi=S.blessers.indexOf(b),same=b.takes[i]===v;
+  loadVersion(v).then(function(){
+    if(!same){b.takes[i]=v;cloudQueue({type:"select",b:bi,i:i,t:v});MIXP.offset=0;MIXP.T=null;showPos(0)}
+    ensureClean(v);renderReview();
+    previewTake(v,(i+1)+", טייק "+num);
+  }).catch(function(e){$("#renderStatus").textContent=e.message;renderReview()});
+}
 function totalDur(b){return b.takes.reduce(function(a,t){return a+(t?t.dur:0)},0)}
 $("#backToText").onclick=function(){stopLive();stopPlaying();$("#review").hidden=true;$("#setup").hidden=false;renderSetup();window.scrollTo(0,0)};
 
@@ -1136,16 +1169,16 @@ function bindOut(id,fmt){var i=$("#"+id),o=$("#"+id+"Out");var f=function(){o.te
 var pct=function(v){return v+"%"},dB=function(v){return (v>0?"+":"")+v+" dB"},sec=function(v){return (+v).toFixed(v%1?2:0)+" שנ'"};
 bindOut("nrMix",pct);bindOut("aiMix",pct);bindOut("deess",pct);bindOut("highs",dB);bindOut("mids",dB);bindOut("voiceDb",dB);
 bindOut("room",pct);bindOut("hall",pct);bindOut("musicDb",function(v){return v+" dB"});
-bindOut("gap",sec);bindOut("fade",sec);bindOut("famGap",sec);
+bindOut("lift",dB);bindOut("gap",sec);bindOut("fade",sec);bindOut("famGap",sec);
 function settings(){
   return {nrMix:+$("#nrMix").value/100,aiMix:+$("#aiMix").value/100,deess:+$("#deess").value,highs:+$("#highs").value,mids:+$("#mids").value,
     voiceDb:+$("#voiceDb").value,room:+$("#room").value/100,hall:+$("#hall").value/100,musicDb:+$("#musicDb").value,
-    gap:+$("#gap").value,fade:+$("#fade").value,famGap:+$("#famGap").value,preset:S.preset,mlevel:S.mlevel};
+    gap:+$("#gap").value,fade:+$("#fade").value,famGap:+$("#famGap").value,lift:+$("#lift").value,sv:2,preset:S.preset,mlevel:S.mlevel};
 }
 ["nrMix","aiMix","deess","highs","mids","voiceDb","room","hall","musicDb"].forEach(function(id){
   $("#"+id).addEventListener("input",function(){if(MIXP.nodes&&MIXP.ctx) applySet(MIXP.nodes,settings(),MIXP.ctx,true);cloudSettingsSoon()});
 });
-["gap","fade","famGap"].forEach(function(id){$("#"+id).addEventListener("change",function(){restartIfPlaying();cloudSettingsSoon()})});
+["gap","fade","famGap","lift"].forEach(function(id){$("#"+id).addEventListener("change",function(){restartIfPlaying();cloudSettingsSoon()})});
 document.querySelectorAll("#musicExtra input[name=music]").forEach(function(r){r.addEventListener("change",function(){setMusic(r.value,true)})});
 
 /* ---------- presets ---------- */
@@ -1370,14 +1403,16 @@ function buildTimeline(){
   var vEnd=spans.length?spans[spans.length-1][1]:0,fade=+$("#fade").value;
   return {items:items,spans:spans,vEnd:vEnd,total:kind==="none"?vEnd+0.8:vEnd+fade,kind:kind,fade:fade};
 }
-function duckPoints(T){
-  var duck=dbg(-9),pts=[[0,0],[1.5,1]],merged=[];
-  T.spans.forEach(function(sp){var l=merged[merged.length-1];if(l&&sp[0]-l[1]<3) l[1]=sp[1];else merged.push([sp[0],sp[1]])});
+// music bed: low under the voice, lifted in the intro, between blessers and after the last word, then a smooth fade
+function duckPoints(T,lift){
+  var L=dbg(lift||0),duck=dbg(-9),pts=[[0,0],[1.5,L]],merged=[];
+  T.spans.forEach(function(sp){var l=merged[merged.length-1];if(l&&sp[0]-l[1]<3.5) l[1]=sp[1];else merged.push([sp[0],sp[1]])});
   merged.forEach(function(sp,i){
-    var up=i===merged.length-1?Math.min(sp[1]+1.4,T.total-0.1):sp[1]+1.2;
-    pts.push([Math.max(1.6,sp[0]-0.6),1],[sp[0],duck],[sp[1]+0.15,duck],[up,1]);
+    pts.push([Math.max(1.6,sp[0]-0.9),i?pts[pts.length-1][1]:L],[Math.max(1.7,sp[0]-0.05),duck],[sp[1]+0.25,duck]);
+    if(i<merged.length-1){var room=merged[i+1][0]-sp[1];pts.push([sp[1]+Math.min(2,room*0.4),room>=4.5?L:1])}
   });
-  pts.push([Math.min(T.vEnd+1.5,T.total-0.05),1],[T.total,0]);
+  var top=Math.min(T.vEnd+2.2,T.total-0.2);pts.push([top,L]);
+  for(var k=1;k<=12;k++){var x=k/12;pts.push([top+(T.total-top)*x,L*Math.pow(Math.cos(x*Math.PI/2),1.4)])}
   var out=[];pts.forEach(function(p){if(!out.length||p[0]>out[out.length-1][0]+1e-3) out.push(p)});
   return out;
 }
@@ -1433,7 +1468,7 @@ function buildGraph(ctx,T,music,set,when0,offset){
   if(music&&offset<music.duration){
     var ms=ctx.createBufferSource();ms.buffer=music;
     var duck=ctx.createGain();N.mus=ctx.createGain();
-    var pts=duckPoints(T);duck.gain.setValueAtTime(valueAt(pts,offset),when0);
+    var pts=duckPoints(T,set.lift);duck.gain.setValueAtTime(valueAt(pts,offset),when0);
     pts.forEach(function(p){if(p[0]>offset) duck.gain.linearRampToValueAtTime(p[1],when0+p[0]-offset)});
     ms.connect(duck);duck.connect(N.mus);N.mus.connect(master);ms.start(when0,offset);N.sources.push(ms);
   }
@@ -1609,16 +1644,18 @@ function cloudPump(){
   CLOUD.busy=true;var job=CLOUD.q[0];cloudPill();
   var p;
   if(job.type==="room") p=blobB64(wavMono(S.rooms[job.sid],job.sr)).then(function(w){return cloudApi("rc_c_room",{sid:job.sid,wav:w})});
+  else if(job.type==="select") p=job.t.n?cloudApi("rc_c_select",{b:job.b,i:job.i,n:job.t.n}):Promise.resolve({ok:true});
   else p=blobB64(wavMono(job.t.raw,job.t.sr)).then(function(w){return cloudApi("rc_c_take",{b:job.b,i:job.i,sid:job.t.sid,pre:job.t.pre,flags:job.t.flags,s:job.s,wav:w})});
   p.then(function(r){
     CLOUD.q.shift();CLOUD.busy=false;CLOUD.failed=0;
     if(!r.ok){
       if(job.type==="take"){ // server refused (limit / submitted): keep the previous take
         var b=S.blessers[job.b];if(b&&b.takes[job.i]===job.t) b.takes[job.i]=job.prev||null;
+        if(b){var vl=versOf(b,job.i),vi=vl.indexOf(job.t);if(vi>=0) vl.splice(vi,1)}
         $("#renderStatus").textContent=r.error||"ההקלטה לא נשמרה.";queueReview();
       }
       if(r.locked||r.closed||r.submitted) gate(r.error,true);
-    } else if(job.type==="take") job.t.uploaded=true;
+    } else if(job.type==="take"){job.t.uploaded=true;if(r.n) job.t.n=r.n}
     cloudPill();cloudPump();
   }).catch(function(){
     CLOUD.busy=false;CLOUD.failed++;cloudPill();
@@ -1639,8 +1676,9 @@ function gate(msg,stop){
   if(stop){$("#setup").hidden=true;$("#review").hidden=true;$("#stage").hidden=true;stopMic();stopLive()}
 }
 function applySettings(st,music){
-  if(st) ["nrMix","aiMix","deess","highs","mids","voiceDb","room","hall","musicDb","gap","fade","famGap"].forEach(function(id){
+  if(st) ["nrMix","aiMix","deess","highs","mids","voiceDb","room","hall","musicDb","gap","fade","famGap","lift"].forEach(function(id){
     var map={nrMix:100,aiMix:100,room:100,hall:100},v=st[id];if(v==null) return;
+    if(id==="famGap"&&!st.sv) return; // older saves used 10 s; the default is now 8 s
     var el=$("#"+id);el.value=map[id]?Math.round(v*map[id]):v;el.dispatchEvent(new Event("input"));
   });
   if(st){S.preset=st.preset!=null?st.preset:S.preset;S.mlevel=st.mlevel!=null?st.mlevel:S.mlevel;markPresets()}
@@ -1667,7 +1705,9 @@ function cloudOpen(){
         var b=S.blessers[t.b],f=files[t.f];if(!b||!f) return;
         var i=t.i;if(b.sentences[i]!==t.s){var j=b.sentences.indexOf(t.s);if(j>=0) i=j}
         if(i>=b.sentences.length) return;
-        var w=unwav(f);b.takes[i]={raw:w.f,pre:t.pre,sr:w.sr,sid:t.sid,dur:2,flags:t.flags||[],uploaded:true,n:t.n,pending:null};
+        var w=unwav(f),tk={raw:w.f,pre:t.pre,sr:w.sr,sid:t.sid,dur:2,flags:t.flags||[],uploaded:true,n:t.n,pending:null};b.takes[i]=tk;
+        b.vers=b.vers||[];b.vers[i]=(t.vers&&t.vers.length?t.vers:[t]).map(function(v){return v.f===t.f?tk:{lazy:true,f:v.f,n:v.n,pre:v.pre,sid:v.sid,flags:v.flags||[],uploaded:true,dur:0,pending:null}});
+        if(b.vers[i].indexOf(tk)<0) b.vers[i].push(tk);
       });
       $("#gate").hidden=true;showReview();allTakes().forEach(ensureClean);
       if(CLOUD.submitted) setSubmittedUI();
@@ -1707,7 +1747,7 @@ function encodeMp3(L,R,sr){
 
 window.addEventListener("beforeunload",function(e){if(CLOUD.on&&!CLOUD.q.length&&!CLOUD.busy) return;if(S.blessers.some(function(b){return b.takes.some(Boolean)})){e.preventDefault();e.returnValue=""}});
 
-window.__kolotDebug={CLOUD:CLOUD,cloudQueue:cloudQueue,cloudFlush:cloudFlush,submitMix:submitMix,cloudOpen:cloudOpen,unwav:unwav,wavMono:wavMono,setApi:function(u){API=u},S:S,quickCheck:quickCheck,ensureClean:ensureClean,DSP:DSP,render:exportMix,startLive:startLive,stopLive:stopLive,MIXP:MIXP,settings:settings,showReview:showReview,renderReview:renderReview,splitText:splitText,resplit:resplit,musicBuffer:musicBuffer,setMusic:setMusic,MLIB:MLIB};
+window.__kolotDebug={CLOUD:CLOUD,cloudQueue:cloudQueue,cloudFlush:cloudFlush,submitMix:submitMix,cloudOpen:cloudOpen,unwav:unwav,wavMono:wavMono,setApi:function(u){API=u},S:S,quickCheck:quickCheck,ensureClean:ensureClean,DSP:DSP,render:exportMix,startLive:startLive,stopLive:stopLive,MIXP:MIXP,settings:settings,showReview:showReview,renderReview:renderReview,splitText:splitText,resplit:resplit,musicBuffer:musicBuffer,setMusic:setMusic,MLIB:MLIB,duckPoints:duckPoints,buildTimeline:buildTimeline,versOf:versOf};
 
 /* ---------- live processing timers ---------- */
 setInterval(function(){
@@ -1715,7 +1755,7 @@ setInterval(function(){
 },1000);
 
 /* ---------- visible errors (prototype) ---------- */
-var VERSION="2026-11-04f";
+var VERSION="2026-11-04g";
 function reportErr(msg){
   var el=document.getElementById("errBox");
   if(!el){el=document.createElement("p");el.id="errBox";el.className="note warn";el.style.cssText="position:fixed;inset:auto 8px calc(8px + env(safe-area-inset-bottom,0px)) 8px;z-index:99;background:var(--paper);border:1px solid var(--warn);border-radius:10px;padding:8px 10px;margin:0";document.body.appendChild(el)}

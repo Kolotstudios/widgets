@@ -5,7 +5,7 @@
  *
  * A project = one order. The client link carries a random key (#k=...). The first two devices that open the link
  * (e.g. a phone and a computer) are bound to it; a third device gets "locked" until the studio resets it.
- * Text locks after the first recording.
+ * Text locks after the first recording. Every take of a sentence is kept (up to MAX_TAKES) so the client can pick a version.
  * Storage layout: e/<k>.json (entry), p/<k>.json (project), f/<k>/<name> (audio).
  */
 const MAX_TAKES = 10, MAX_UPLOADS = 600, DAYS = 30, MAX_DEVICES = 2;
@@ -63,7 +63,7 @@ async function client(d, env) {
   const pr = (await getJ(env, 'p/' + k)) || {};
   if (d.action === 'rc_c_open') return view(k, e, pr);
   if (d.action === 'rc_c_audio') {
-    const allowed = new Set([...Object.values(e.takes || {}).map(t => t.f), ...Object.values(e.rooms || {})]);
+    const allowed = new Set([...Object.values(e.takes || {}).flatMap(t => [t.f, ...(t.vers || []).map(v => v.f)]), ...Object.values(e.rooms || {})]);
     const files = {}; let size = 0;
     for (const id of (d.ids || []).slice(0, 40)) { if (!allowed.has(id) || size > 24e6) continue; const b = await getBin(env, id); if (b) { size += b.length; files[id] = bytesToB64(b); } }
     return { ok: true, files };
@@ -86,14 +86,22 @@ async function client(d, env) {
     if (!pr.blessers || !pr.blessers[b]) return { ok: false, error: 'מברך לא קיים' };
     e.takes = e.takes || {}; e.uploads = (e.uploads || 0) + 1;
     if (e.uploads > MAX_UPLOADS) return { ok: false, error: 'הגעתם למספר ההקלטות המרבי. פנו לאולפני קולות.' };
-    const old = e.takes[key], n = old ? old.n + 1 : 1;
+    const old = e.takes[key], n = old ? Math.max(old.n | 0, ...(old.vers || []).map(v => v.n | 0)) + 1 : 1;
     if (n > MAX_TAKES) return { ok: false, limit: true, error: 'אפשר להקליט כל משפט עד ' + MAX_TAKES + ' פעמים. לעזרה פנו לאולפני קולות.' };
     const f = await putBin(env, 'f/' + k + '/' + b + '-' + i + '-' + n + '.wav', d.wav, 'audio/wav');
-    if (old && old.f) await env.BUCKET.delete(old.f);
-    e.takes[key] = { f, n, pre: d.pre | 0, sid: String(d.sid || '').slice(0, 12), flags: (d.flags || []).slice(0, 4), s: String(d.s || '').slice(0, 400), at: Date.now() };
+    const v = { f, n, pre: d.pre | 0, sid: String(d.sid || '').slice(0, 12), flags: (d.flags || []).slice(0, 4), at: Date.now() };
+    const vers = old ? (old.vers || [{ f: old.f, n: old.n, pre: old.pre, sid: old.sid, flags: old.flags, at: old.at }]) : [];
+    vers.push(v);
+    e.takes[key] = { ...v, s: String(d.s || '').slice(0, 400), vers };
     if (!pr.textLocked) { pr.textLocked = true; await putJ(env, 'p/' + k, pr); }
     e.updated = Date.now(); await putJ(env, 'e/' + k, e);
     return { ok: true, n, left: MAX_TAKES - n };
+  }
+  if (d.action === 'rc_c_select') {
+    const key = (d.b | 0) + ':' + (d.i | 0), t = (e.takes || {})[key]; if (!t) return { ok: false, error: 'לא נמצא' };
+    const v = (t.vers || []).find(x => x.n === (d.n | 0)); if (!v) return { ok: false, error: 'לא נמצא' };
+    Object.assign(t, { f: v.f, pre: v.pre, sid: v.sid, flags: v.flags, sel: v.n });
+    e.updated = Date.now(); await putJ(env, 'e/' + k, e); return { ok: true };
   }
   if (d.action === 'rc_c_settings') { pr.settings = d.settings || {}; pr.music = String(d.music || '').slice(0, 40); await putJ(env, 'p/' + k, pr); return { ok: true }; }
   if (d.action === 'rc_c_submit') {
@@ -106,7 +114,7 @@ async function client(d, env) {
   return { ok: false, error: 'unknown action' };
 }
 function view(k, e, pr) {
-  const takes = Object.entries(e.takes || {}).map(([x, t]) => { const p = x.split(':'); return { b: +p[0], i: +p[1], f: t.f, n: t.n, pre: t.pre, sid: t.sid, flags: t.flags, s: t.s }; });
+  const takes = Object.entries(e.takes || {}).map(([x, t]) => { const p = x.split(':'); return { b: +p[0], i: +p[1], f: t.f, n: t.sel || t.n, pre: t.pre, sid: t.sid, flags: t.flags, s: t.s, vers: (t.vers || []).map(v => ({ f: v.f, n: v.n, pre: v.pre, sid: v.sid, flags: v.flags })) }; });
   return { ok: true, name: e.name || '', mode: pr.mode || e.mode || 'blessing', maxBlessers: e.maxBlessers || 5, blessers: pr.blessers || [], textLocked: !!pr.textLocked,
     settings: pr.settings || null, music: pr.music || '', takes, rooms: e.rooms || {}, state: state(e), maxTakes: MAX_TAKES };
 }

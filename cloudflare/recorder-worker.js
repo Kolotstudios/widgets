@@ -95,11 +95,11 @@ async function client(d, env) {
     e.updated = Date.now(); await putJ(env, 'e/' + k, e);
     return { ok: true, n, left: MAX_TAKES - n };
   }
-  if (d.action === 'rc_c_settings') { pr.settings = d.settings || {}; pr.music = String(d.music || '').slice(0, 20); await putJ(env, 'p/' + k, pr); return { ok: true }; }
+  if (d.action === 'rc_c_settings') { pr.settings = d.settings || {}; pr.music = String(d.music || '').slice(0, 40); await putJ(env, 'p/' + k, pr); return { ok: true }; }
   if (d.action === 'rc_c_submit') {
     if (!d.mp3) return { ok: false, error: 'חסר קובץ' };
     e.final = await putBin(env, 'f/' + k + '/final.mp3', d.mp3, 'audio/mpeg');
-    pr.settings = d.settings || pr.settings; pr.music = String(d.music || pr.music || ''); await putJ(env, 'p/' + k, pr);
+    pr.settings = d.settings || pr.settings; pr.music = String(d.music || pr.music || '').slice(0, 40); await putJ(env, 'p/' + k, pr);
     e.status = 'submitted'; e.submittedAt = Date.now(); e.updated = Date.now(); await putJ(env, 'e/' + k, e);
     return { ok: true };
   }

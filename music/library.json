@@ -1,0 +1,291 @@
+{
+ "version": 1,
+ "defaults": {
+  "blessing": "warm-nostalgia",
+  "family": "warm-nostalgia",
+  "drasha": "quiet-piano"
+ },
+ "categories": [
+  {
+   "id": "warm",
+   "name": "חם ונוסטלגי",
+   "desc": "רקע יציב ונעים שלא מתחרה בקול. מתאים כמעט לכל ברכה"
+  },
+  {
+   "id": "piano",
+   "name": "פסנתר שקט",
+   "desc": "פסנתר עדין ואינטימי. מצוין לדרשה ולברכות מרגשות"
+  },
+  {
+   "id": "cinema",
+   "name": "מרגש וקולנועי",
+   "desc": "מיתרים ובנייה לשיא. לחתונות ולרגעים גדולים"
+  },
+  {
+   "id": "med",
+   "name": "ים תיכוני ומזרחי",
+   "desc": "גיטרות, בוזוקי וצבעים חמים מהאזור"
+  },
+  {
+   "id": "happy",
+   "name": "שמח וקליל",
+   "desc": "קצבי ואופטימי. לימי הולדת ולברכות עם חיוך"
+  }
+ ],
+ "tracks": [
+  {
+   "id": "warm-nostalgia",
+   "cat": "warm",
+   "name": "נוסטלגיה חמה",
+   "desc": "הרקע היציב ביותר במאגר, כמעט בלי קפיצות בעוצמה",
+   "fit": [
+    "blessing",
+    "family"
+   ],
+   "file": "warm-nostalgia.mp3",
+   "dur": 194.0
+  },
+  {
+   "id": "warm-nostalgia-2",
+   "cat": "warm",
+   "name": "נוסטלגיה חמה, גרסה ב׳",
+   "desc": "אותו רעיון בגוון מעט יותר רגשי",
+   "fit": [
+    "blessing",
+    "family"
+   ],
+   "file": "warm-nostalgia-2.mp3",
+   "dur": 197.2
+  },
+  {
+   "id": "caluna-intima",
+   "cat": "warm",
+   "name": "קרוב ללב",
+   "desc": "רך ואחיד לאורך כל הקטע",
+   "fit": [
+    "blessing",
+    "family",
+    "drasha"
+   ],
+   "file": "caluna-intima.mp3",
+   "dur": 192.4
+  },
+  {
+   "id": "new-start",
+   "cat": "warm",
+   "name": "התחלה חדשה",
+   "desc": "נפתח בשקט ונכנס לקצב רך אחרי כ־45 שניות",
+   "fit": [
+    "blessing",
+    "family"
+   ],
+   "file": "new-start.mp3",
+   "dur": 189.1
+  },
+  {
+   "id": "quiet-piano",
+   "cat": "piano",
+   "name": "פסנתר רך",
+   "desc": "פסנתר מוביל, שקט ומתון שנרגע לקראת הסוף",
+   "fit": [
+    "drasha",
+    "blessing"
+   ],
+   "file": "quiet-piano.mp3",
+   "dur": 189.8
+  },
+  {
+   "id": "broken-keys",
+   "cat": "piano",
+   "name": "רגע של שקט",
+   "desc": "פסנתר סולו מינימלי ומהורהר",
+   "fit": [
+    "drasha"
+   ],
+   "file": "broken-keys.mp3",
+   "dur": 157.2
+  },
+  {
+   "id": "lingering-cadence",
+   "cat": "piano",
+   "name": "מחשבות",
+   "desc": "פסנתר רך עם מנגינה שחוזרת ונושמת",
+   "fit": [
+    "drasha",
+    "blessing"
+   ],
+   "file": "lingering-cadence.mp3",
+   "dur": 184.0
+  },
+  {
+   "id": "empty-station",
+   "cat": "piano",
+   "name": "אור ראשון",
+   "desc": "פסנתר עדין שמתעצם באמצע ונרגע שוב",
+   "fit": [
+    "drasha",
+    "blessing"
+   ],
+   "file": "empty-station.mp3",
+   "dur": 172.9
+  },
+  {
+   "id": "forever-yours",
+   "cat": "cinema",
+   "name": "לנצח שלך",
+   "desc": "פסנתר ומיתרים שנבנים לשיא מרגש",
+   "fit": [
+    "blessing",
+    "family"
+   ],
+   "file": "forever-yours.mp3",
+   "dur": 178.3
+  },
+  {
+   "id": "med-crescendo",
+   "cat": "cinema",
+   "name": "קרשנדו ים תיכוני",
+   "desc": "פתיחה תזמורתית, פסנתר עדין ומיתרים גדולים",
+   "fit": [
+    "blessing"
+   ],
+   "file": "med-crescendo.mp3",
+   "dur": 124.5
+  },
+  {
+   "id": "med-crescendo-2",
+   "cat": "cinema",
+   "name": "קרשנדו ים תיכוני, גרסה ב׳",
+   "desc": "גרסה ארוכה יותר עם בנייה הדרגתית",
+   "fit": [
+    "blessing",
+    "family"
+   ],
+   "file": "med-crescendo-2.mp3",
+   "dur": 192.4
+  },
+  {
+   "id": "first-cry-sun",
+   "cat": "cinema",
+   "name": "זריחה",
+   "desc": "קולנועי עם עליות וירידות חדות. מתאים לברכה קצרה",
+   "fit": [
+    "blessing"
+   ],
+   "file": "first-cry-sun.mp3",
+   "dur": 184.5
+  },
+  {
+   "id": "aegean-sunset",
+   "cat": "med",
+   "name": "שקיעה ביוון",
+   "desc": "גיטרה אקוסטית ובוזוקי עם מיתרים עדינים",
+   "fit": [
+    "blessing",
+    "family",
+    "drasha"
+   ],
+   "file": "aegean-sunset.mp3",
+   "dur": 193.2
+  },
+  {
+   "id": "luz-atardecer",
+   "cat": "med",
+   "name": "אור של ערב",
+   "desc": "חם, מלא ואחיד לאורך כל הקטע",
+   "fit": [
+    "blessing",
+    "family"
+   ],
+   "file": "luz-atardecer.mp3",
+   "dur": 207.2
+  },
+  {
+   "id": "quiet-space",
+   "cat": "med",
+   "name": "מרחב שקט",
+   "desc": "צבע מזרחי רגוע עם קצב רך ברקע",
+   "fit": [
+    "blessing",
+    "family",
+    "drasha"
+   ],
+   "file": "quiet-space.mp3",
+   "dur": 203.7
+  },
+  {
+   "id": "quiet-space-2",
+   "cat": "med",
+   "name": "מרחב שקט, גרסה ב׳",
+   "desc": "מעט יותר קצבי ובהיר",
+   "fit": [
+    "blessing",
+    "family"
+   ],
+   "file": "quiet-space-2.mp3",
+   "dur": 204.3
+  },
+  {
+   "id": "piano-smile",
+   "cat": "happy",
+   "name": "חיוך",
+   "desc": "פסנתר קליל עם קצב, אופטימי ומואר",
+   "fit": [
+    "blessing",
+    "family"
+   ],
+   "file": "piano-smile.mp3",
+   "dur": 123.5
+  },
+  {
+   "id": "skipping-pulse",
+   "cat": "happy",
+   "name": "צעד קליל",
+   "desc": "קצב קופצני ועדין, שמח בלי להשתלט",
+   "fit": [
+    "blessing",
+    "family"
+   ],
+   "file": "skipping-pulse.mp3",
+   "dur": 176.8
+  },
+  {
+   "id": "piano-ledger",
+   "cat": "happy",
+   "name": "בוקר טוב",
+   "desc": "פסנתר נעים וקליל עם קצב רך",
+   "fit": [
+    "blessing",
+    "family"
+   ],
+   "file": "piano-ledger.mp3",
+   "dur": 118.1
+  }
+ ],
+ "picks": {
+  "blessing": [
+   "warm-nostalgia",
+   "aegean-sunset",
+   "forever-yours",
+   "quiet-space",
+   "caluna-intima",
+   "piano-smile"
+  ],
+  "family": [
+   "warm-nostalgia",
+   "luz-atardecer",
+   "med-crescendo-2",
+   "quiet-space",
+   "skipping-pulse",
+   "forever-yours"
+  ],
+  "drasha": [
+   "quiet-piano",
+   "lingering-cadence",
+   "broken-keys",
+   "caluna-intima",
+   "aegean-sunset",
+   "quiet-space"
+  ]
+ }
+}

@@ -13,7 +13,7 @@
  * Storage layout: e/<k>.json (entry), p/<k>.json (project), f/<k>/<name> (audio).
  */
 const MAX_TAKES = 10, MAX_UPLOADS = 600, DAYS = 30, MAX_DEVICES = 2, MAX_EDITS = 5,
-  PRICE_BASE = 150, PRICE_EXTRA = 50, PRICE_DRASHA = 120, // ₪ – keep in sync with PRICING in recorder.html
+  PRICE_BASE = 150, PRICE_EXTRA = 50, PRICE_DRASHA = 150, // ₪ – keep in sync with PRICING in recorder.html
   DRAFT_DAYS = 14, PAID_DAYS = 14, MAX_DRAFTS_PER_DAY = 8, MAX_FINALS = 20;
 const H = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type', 'Content-Type': 'application/json; charset=utf-8' };
 const out = (o) => new Response(JSON.stringify(o), { headers: H });

@@ -1791,7 +1791,7 @@ var CLOUD={on:false,k:null,dev:null,q:[],busy:false,failed:0,submitted:false,fix
 // payment: free drafts record and play with a soft chime; the clean file opens once the studio marks the draft paid
 var PAY_URL="https://kolot.kala-crm.co.il/"+encodeURIComponent("רכישה");
 // prices in ₪ – keep in sync with PRICE_* in cloudflare/recorder-worker.js
-var PRICING={base:150,extra:50,drasha:120};
+var PRICING={base:150,extra:50,drasha:150};
 // Kala products (page ids): one product per number of blessers, a top-up for one more blesser, and a drasha
 var KALA_BASE="https://kolot.kala-crm.co.il/",KALA_IDS={pack:[0,0,0,0,0],extra:0,drasha:0};
 var GEN_URL="https://kolotstudios.github.io/widgets/blessing.html";
@@ -1969,7 +1969,7 @@ setInterval(function(){
 },1000);
 
 /* ---------- visible errors (prototype) ---------- */
-var VERSION="2026-11-04l";
+var VERSION="2026-11-04m";
 function reportErr(msg){
   var el=document.getElementById("errBox");
   if(!el){el=document.createElement("p");el.id="errBox";el.className="note warn";el.style.cssText="position:fixed;inset:auto 8px calc(8px + env(safe-area-inset-bottom,0px)) 8px;z-index:99;background:var(--paper);border:1px solid var(--warn);border-radius:10px;padding:8px 10px;margin:0";document.body.appendChild(el)}

@@ -1,6 +1,6 @@
 /* Kolot – "משלים את האירוע": 2–3 complementary products under the cart on the Kala order form (page order-form, 75774).
    Loaded by the Kala widget "partial / order_upsell":  <script src="https://kolotstudios.github.io/widgets/kala/order-upsell.js" defer></script>
-   To turn it off, remove {{{widget.partial.order_upsell}}} from the order-form page body in Kala. */
+   Also on the cart page (shopping-cart, 75773). To turn it off, remove {{{widget.partial.order_upsell}}} from those page bodies in Kala. */
 (function(){
 var CSS="#kolot-upsell{margin:14px 0 6px}\n#kolot-upsell .ku-h{font-weight:700;font-size:16px;margin:0 0 8px}\n#kolot-upsell .ku-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}\n#kolot-upsell .ku-card{border:1px solid #e3dcea;border-radius:12px;padding:10px;display:grid;gap:6px;background:#fff;text-align:center}\n#kolot-upsell .ku-img{height:90px;border-radius:8px;background:#f2edf7 center/cover no-repeat}\n#kolot-upsell .ku-t{font-weight:600;font-size:14px;line-height:1.3}\n#kolot-upsell .ku-n{font-size:12px;color:#6f6479;line-height:1.35}\n#kolot-upsell .ku-p{font-weight:700}\n#kolot-upsell .ku-b{cursor:pointer}";
 (function(){
@@ -12,12 +12,14 @@ var CSS="#kolot-upsell{margin:14px 0 6px}\n#kolot-upsell .ku-h{font-weight:700;f
   var RULES=[[SONG,[LYR,76164,75898]],[CLIP,[75831,75899]],[TAKE,[LYR,75831,75899]],[PRES,[76215,75898]],[BLESS,[75831,76215]],[[LYR],[76215,76164]]];
   var NOTES={75982:"שיר אישי על מנגינה מוכרת, עם גייד מוקלט",76164:"קליפ בטייק אחד, מהיר ומשתלם",75898:"ברכות מרגשות באולפן, עד 5 מברכים",
     75899:"ברכות ודרשה באולפן, במחיר חבילה",75831:"מצגת מרגשת לאירוע, עד 50 תמונות",76215:"הקלטת שיר מקצועית במחיר בוקר"};
-  var cart=document.querySelector("#widget-shopping_cart-shopping_cart");
+  // order form (cart summary) or the cart page (/shopping-cart, editable cart)
+  var cart=document.querySelector("#widget-shopping_cart-shopping_cart")||document.querySelector("#widget-shopping_cart-cart_edit");
   if(!cart||document.getElementById("kolot-upsell")) return;
   var st=document.createElement("style");st.textContent=CSS;document.head.appendChild(st);
   var box=document.createElement("div");box.id="kolot-upsell";cart.parentNode.insertBefore(box,cart.nextSibling);
   var inCartTitles=[].map.call(cart.querySelectorAll(".cart-prod-title"),function(e){return e.textContent.trim()});
-  if(!inCartTitles.length) return;
+  var inCartIds=[].map.call(cart.querySelectorAll("[data-page_id]"),function(e){return +e.getAttribute("data-page_id")});
+  if(!inCartTitles.length&&!inCartIds.length) return;
   fetch("/"+encodeURIComponent("רכישה"),{credentials:"same-origin"}).then(function(r){return r.text()}).then(function(html){
     var doc=new DOMParser().parseFromString(html,"text/html"),P={},byTitle={};
     [].forEach.call(doc.querySelectorAll(".widget-item"),function(it){
@@ -26,7 +28,7 @@ var CSS="#kolot-upsell{margin:14px 0 6px}\n#kolot-upsell .ku-h{font-weight:700;f
       P[id]={id:id,title:t.textContent.trim(),price:a.getAttribute("data-price"),img:img?img.style.backgroundImage:""};
       byTitle[P[id].title]=id;
     });
-    var have=inCartTitles.map(function(t){return byTitle[t]}).filter(Boolean);
+    var have=inCartIds.concat(inCartTitles.map(function(t){return byTitle[t]})).filter(function(x,i,a){return x&&a.indexOf(x)===i});
     var has=function(list){return have.some(function(id){return list.indexOf(id)>=0})};
     var out=[];
     have.forEach(function(id){RULES.forEach(function(r){if(r[0].indexOf(id)>=0) r[1].forEach(function(s){if(out.indexOf(s)<0) out.push(s)})})});

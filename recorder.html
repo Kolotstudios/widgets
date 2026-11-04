@@ -13,7 +13,7 @@
   --bg:#f7f3f8;--paper:#ffffff;--ink:#251b2e;--muted:#6f6479;--line:#e6dcea;
   --accent:#6b2fb3;--accent-ink:#ffffff;--soft:#efe6f8;--gold:#a0782a;
   --rec:#d23048;--ok:#2c8553;--warn:#a85a14;
-  --stage:#0e0a13;--stage-ink:#f5effa;--stage-dim:rgba(245,239,250,.30);--stage-line:rgba(245,239,250,.14);
+  --stage:#0e0a13;--hero:#241632;--stage-ink:#f5effa;--stage-dim:rgba(245,239,250,.30);--stage-line:rgba(245,239,250,.14);
   --f-display:"Frank Ruhl Libre","David Libre",Georgia,serif;
   --f-body:"Assistant",system-ui,"Segoe UI",Arial,sans-serif;
   color-scheme:light;
@@ -29,17 +29,61 @@
 [hidden]{display:none!important}
 *{box-sizing:border-box}
 html,body{margin:0}
-body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.55;
-  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
-  padding-block:max(16px,env(safe-area-inset-top,0px)) max(32px,env(safe-area-inset-bottom,0px))}
-.wrap{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.55;padding-block:0 max(32px,env(safe-area-inset-bottom,0px))}
+.wrap{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:18px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+#review.wrap,#setup .wrap{padding-left:0;padding-right:0}
+#review{max-width:760px;width:100%;margin:0 auto}
+/* hero */
+.hero{position:relative;overflow:hidden;background:var(--hero);color:#f6eefc;margin-bottom:22px;padding-top:env(safe-area-inset-top,0px)}
+.hero canvas{position:absolute;inset:0;width:100%;height:100%;opacity:.55}
+.hero-in{position:relative;max-width:1040px;margin:0 auto;padding:22px max(16px,env(safe-area-inset-right,0px)) 26px max(16px,env(safe-area-inset-left,0px));display:grid;gap:10px}
+.hero h1{color:#fff;font-size:clamp(30px,6vw,46px);line-height:1.08;letter-spacing:-.01em}
+.hero .sub{color:rgba(246,238,252,.82);max-width:34em;font-size:17px}
+.hero .brand{color:#e8c77d}
+.hero .badge{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.22)}
+.steps{list-style:none;margin:6px 0 0;padding:0;display:flex;gap:8px;flex-wrap:wrap}
+.steps li{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:rgba(246,238,252,.7);padding:6px 12px 6px 14px;border-radius:99px;background:rgba(255,255,255,.07)}
+.steps li b{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.14);font-size:12px}
+.steps li.on{color:#241632;background:#f3e6ff}
+.steps li.on b{background:#6b2fb3;color:#fff}
+.steps li.done{color:#fff}
+.steps li.done b{background:#e8c77d;color:#241632}
+/* setup layout */
+.setup{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:18px;align-items:start}
+.col-main,.col-side{display:flex;flex-direction:column;gap:18px;min-width:0}
+.col-side{position:sticky;top:12px}
+@media (max-width:860px){.setup{grid-template-columns:1fr}.col-side{position:static}}
+.modes{grid-template-columns:repeat(3,1fr);background:transparent;padding:0;gap:10px}
+.modes button{display:grid;justify-items:start;gap:2px;text-align:start;border:1px solid var(--line);background:var(--paper);padding:12px;border-radius:12px}
+.modes button svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;color:var(--accent);margin-bottom:4px}
+.modes button b{font-size:16px}
+.modes button span{font-size:12px;color:var(--muted);font-weight:400}
+.modes button[aria-pressed="true"]{border-color:var(--accent);background:var(--soft);box-shadow:inset 0 0 0 1px var(--accent);color:var(--ink)}
+@media (max-width:420px){.modes button{padding:10px 8px}.modes button span{display:none}}
+.stagecard{background:#140e1b;border-color:#2b2036;color:#f5effa}
+.stagecard h2{color:#f5effa}
+.stagecard .note{color:rgba(245,239,250,.55)}
+.pv{margin:0;padding:0;list-style:none;display:grid;gap:8px;max-height:340px;overflow:auto;counter-reset:pv}
+.pv li{font-family:var(--f-display);font-size:19px;line-height:1.4;color:rgba(245,239,250,.42);padding-inline-start:30px;position:relative;counter-increment:pv}
+.pv li::before{content:counter(pv);position:absolute;inset-inline-start:0;top:3px;font:600 12px var(--f-body);color:rgba(245,239,250,.4);width:22px;text-align:center;border:1px solid rgba(245,239,250,.2);border-radius:6px}
+.pv li.cur{color:#fff}
+.pv li.pv-empty{font-family:var(--f-body);font-size:15px;padding:0;color:rgba(245,239,250,.55)}
+.pv li.pv-empty::before{display:none}
+.pv li.pv-who{font:700 13px var(--f-body);color:#e8c77d;padding:6px 0 0;counter-increment:none}
+.pv li.pv-who::before{display:none}
+.tips{list-style:none;padding:0}
+.tips li{position:relative;padding-inline-start:18px}
+.tips li::before{content:"";position:absolute;inset-inline-start:2px;top:.62em;width:7px;height:7px;border-radius:50%;background:var(--gold)}
+.tips b{color:var(--ink);font-weight:700}
+.btn.big svg{margin-inline-end:4px}
+.ver{font-size:11px;text-align:center}
 header.top{display:flex;flex-direction:column;gap:4px;padding-top:8px}
 .brand{font-size:13px;letter-spacing:.08em;color:var(--gold);font-weight:700}
 h1{font-family:var(--f-display);font-size:clamp(28px,6vw,38px);line-height:1.15;margin:0;text-wrap:balance}
 h2{font-family:var(--f-display);font-size:22px;margin:0;text-wrap:balance}
 .sub{color:var(--muted);margin:0}
 .badge{display:inline-block;font-size:12px;font-weight:700;padding:2px 10px;border-radius:99px;background:var(--soft);color:var(--accent);width:max-content}
-.card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:0 1px 2px rgba(36,22,50,.05),0 8px 24px -16px rgba(36,22,50,.25);display:flex;flex-direction:column;gap:14px;min-width:0}
 .seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:var(--soft);padding:5px;border-radius:12px}
 .seg button{border:0;background:transparent;color:var(--ink);font:600 15px var(--f-body);padding:10px 6px;border-radius:9px;cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--paper);color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.12)}
@@ -52,7 +96,7 @@ input:focus-visible,textarea:focus-visible,button:focus-visible,select:focus-vis
 .row.between{justify-content:space-between}
 .btn{border:1px solid var(--line);background:var(--paper);color:var(--ink);font:600 15px var(--f-body);padding:10px 16px;border-radius:10px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;justify-content:center}
 .btn:hover{border-color:var(--accent)}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);box-shadow:0 6px 16px -8px var(--accent)}
 .btn.big{font-size:18px;padding:14px 20px;width:100%}
 .btn.small{font-size:13px;padding:6px 10px}
 .btn.ghost{background:transparent}
@@ -134,49 +178,67 @@ h3{font:700 15px var(--f-body);margin:0;color:var(--muted);letter-spacing:.02em}
 </style>
 </head>
 <body>
+<header class="hero" id="hero">
+  <canvas id="wave" aria-hidden="true"></canvas>
+  <div class="hero-in">
+    <div class="row between" style="align-items:flex-start">
+      <span class="brand">אולפני קולות</span>
+      <span class="badge" id="modeBadge">מצב הדגמה: ההקלטות לא נשמרות</span>
+    </div>
+    <h1>מקליטים את הברכה<br>מהטלפון, כמו באולפן</h1>
+    <p class="sub">טלפרומפטר שמוביל משפט אחרי משפט, ניקוי קול אוטומטי ומוסיקה מרגשת ברקע.</p>
+    <ol class="steps" id="steps">
+      <li data-step="1" class="on"><b>1</b>הטקסט</li>
+      <li data-step="2"><b>2</b>הקלטה</li>
+      <li data-step="3"><b>3</b>סאונד ושליחה</li>
+    </ol>
+  </div>
+</header>
 <div class="wrap" id="app">
-  <header class="top">
-    <span class="brand">אולפני קולות</span>
-    <h1>הקלטת ברכה מהנייד</h1>
-    <p class="sub">כותבים או מדביקים את הטקסט, מקליטים משפט אחרי משפט מול טלפרומפטר, ומקבלים קובץ ערוך עם מוסיקה.</p>
-    <span class="note" id="verNote" style="font-size:11px"></span>
-    <span class="badge" id="modeBadge">מצב הדגמה: ההקלטות לא נשמרות</span>
-  </header>
-
   <!-- GATE: loading / locked link -->
   <section id="gate" class="card" hidden>
     <h2 id="gateTitle">טוענים את ההקלטה שלך…</h2>
     <p class="sub" id="gateMsg"></p>
     <p class="note" dir="ltr" id="gateStudio" hidden>WhatsApp: 055-517-0280</p>
+    <button class="btn" id="gateRetry" type="button" hidden>לנסות שוב</button>
   </section>
 
   <!-- SETUP -->
-  <section id="setup" class="wrap" style="gap:18px">
-    <div class="card">
-      <h2>מה מקליטים?</h2>
-      <div class="seg" role="group" aria-label="סוג ההקלטה">
-        <button type="button" data-mode="blessing" aria-pressed="true">ברכה</button>
-        <button type="button" data-mode="family" aria-pressed="false">ברכות משפחה</button>
-        <button type="button" data-mode="drasha" aria-pressed="false">דרשה</button>
+  <section id="setup" class="setup">
+    <div class="col-main">
+      <div class="card">
+        <h2>מה מקליטים?</h2>
+        <div class="seg modes" role="group" aria-label="סוג ההקלטה">
+          <button type="button" data-mode="blessing" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><b>ברכה</b><span>מברך אחד</span></button>
+          <button type="button" data-mode="family" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3"/><circle cx="16.5" cy="9" r="2.5"/><path d="M2.5 20c.8-3.6 3-5.5 5.5-5.5s4.7 1.9 5.5 5.5M13.5 15.2c.9-.5 1.9-.7 3-.7 2.2 0 4 1.6 4.8 5.5"/></svg><b>ברכות משפחה</b><span>עד 5 מברכים</span></button>
+          <button type="button" data-mode="drasha" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6z"/><path d="M9 9h6M9 13h6M9 17h4"/></svg><b>דרשה</b><span>טקסט ארוך יותר</span></button>
+        </div>
+        <p class="note" id="modeNote"></p>
       </div>
-      <p class="note" id="modeNote"></p>
+      <div class="card">
+        <div class="row between"><h2 id="textTitle">הטקסט</h2><button class="btn small" id="sampleBtn" type="button">טען טקסט לדוגמה</button></div>
+        <div id="blessers" style="display:grid;gap:12px"></div>
+        <button class="btn" id="addBlesser" type="button" hidden>+ הוספת מברך</button>
+      </div>
     </div>
-    <div class="card">
-      <div class="row between"><h2 id="textTitle">הטקסט</h2><button class="btn small" id="sampleBtn" type="button">טען טקסט לדוגמה</button></div>
-      <div id="blessers" style="display:grid;gap:12px"></div>
-      <button class="btn" id="addBlesser" type="button" hidden>+ הוספת מברך</button>
-    </div>
-    <div class="card">
-      <h2>לפני שמתחילים</h2>
-      <ul class="tips">
-        <li>חדר שקט, בלי מזגן או טלוויזיה ברקע.</li>
-        <li>מניחים את הטלפון על שולחן, בערך 20–30 ס"מ מהפה, וקוראים מהמסך.</li>
-        <li>אין צורך באוזניות. בזמן ההקלטה לא מתנגנת מוסיקה.</li>
-        <li>טעיתם? לוחצים "מההתחלה" ומקריאים את המשפט שוב. אפשר גם לתקן כל משפט אחר כך.</li>
-      </ul>
-      <button class="btn primary big" id="toRecord" type="button">למסך ההקלטה</button>
-      <p class="status" id="setupStatus"></p>
-    </div>
+    <aside class="col-side">
+      <div class="card stagecard">
+        <div class="row between"><h2>כך זה ייראה בהקלטה</h2><span class="note" id="pvCount"></span></div>
+        <ol class="pv" id="pv"><li class="pv-empty">הטקסט יתחלק כאן למשפטים, וכל משפט יוקלט בנפרד.</li></ol>
+      </div>
+      <div class="card">
+        <h2>לפני שמתחילים</h2>
+        <ul class="tips">
+          <li><b>חדר שקט</b> בלי מזגן או טלוויזיה ברקע</li>
+          <li><b>20–30 ס"מ</b> בין הטלפון לפה, הטלפון מונח על שולחן</li>
+          <li><b>בלי אוזניות</b>, בזמן ההקלטה אין מוסיקה</li>
+          <li><b>טעיתם?</b> "מההתחלה" ומקריאים שוב, ואפשר לתקן כל משפט אחר כך</li>
+        </ul>
+        <button class="btn primary big" id="toRecord" type="button"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:20px;height:20px"><circle cx="12" cy="12" r="6" fill="currentColor" stroke="none"/></svg>למסך ההקלטה</button>
+        <p class="status" id="setupStatus"></p>
+      </div>
+      <p class="note ver" id="verNote"></p>
+    </aside>
   </section>
 
   <!-- REVIEW -->
@@ -644,14 +706,37 @@ function renderSetup(){
     head.appendChild(lab);
     if(!lockedText&&S.mode==="family"&&S.blessers.length>1){var del=document.createElement("button");del.type="button";del.className="btn small ghost";del.textContent="הסרה";del.onclick=function(){S.blessers.splice(i,1);saveText();renderSetup()};head.appendChild(del)}
     var inp=document.createElement("input");inp.type="text";inp.id="n_"+b.id;inp.value=b.name;inp.placeholder=S.mode==="drasha"?"למשל: איתי":"למשל: אבא ואמא";
-    inp.oninput=function(){b.name=inp.value;saveText()};
+    inp.oninput=function(){b.name=inp.value;saveText();renderPreview()};
     var ta=document.createElement("textarea");ta.id="t_"+b.id;ta.value=b.text;ta.placeholder="מדביקים כאן את הטקסט. כל שורה חדשה היא פסקה.";
-    ta.oninput=function(){b.text=ta.value;saveText();cnt.textContent=countInfo(b.text)};
+    ta.oninput=function(){b.text=ta.value;saveText();cnt.textContent=countInfo(b.text);renderPreview()};
     var cnt=document.createElement("p");cnt.className="note";cnt.textContent=countInfo(b.text);
     if(lockedText){inp.readOnly=true;ta.readOnly=true;cnt.textContent="הטקסט ננעל כשההקלטה התחילה. לשינוי פנו לאולפני קולות."}
     d.append(head,inp,ta,cnt);box.appendChild(d);
   });
+  renderPreview();setStep(1);
 }
+function renderPreview(){
+  var pv=$("#pv");if(!pv) return;pv.innerHTML="";var total=0;
+  S.blessers.forEach(function(b,bi){
+    var r=splitText(b.text);if(!r.sentences.length) return;
+    if(S.blessers.length>1){var w=document.createElement("li");w.className="pv-who";w.textContent=b.name||("מברך "+(bi+1));pv.appendChild(w)}
+    r.sentences.forEach(function(x){var li=document.createElement("li");li.textContent=x;if(!total) li.className="cur";pv.appendChild(li);total++});
+  });
+  if(!total){var e=document.createElement("li");e.className="pv-empty";e.textContent="הטקסט יתחלק כאן למשפטים, וכל משפט יוקלט בנפרד.";pv.appendChild(e)}
+  $("#pvCount").textContent=total?(total+" משפטים"):"";
+}
+function setStep(n){document.querySelectorAll("#steps li").forEach(function(li){var k=+li.dataset.step;li.className=k===n?"on":(k<n?"done":"")})}
+function drawWave(){
+  var c=$("#wave");if(!c) return;var r=c.getBoundingClientRect(),d=window.devicePixelRatio||1;c.width=r.width*d;c.height=r.height*d;
+  var g=c.getContext("2d");g.scale(d,d);var W=r.width,H=r.height,n=Math.floor(W/7),seed=7;
+  var rnd=function(){seed=(seed*16807)%2147483647;return seed/2147483647};
+  for(var i=0;i<n;i++){
+    var x=i*7+2,env=Math.pow(Math.sin(Math.PI*(i/n)),.6),h=(0.15+0.85*rnd())*env*H*0.42;
+    g.fillStyle=i%9===0?"rgba(232,199,125,.45)":"rgba(183,139,240,.22)";
+    g.fillRect(x,H*0.62-h/2,3,h);
+  }
+}
+window.addEventListener("resize",function(){clearTimeout(drawWave.t);drawWave.t=setTimeout(drawWave,150)});
 function countInfo(t){var r=splitText(t),w=wc(t||"");if(!w) return "";return r.sentences.length+" משפטים · בערך "+fmtDur(w/2.1)+" הקלטה"}
 function fmtDur(sec){sec=Math.round(sec);var m=Math.floor(sec/60),s=sec%60;return m?(m+":"+(s<10?"0":"")+s+" דק'"):(s+" שנ'")}
 document.querySelectorAll(".seg button").forEach(function(b){b.onclick=function(){
@@ -857,6 +942,7 @@ try{var ps=JSON.parse(localStorage.getItem(LS+"_ui")||"null");if(ps){P.size=ps.s
 function saveUi(){try{localStorage.setItem(LS+"_ui",JSON.stringify({size:P.size,auto:P.auto}))}catch(e){}}
 
 function openStage(b,idx,single){
+  setStep(2);
   P.b=b;P.idx=idx;P.single=single;P.state="idle";
   $("#stage").hidden=false;document.body.style.overflow="hidden";
   $("#stName").textContent=(S.mode==="drasha"?"דרשה":"ברכה")+(b.name?" · "+b.name:"");
@@ -867,7 +953,7 @@ function closeStage(){
   if(P.state==="rec"||P.state==="count") finishSession(true);
   stopMic();releaseWake();
   $("#stage").hidden=true;document.body.style.overflow="";
-  renderReview();
+  renderReview();setStep(3);
 }
 function renderStageText(){
   var box=$("#stText");box.innerHTML="";box.style.fontSize=P.size+"px";
@@ -1006,7 +1092,7 @@ function playBuffer(buf){
   stopPlaying();stopLive();
   return ensurePlay().then(function(ctx){var s=ctx.createBufferSource();s.buffer=buf;s.connect(ctx.destination);s.start();playing=s;s.onended=function(){if(playing===s) playing=null}});
 }
-function showReview(){$("#setup").hidden=true;$("#review").hidden=false;renderReview();window.scrollTo(0,0)}
+function showReview(){$("#setup").hidden=true;$("#review").hidden=false;renderReview();setStep(3);window.scrollTo(0,0)}
 function renderReview(){
   $("#famGapWrap").hidden=S.mode!=="family";
   var box=$("#takes");box.innerHTML="";
@@ -1427,7 +1513,10 @@ var API="https://kolot-recorder.kolot-studios.workers.dev";
 var CLOUD={on:false,k:null,dev:null,q:[],busy:false,failed:0,submitted:false,fixedMode:false,setT:null};
 function devId(){
   var v=null;try{v=localStorage.getItem("kolot_rec_dev")}catch(e){}
-  if(!v||!/^[a-f0-9]{32}$/.test(v)){var a=new Uint8Array(16);crypto.getRandomValues(a);v=Array.prototype.map.call(a,function(x){return ("0"+x.toString(16)).slice(-2)}).join("");try{localStorage.setItem("kolot_rec_dev",v)}catch(e){}}
+  if(!v){var m=document.cookie.match(/(?:^|; )kolot_rec_dev=([a-f0-9]{32})/);if(m) v=m[1]}
+  if(!v||!/^[a-f0-9]{32}$/.test(v)){var a=new Uint8Array(16);crypto.getRandomValues(a);v=Array.prototype.map.call(a,function(x){return ("0"+x.toString(16)).slice(-2)}).join("")}
+  try{localStorage.setItem("kolot_rec_dev",v)}catch(e){}
+  try{document.cookie="kolot_rec_dev="+v+"; max-age=31536000; path=/; SameSite=Lax; Secure"}catch(e){}
   return v;
 }
 function cloudApi(action,data){
@@ -1488,7 +1577,7 @@ function cloudSettingsSoon(){
   CLOUD.setT=setTimeout(function(){cloudApi("rc_c_settings",{settings:settings(),music:document.querySelector("input[name=music]:checked").value}).catch(function(){})},1500);
 }
 function gate(msg,stop){
-  $("#gate").hidden=false;$("#gateTitle").textContent=stop?"אי אפשר להמשיך מכאן":"טוענים את ההקלטה שלך…";$("#gateMsg").textContent=msg||"";$("#gateStudio").hidden=!stop;
+  $("#gate").hidden=false;$("#gateTitle").textContent=stop?"אי אפשר להמשיך מכאן":"טוענים את ההקלטה שלך…";$("#gateMsg").textContent=msg||"";$("#gateStudio").hidden=!stop;$("#gateRetry").hidden=!stop||!CLOUD.on||!API;
   if(stop){$("#setup").hidden=true;$("#review").hidden=true;$("#stage").hidden=true;stopMic();stopLive()}
 }
 function applySettings(st,music){
@@ -1499,6 +1588,7 @@ function applySettings(st,music){
   if(st){S.preset=st.preset!=null?st.preset:S.preset;S.mlevel=st.mlevel!=null?st.mlevel:S.mlevel;markPresets()}
   if(music&&music!=="file"){var r=document.querySelector('input[name=music][value="'+music+'"]');if(r) r.checked=true}
 }
+$("#gateRetry").onclick=function(){cloudOpen()};
 function cloudOpen(){
   $("#setup").hidden=true;gate("רגע אחד…",false);
   cloudApi("rc_c_open").then(function(r){
@@ -1566,7 +1656,7 @@ setInterval(function(){
 },1000);
 
 /* ---------- visible errors (prototype) ---------- */
-var VERSION="2026-11-04d";
+var VERSION="2026-11-04e";
 function reportErr(msg){
   var el=document.getElementById("errBox");
   if(!el){el=document.createElement("p");el.id="errBox";el.className="note warn";el.style.cssText="position:fixed;inset:auto 8px calc(8px + env(safe-area-inset-bottom,0px)) 8px;z-index:99;background:var(--paper);border:1px solid var(--warn);border-radius:10px;padding:8px 10px;margin:0";document.body.appendChild(el)}
@@ -1576,7 +1666,7 @@ window.addEventListener("error",function(e){reportErr((e.message||"")+(e.filenam
 window.addEventListener("unhandledrejection",function(e){var r=e.reason;reportErr(r&&(r.message||r.name)||String(r))});
 
 /* ---------- boot ---------- */
-$("#verNote").textContent="גרסה "+VERSION;
+$("#verNote").textContent="גרסה "+VERSION;drawWave();
 applyPreset("natural",true);applyLevel("normal",true);
 var hk=(location.hash.match(/k=([a-f0-9]{20,40})/)||[])[1];
 if(hk){

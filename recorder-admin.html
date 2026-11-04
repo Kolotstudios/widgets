@@ -161,7 +161,7 @@ function load(){
       var ch=document.createElement("span");ch.className="chip "+st[0];ch.textContent=st[1];
       top.append(nm,ch);
       var meta=document.createElement("div");meta.className="meta";
-      [MODES[it.mode]||it.mode,it.orderId?"הזמנה "+it.orderId:"",it.takes+" משפטים",it.state.device?"נעול למכשיר":"עוד לא נפתח","עודכן "+fmtDate(it.updated),"בתוקף עד "+new Date(it.state.expires).toLocaleDateString("he-IL")]
+      [MODES[it.mode]||it.mode,it.orderId?"הזמנה "+it.orderId:"",it.takes+" משפטים",it.state.device?("נפתח ב-"+(it.state.devices||1)+" מכשירים"):"עוד לא נפתח","עודכן "+fmtDate(it.updated),"בתוקף עד "+new Date(it.state.expires).toLocaleDateString("he-IL")]
         .filter(Boolean).forEach(function(t){var s=document.createElement("span");s.textContent=t;meta.appendChild(s)});
       var acts=document.createElement("div");acts.className="row";
       var btn=function(t,fn,cls){var b=document.createElement("button");b.type="button";b.className="btn "+(cls||"");b.textContent=t;b.onclick=function(){fn(b)};acts.appendChild(b);return b};

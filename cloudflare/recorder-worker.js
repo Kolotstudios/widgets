@@ -3,11 +3,12 @@
  * and stored hashed in the bucket (config/admin.json).
  * Same API as the Apps Script version: POST JSON {action, ...}, actions rc_ping / rc_setup / rc_login / rc_* (studio) / rc_c_* (client link).
  *
- * A project = one order. The client link carries a random key (#k=...). The first device that opens the link
- * is bound to it; another device gets "locked" until the studio resets it. Text locks after the first recording.
+ * A project = one order. The client link carries a random key (#k=...). The first two devices that open the link
+ * (e.g. a phone and a computer) are bound to it; a third device gets "locked" until the studio resets it.
+ * Text locks after the first recording.
  * Storage layout: e/<k>.json (entry), p/<k>.json (project), f/<k>/<name> (audio).
  */
-const MAX_TAKES = 10, MAX_UPLOADS = 600, DAYS = 30;
+const MAX_TAKES = 10, MAX_UPLOADS = 600, DAYS = 30, MAX_DEVICES = 2;
 const H = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type', 'Content-Type': 'application/json; charset=utf-8' };
 const out = (o) => new Response(JSON.stringify(o), { headers: H });
 
@@ -29,7 +30,7 @@ async function putBin(env, key, b64, type) { await env.BUCKET.put(key, b64ToByte
 async function getBin(env, key) { const o = await env.BUCKET.get(key); return o ? new Uint8Array(await o.arrayBuffer()) : null; }
 function tok() { const a = new Uint8Array(14); crypto.getRandomValues(a); return [...a].map(x => x.toString(16).padStart(2, '0')).join(''); }
 async function sha(s) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)); return btoa(String.fromCharCode(...new Uint8Array(h))).replace(/[+/=]/g, '').slice(0, 32); }
-const state = (e) => ({ status: e.status || 'open', expires: e.expires, expired: Date.now() > e.expires, device: !!e.device });
+const state = (e) => ({ status: e.status || 'open', expires: e.expires, expired: Date.now() > e.expires, device: !!((e.devices && e.devices.length) || e.device), devices: (e.devices || (e.device ? [e.device] : [])).length });
 
 /* ---------- router ---------- */
 async function handle(d, env) {
@@ -54,8 +55,11 @@ async function client(d, env) {
   if (!e) return { ok: false, error: 'הקישור לא נמצא. בדקו שהעתקתם אותו במלואו.' };
   if (Date.now() > e.expires) return { ok: false, closed: true, error: 'תוקף הקישור הסתיים. לפרטים פנו לאולפני קולות.' };
   const h = await sha('kolot-rec|' + dev);
-  if (!e.device) { e.device = h; e.devAt = Date.now(); await putJ(env, 'e/' + k, e); }
-  else if (e.device !== h) return { ok: false, locked: true, error: 'הקישור כבר נפתח במכשיר אחר. כדי להקליט מהמכשיר הזה, פנו לאולפני קולות ונפתח אותו עבורכם.' };
+  e.devices = e.devices || (e.device ? [e.device] : []);
+  if (!e.devices.includes(h)) {
+    if (e.devices.length >= (e.maxDevices || MAX_DEVICES)) return { ok: false, locked: true, error: 'הקישור כבר נפתח בשני מכשירים אחרים. כדי להקליט מהמכשיר הזה, פנו לאולפני קולות ונפתח אותו עבורכם.' };
+    e.devices.push(h); e.device = e.devices[0]; e.devAt = Date.now(); await putJ(env, 'e/' + k, e);
+  }
   const pr = (await getJ(env, 'p/' + k)) || {};
   if (d.action === 'rc_c_open') return view(k, e, pr);
   if (d.action === 'rc_c_audio') {
@@ -134,7 +138,7 @@ async function staff(d, env) {
       let cursor; do { const l = await env.BUCKET.list({ prefix: 'f/' + k + '/', cursor }); cursor = l.truncated ? l.cursor : undefined; if (l.objects.length) await env.BUCKET.delete(l.objects.map(o => o.key)); } while (cursor);
       await env.BUCKET.delete(['e/' + k, 'p/' + k]); return { ok: true, removed: true };
     }
-    if (d.resetDevice) { e.device = null; e.devAt = null; }
+    if (d.resetDevice) { e.device = null; e.devices = []; e.devAt = null; }
     if (d.reopen) e.status = 'open';
     if (d.done) e.status = 'done';
     if (d.extendDays) e.expires = Math.max(Date.now(), e.expires) + (d.extendDays | 0) * 86400000;

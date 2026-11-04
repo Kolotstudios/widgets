@@ -7,10 +7,12 @@ var CSS="#kolot-upsell{margin:14px 0 6px}\n#kolot-upsell .ku-h{font-weight:700;f
   // product page ids on the Kala purchase page
   var SONG=[75801,76215,76247,76248,76249,76210], CLIP=[75803,76144,76236,75808,75807], TAKE=[76164],
       PRES=[75831,76038,75832], BLESS=[75898,75816,75899,76250,75985,76252,76253,76254,76255,76256,76257,76258],
-      LYR=75982;
+      LYR=75982, UPG=76259;
+  // products that are not on the purchase page: shown from here (keep the price in sync with Kala)
+  var EXTRA={76259:{title:"שדרוג שיר לטייקליפ",price:"810",slug:"שדרוג-שיר-לטייקליפ"}};
   // what to offer for each kind of product already in the cart, in order of preference
-  var RULES=[[SONG,[LYR,76164,75898]],[CLIP,[75831,75899]],[TAKE,[LYR,75831,75899]],[PRES,[76215,75898]],[BLESS,[75831,76215]],[[LYR],[76215,76164]]];
-  var NOTES={75982:"שיר אישי על מנגינה מוכרת, עם גייד מוקלט",76164:"קליפ בטייק אחד, מהיר ומשתלם",75898:"ברכות מרגשות באולפן, עד 5 מברכים",
+  var RULES=[[SONG,[LYR,UPG,75898]],[[UPG],[LYR,75831,75899]],[CLIP,[75831,75899]],[TAKE,[LYR,75831,75899]],[PRES,[76215,75898]],[BLESS,[75831,76215]],[[LYR],[76215,76164]]];
+  var NOTES={75982:"שיר אישי על מנגינה מוכרת, עם גייד מוקלט",76164:"קליפ בטייק אחד, מהיר ומשתלם",76259:"השיר שלכם הופך לקליפ בטייק אחד, עם תמונות",75898:"ברכות מרגשות באולפן, עד 5 מברכים",
     75899:"ברכות ודרשה באולפן, במחיר חבילה",75831:"מצגת מרגשת לאירוע, עד 50 תמונות",76215:"הקלטת שיר מקצועית במחיר בוקר"};
   // order form (cart summary) or the cart page (/shopping-cart, editable cart)
   var cart=document.querySelector("#widget-shopping_cart-shopping_cart")||document.querySelector("#widget-shopping_cart-cart_edit");
@@ -28,6 +30,7 @@ var CSS="#kolot-upsell{margin:14px 0 6px}\n#kolot-upsell .ku-h{font-weight:700;f
       P[id]={id:id,title:t.textContent.trim(),price:a.getAttribute("data-price"),img:img?img.style.backgroundImage:""};
       byTitle[P[id].title]=id;
     });
+    Object.keys(EXTRA).forEach(function(id){if(!byTitle[EXTRA[id].title]) byTitle[EXTRA[id].title]=+id});
     var have=inCartIds.concat(inCartTitles.map(function(t){return byTitle[t]})).filter(function(x,i,a){return x&&a.indexOf(x)===i});
     var has=function(list){return have.some(function(id){return list.indexOf(id)>=0})};
     var out=[];
@@ -36,9 +39,20 @@ var CSS="#kolot-upsell{margin:14px 0 6px}\n#kolot-upsell .ku-h{font-weight:700;f
       if(have.indexOf(s)>=0) return false;
       if(has(BLESS)&&BLESS.indexOf(s)>=0) return false;   // already recording a blessing or a drasha
       if(has(CLIP)&&s===LYR) return false;                 // every clip except the take-clip includes lyrics and a guide
-      return !!P[s];
+      if(s===UPG&&(!has(SONG)||has(CLIP)||has(TAKE))) return false; // the upgrade only makes sense on top of a song
+      return !!(P[s]||EXTRA[s]);
     }).slice(0,3);
     if(!out.length) return;
+    // fill in products that are not on the purchase page (image from their own page)
+    return Promise.all(out.filter(function(id){return !P[id]}).map(function(id){
+      var x=EXTRA[id];P[id]={id:id,title:x.title,price:x.price,img:""};
+      return fetch("/"+encodeURIComponent(x.slug),{credentials:"same-origin"}).then(function(r){return r.text()}).then(function(h){
+        var m=h.match(/property="og:image"\s+content="([^"]+)"/)||h.match(/content="([^"]+)"\s+property="og:image"/);
+        if(m) P[id].img="url("+m[1]+")";
+      }).catch(function(){});
+    })).then(function(){render(out,P)});
+  }).catch(function(){});
+  function render(out,P){
     var h='<p class="ku-h">משלים את האירוע</p><div class="ku-row">';
     out.forEach(function(id){var p=P[id];
       h+='<div class="ku-card">'+(p.img?'<div class="ku-img" style="background-image:'+p.img.replace(/"/g,"'")+'"></div>':'')+
@@ -47,6 +61,6 @@ var CSS="#kolot-upsell{margin:14px 0 6px}\n#kolot-upsell .ku-h{font-weight:700;f
     });
     box.innerHTML=h+'</div>';
     [].forEach.call(box.querySelectorAll(".ku-t"),function(el,i){el.textContent=P[out[i]].title});
-  }).catch(function(){});
+  }
 })();
 })();

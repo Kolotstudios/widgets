@@ -84,7 +84,7 @@ audio{width:100%}
 <script>
 (function(){
 "use strict";
-var API="";
+var API="https://kolot-recorder.kolot-studios.workers.dev";
 var REC=new URL("recorder.html",location.href).href;
 var $=function(s){return document.querySelector(s)};
 var pass="";try{pass=sessionStorage.getItem("kolot_rec_admin")||""}catch(e){}

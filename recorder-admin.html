@@ -237,7 +237,7 @@ function renderList(){
       if(it.code){var cd=document.createElement("span");cd.innerHTML="קוד: ";var cb=document.createElement("b");cb.className="ltr";cb.textContent=it.code;cd.appendChild(cb);ct.appendChild(cd)}
       if(it.contact){
         if(it.contact.name){var cn=document.createElement("span");cn.textContent=it.contact.name;ct.appendChild(cn)}
-        var ph=it.contact.phone||"",intl=ph.replace(/^0/,"972");
+        var ph=it.contact.phone||"",intl=ph.replace(/^0/,"972"),loc=ph.replace(/^972/,"0");ph=loc.length===10?loc.slice(0,3)+"-"+loc.slice(3):loc;
         var pa=document.createElement("a");pa.href="https://wa.me/"+intl;pa.target="_blank";pa.rel="noopener";pa.className="ltr";pa.textContent=ph;ct.appendChild(pa);
         var ca=document.createElement("span");ca.className="note";ca.textContent="ביקש לשלם "+fmtDate(it.contact.at);ct.appendChild(ca);
         if(it.due&&(waiting(it)||!it.state.paid)){var du=document.createElement("b");du.textContent="לתשלום: "+it.due.amount+" ₪"+(it.due.topUp?" (השלמה)":" · "+(it.mode==="drasha"?"דרשה":(it.due.n||1)+" מברכים"));ct.appendChild(du)}

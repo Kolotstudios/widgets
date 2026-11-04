@@ -798,7 +798,7 @@ function okBlessers(){return S.blessers.filter(function(b){return wc(b.text)>0})
 function createDraft(ok){
   CLOUD.dev=CLOUD.dev||devId();
   var qp=new URLSearchParams(location.search),forName=(qp.get("for")||"").trim(),dn=((ok[0]||{}).name||"").trim();
-  return cloudApi("rc_c_draft",{mode:S.mode,name:forName?(dn?dn+" ל"+forName:forName):dn,src:qp.get("src")||"",blessers:ok.map(function(b){return {name:b.name,text:b.text}})}).then(function(r){
+  return cloudApi("rc_c_draft",{mode:S.mode,name:forName&&forName!==dn?(dn?dn+" ל"+forName:forName):dn,src:qp.get("src")||"",blessers:ok.map(function(b){return {name:b.name,text:b.text}})}).then(function(r){
     if(!r.ok) throw new Error(r.error||"לא הצלחנו לשמור בענן.");
     CLOUD.on=true;CLOUD.k=r.k;CLOUD.draft=true;CLOUD.paid=false;CLOUD.paidBlessers=null;CLOUD.code=r.code;CLOUD.fixedMode=true;S.editsLeft=5;S.maxBlessers=S.mode==="drasha"?1:5;
     try{history.replaceState(null,"",location.pathname+"#k="+r.k)}catch(e){location.hash="k="+r.k}
@@ -1969,7 +1969,7 @@ setInterval(function(){
 },1000);
 
 /* ---------- visible errors (prototype) ---------- */
-var VERSION="2026-11-04o";
+var VERSION="2026-11-04p";
 function reportErr(msg){
   var el=document.getElementById("errBox");
   if(!el){el=document.createElement("p");el.id="errBox";el.className="note warn";el.style.cssText="position:fixed;inset:auto 8px calc(8px + env(safe-area-inset-bottom,0px)) 8px;z-index:99;background:var(--paper);border:1px solid var(--warn);border-radius:10px;padding:8px 10px;margin:0";document.body.appendChild(el)}

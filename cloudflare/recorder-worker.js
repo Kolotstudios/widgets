@@ -49,7 +49,8 @@ async function getBin(env, key) { const o = await env.BUCKET.get(key); return o 
 function tok() { const a = new Uint8Array(14); crypto.getRandomValues(a); return [...a].map(x => x.toString(16).padStart(2, '0')).join(''); }
 async function sha(s) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)); return btoa(String.fromCharCode(...new Uint8Array(h))).replace(/[+/=]/g, '').slice(0, 32); }
 const isPaid = (e) => e.paid !== false;
-const priceOf = (mode, n) => mode === 'drasha' ? PRICE_DRASHA : PRICE_BASE + PRICE_EXTRA * Math.max(0, (n | 0) - 1);
+const single = (m) => m === 'drasha' || m === 'kala'; // one speaker: drasha or ברכת כלה (same price)
+const priceOf = (mode, n) => single(mode) ? PRICE_DRASHA : PRICE_BASE + PRICE_EXTRA * Math.max(0, (n | 0) - 1);
 // drafts are paid per blesser: more blessers than were paid for need a top-up before the final file
 const extraDue = (e) => (e.draft && isPaid(e) && e.paidBlessers != null) ? Math.max(0, (e.nb | 0) - e.paidBlessers) : 0;
 const state = (e) => ({ paid: isPaid(e), draft: !!e.draft, nb: e.nb | 0, paidBlessers: e.paidBlessers == null ? null : e.paidBlessers, extraDue: extraDue(e), price: priceOf(e.mode, e.nb || 1), status: e.status || 'open', expires: e.expires, expired: Date.now() > e.expires, device: !!((e.devices && e.devices.length) || e.device), devices: (e.devices || (e.device ? [e.device] : [])).length });
@@ -80,7 +81,7 @@ async function handle(d, env, ip) {
  * A Kala automation posts here when one of the recorder products is paid (order product status → "שולם במלואו").
  * The body carries a shared secret that the studio copies from the admin page into the automation.
  * The draft is found by the code the customer wrote in the order comments, or by the phone they gave in the recorder. */
-const KALA_PACKS = { 76252: 1, 76253: 2, 76254: 3, 76255: 4, 76256: 5, 76258: 1 }, KALA_EXTRA = 76257;
+const KALA_PACKS = { 76252: 1, 76253: 2, 76254: 3, 76255: 4, 76256: 5, 76258: 1, 76261: 1 }, KALA_EXTRA = 76257;
 const last9 = (p) => String(p || '').replace(/\D/g, '').slice(-9);
 async function kalaPaid(d, env) {
   const cfg = await getJ(env, 'config/kala.json');
@@ -125,13 +126,13 @@ async function draft(d, env, ip) {
   const n = rl.day === day ? (rl.n | 0) : 0;
   if (n >= MAX_DRAFTS_PER_DAY) return { ok: false, error: 'נפתחו היום יותר מדי הקלטות מהחיבור הזה. נסו שוב מחר או פנו לאולפני קולות.' };
   await putJ(env, rk, { day, n: n + 1 });
-  const mode = ['blessing', 'family', 'drasha'].includes(d.mode) ? d.mode : 'blessing', k = tok();
+  const mode = ['blessing', 'family', 'drasha', 'kala'].includes(d.mode) ? d.mode : 'blessing', k = tok();
   const code = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000)), h = await sha('kolot-rec|' + dev);
-  const e = { created: now, updated: now, name: String(d.name || '').slice(0, 80), orderId: '', mode, maxBlessers: mode === 'drasha' ? 1 : 5,
+  const e = { created: now, updated: now, name: String(d.name || '').slice(0, 80), orderId: '', mode, maxBlessers: single(mode) ? 1 : 5,
     expires: now + DRAFT_DAYS * 86400000, status: 'open', draft: true, paid: false, code, src: String(d.src || '').slice(0, 20), devices: [h], device: h, devAt: now };
   const blessers = (d.blessers || []).slice(0, e.maxBlessers).map(b => ({ name: String(b.name || '').slice(0, 60), text: String(b.text || '').slice(0, 6000) }));
   e.nb = blessers.filter(b => b.text.trim()).length;
-  if (mode !== 'drasha') e.mode = e.nb > 1 ? 'family' : 'blessing';
+  if (!single(mode)) e.mode = e.nb > 1 ? 'family' : 'blessing';
   await putJ(env, 'p/' + k, { mode: e.mode, blessers, textLocked: false });
   await putJ(env, 'e/' + k, e);
   return { ok: true, k, code };
@@ -183,8 +184,8 @@ async function client(d, env) {
         e.takes = nt; e.editsUsed = (e.editsUsed || 0) + 1;
         pr.history = (pr.history || []).concat([{ at: Date.now(), blessers: pr.blessers }]).slice(-12);
       }
-    } else pr.mode = ['blessing', 'family', 'drasha'].includes(d.mode) ? d.mode : (pr.mode || 'blessing');
-    if (pr.mode !== 'drasha') pr.mode = nb.length > 1 ? 'family' : 'blessing';
+    } else pr.mode = ['blessing', 'family', 'drasha', 'kala'].includes(d.mode) ? d.mode : (pr.mode || 'blessing');
+    if (!single(pr.mode)) pr.mode = nb.length > 1 ? 'family' : 'blessing';
     pr.blessers = nb; e.mode = pr.mode; e.nb = nb.filter(b => b.text.trim()).length;
     await putJ(env, 'p/' + k, pr); e.updated = Date.now(); await putJ(env, 'e/' + k, e);
     return { ok: true, editsLeft: Math.max(0, maxEdits - (e.editsUsed || 0)) };
@@ -258,7 +259,7 @@ async function staff(d, env) {
     return { ok: true, items: items.sort((a, b) => b.updated - a.updated) };
   }
   if (d.action === 'rc_create') {
-    const k = tok(), mode = ['blessing', 'family', 'drasha'].includes(d.mode) ? d.mode : 'blessing';
+    const k = tok(), mode = ['blessing', 'family', 'drasha', 'kala'].includes(d.mode) ? d.mode : 'blessing';
     const e = { created: Date.now(), updated: Date.now(), name: String(d.name || '').slice(0, 80), orderId: String(d.orderId || '').replace(/\D/g, '').slice(0, 12), mode,
       maxBlessers: Math.max(1, Math.min(5, (d.maxBlessers | 0) || (mode === 'family' ? 5 : 1))), expires: Date.now() + Math.max(1, Math.min(120, (d.days | 0) || DAYS)) * 86400000, status: 'open' };
     await putJ(env, 'p/' + k, { mode, blessers: (d.blessers || []).slice(0, 5), textLocked: false });

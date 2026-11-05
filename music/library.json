@@ -3,7 +3,8 @@
  "defaults": {
   "blessing": "warm-nostalgia",
   "family": "warm-nostalgia",
-  "drasha": "quiet-piano"
+  "drasha": "quiet-piano",
+  "kala": "forever-yours"
  },
  "categories": [
   {
@@ -89,7 +90,8 @@
    "desc": "פסנתר מוביל, שקט ומתון שנרגע לקראת הסוף",
    "fit": [
     "drasha",
-    "blessing"
+    "blessing",
+    "kala"
    ],
    "file": "quiet-piano.mp3",
    "dur": 189.8
@@ -112,7 +114,8 @@
    "desc": "פסנתר רך עם מנגינה שחוזרת ונושמת",
    "fit": [
     "drasha",
-    "blessing"
+    "blessing",
+    "kala"
    ],
    "file": "lingering-cadence.mp3",
    "dur": 184.0
@@ -124,7 +127,8 @@
    "desc": "פסנתר עדין שמתעצם באמצע ונרגע שוב",
    "fit": [
     "drasha",
-    "blessing"
+    "blessing",
+    "kala"
    ],
    "file": "empty-station.mp3",
    "dur": 172.9
@@ -136,7 +140,8 @@
    "desc": "פסנתר ומיתרים שנבנים לשיא מרגש",
    "fit": [
     "blessing",
-    "family"
+    "family",
+    "kala"
    ],
    "file": "forever-yours.mp3",
    "dur": 178.3
@@ -159,7 +164,8 @@
    "desc": "גרסה ארוכה יותר עם בנייה הדרגתית",
    "fit": [
     "blessing",
-    "family"
+    "family",
+    "kala"
    ],
    "file": "med-crescendo-2.mp3",
    "dur": 192.4
@@ -183,7 +189,8 @@
    "fit": [
     "blessing",
     "family",
-    "drasha"
+    "drasha",
+    "kala"
    ],
    "file": "aegean-sunset.mp3",
    "dur": 193.2
@@ -286,6 +293,14 @@
    "caluna-intima",
    "aegean-sunset",
    "quiet-space"
+  ],
+  "kala": [
+   "forever-yours",
+   "quiet-piano",
+   "empty-station",
+   "aegean-sunset",
+   "lingering-cadence",
+   "med-crescendo-2"
   ]
  }
 }

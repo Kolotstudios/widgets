@@ -128,13 +128,15 @@ html.embedded .wrap{padding-block:12px 16px}
           <input type="radio" name="ev" id="ev-bd" value="bd"><label for="ev-bd">יום הולדת</label>
           <input type="radio" name="ev" id="ev-wed" value="wed"><label for="ev-wed">חתונה</label>
           <input type="radio" name="ev" id="ev-hina" value="hina"><label for="ev-hina">חינה</label>
+          <input type="radio" name="ev" id="ev-kala" value="kala"><label for="ev-kala">ברכת כלה</label>
         </div>
         <div class="two">
           <div><label for="name" id="nameLbl">שם החוגגת</label><input type="text" id="name" placeholder="למשל: נועה"></div>
           <div data-show="bd"><label for="age">גיל</label><input type="number" id="age" min="1" max="120" placeholder="למשל: 40"></div>
-          <div data-show="wed"><label for="name2">שם החתן</label><input type="text" id="name2" placeholder="למשל: יואב"></div>
+          <div data-show="wed kala"><label for="name2">שם החתן</label><input type="text" id="name2" placeholder="למשל: יואב"></div>
         </div>
         <div><label for="evDate">תאריך האירוע <span class="hint">(לא חובה. ממנו נדע את התאריך העברי ואת פרשת השבוע)</span></label><input type="date" id="evDate" style="max-width:200px"><p class="note" id="hebDate" hidden></p></div>
+        <p class="note" data-show="kala">ברכת כלה: התפילה והמילים שהכלה אומרת לפני הכניסה לחופה, בגוף ראשון. אפשר להקליט אותה באולפן או לבד מהטלפון, ולהשמיע אותה לפני החופה.</p>
         <p class="note">רק השם חובה. כל השאר עוזר לדייק את הברכה, ואפשר ללחוץ "יצירה עכשיו" בכל שלב.</p>
         <div data-show="bd" class="seg">
           <input type="radio" name="cg" id="cg-f" value="f" checked><label for="cg-f">חוגגת</label>
@@ -194,7 +196,46 @@ html.embedded .wrap{padding-block:12px 16px}
         <div><label for="wHow">איך הכירו <span class="hint">(משפט קצר, לא חובה)</span></label><input type="text" id="wHow" placeholder="למשל: בטיול אחרי הצבא"></div>
       </fieldset>
 
-      <fieldset data-step="3">
+      <!-- ברכת כלה: family -->
+      <fieldset data-step="2" data-show="kala">
+        <legend>המשפחה</legend>
+        <div class="box"><div class="t">ההורים שלך</div>
+          <div class="pair"><span>אמא</span><input type="text" id="km" placeholder="למשל: מיכל"><label class="late"><input type="checkbox" id="kmL"> ז״ל</label></div>
+          <div class="pair"><span>אבא</span><input type="text" id="kd" placeholder="למשל: אבי"><label class="late"><input type="checkbox" id="kdL"> ז״ל</label></div>
+        </div>
+        <div class="box"><div class="t" id="kgt">ההורים של החתן</div>
+          <div class="pair"><span>אמא</span><input type="text" id="kgm" placeholder="למשל: רונית"></div>
+          <div class="pair"><span>אבא</span><input type="text" id="kgd" placeholder="למשל: יוסי"></div>
+        </div>
+        <p class="note">בנוסח המסורתי הכלה אומרת ״אני, נועה בת מיכל... עם דניאל בן רונית״, לכן כדאי למלא את שמות האמהות.</p>
+        <div><label for="ksibs">אחים ואחיות <span class="hint">(שמות, מופרדים בפסיק, לא חובה)</span></label><input type="text" id="ksibs" placeholder="למשל: שירה, איתי"></div>
+        <div><label for="klate">יקירים שכבר אינם <span class="hint">(לא חובה)</span></label><input type="text" id="klate" placeholder="למשל: סבתא לאה, סבא חיים"></div>
+      </fieldset>
+
+      <!-- ברכת כלה: what to include -->
+      <fieldset data-step="3" data-show="kala">
+        <legend>מה לכלול בברכה</legend>
+        <div class="seg">
+          <input type="checkbox" id="ki-home" checked><label for="ki-home">תפילה לבית ולזוגיות</label>
+          <input type="checkbox" id="ki-health" checked><label for="ki-health">בריאות ופרנסה</label>
+          <input type="checkbox" id="ki-par" checked><label for="ki-par">תודה להורים</label>
+          <input type="checkbox" id="ki-gpar"><label for="ki-gpar">להורים של החתן</label>
+          <input type="checkbox" id="ki-sibs"><label for="ki-sibs">לאחים ולאחיות</label>
+          <input type="checkbox" id="ki-groom" checked><label for="ki-groom">מילים לחתן</label>
+          <input type="checkbox" id="ki-others"><label for="ki-others">תפילה על אחרים</label>
+        </div>
+        <p class="note">״תפילה על אחרים״: מנהג יפה שהכלה מתפללת ברגע הזה גם על מי שמחכה לזיווג, לרפואה או לפרי בטן.</p>
+        <div><label for="kothers">על מי במיוחד להתפלל <span class="hint">(לא חובה)</span></label><input type="text" id="kothers" placeholder="למשל: רפואה שלמה לסבתא רחל, וזיווג הגון לאחותי שירה"></div>
+      </fieldset>
+
+      <!-- ברכת כלה: personal -->
+      <fieldset data-step="4" data-show="kala">
+        <legend>משהו אישי</legend>
+        <div><label for="khow">איך הכרתם <span class="hint">(משפט קצר, לא חובה)</span></label><input type="text" id="khow" placeholder="למשל: בטיול אחרי הצבא"></div>
+        <div><label for="kwish">בקשה אישית שלך <span class="hint">(לא חובה, נשלב אותה כמו שכתבת)</span></label><textarea id="kwish" placeholder="למשל: שנדע תמיד לצחוק יחד, גם כשקשה"></textarea></div>
+      </fieldset>
+
+      <fieldset data-step="3" data-hide="kala">
         <legend>מי מברך</legend>
         <select id="from"></select>
         <div id="sideBox" hidden><label for="side">מאיזה צד</label><select id="side"></select></div>
@@ -202,7 +243,7 @@ html.embedded .wrap{padding-block:12px 16px}
         <div><label for="sign">חתימה <span class="hint">(מתמלאת לבד, אפשר לשנות)</span></label><input type="text" id="sign"></div>
       </fieldset>
 
-      <fieldset data-step="4">
+      <fieldset data-step="4" data-hide="kala">
         <legend id="aboutLbl">על החוגגת</legend>
         <div><label for="story">ספרו במילים שלכם <span class="hint">(לא חובה. אפשר גם להקליט. נסמן לבד תכונות ותחביבים שנזהה)</span></label><textarea id="story" placeholder="למשל: מצחיקה ורגישה, אוהבת לרקוד ולצייר, ותמיד דואגת לאחים הקטנים"></textarea><p class="note" id="storyHit" hidden></p></div>
         <div><span class="lbl">תכונות</span><div class="seg" id="traits"></div></div>
@@ -213,7 +254,7 @@ html.embedded .wrap{padding-block:12px 16px}
         <div><label for="memory">רגע או זיכרון קטן <span class="hint">(משפט אחד, לא חובה)</span></label><textarea id="memory" placeholder="למשל: כשהיית בת חמש עלית על הבמה בגן ולא הסכמת לרדת"></textarea></div>
       </fieldset>
 
-      <fieldset data-step="5">
+      <fieldset data-step="5" data-hide="kala">
         <legend>תודות</legend>
         <div class="seg" id="thanks"></div>
         <input type="text" id="thanksFree" placeholder="תודה למישהו מיוחד, למשל: למורה דינה">
@@ -232,7 +273,7 @@ html.embedded .wrap{padding-block:12px 16px}
           <input type="radio" name="fl" id="fl-ash" value="ash"><label for="fl-ash">אשכנזי</label>
         </div></div>
         <p class="note" id="styleNote">מודרני: בלי ניסוחים דתיים. מסורתי: ניסוחים מוכרים מהבית, פרשת השבוע והחודש העברי. דתי: שפה דתית, ובברכת הורים או סבים גם ״ישימך״ וברכת הכוהנים.</p>
-        <div class="seg">
+        <div class="seg" data-hide="kala">
           <input type="radio" name="tone" id="tn-warm" value="warm" checked><label for="tn-warm">מרגש</label>
           <input type="radio" name="tone" id="tn-fun" value="fun"><label for="tn-fun">מרגש עם חיוך</label>
         </div>
@@ -305,8 +346,8 @@ function chips(box,arr,name,def){$(box).innerHTML=arr.map((t,i)=>`<input type="c
 const checked=box=>[...document.querySelectorAll('#'+box+' input:checked')].map(i=>+i.value);
 
 // ---------- mode ----------
-function mode(){const ev=val('ev');if(ev==='wed'||ev==='hina')return 'wed';if(ev==='bd'&&(+$('age').value||0)>=18)return 'adult';return 'child'}
-function cgOf(){const ev=val('ev');return ev==='bat'?'f':ev==='bar'?'m':(ev==='wed'||ev==='hina')?'p':val('cg')}
+function mode(){const ev=val('ev');if(ev==='kala')return 'kala';if(ev==='wed'||ev==='hina')return 'wed';if(ev==='bd'&&(+$('age').value||0)>=18)return 'adult';return 'child'}
+function cgOf(){const ev=val('ev');return ev==='bat'||ev==='kala'?'f':ev==='bar'?'m':(ev==='wed'||ev==='hina')?'p':val('cg')}
 function celebAge(){const ev=val('ev');return ev==='bat'?12:ev==='bar'?13:ev==='bd'?(+$('age').value||null):null}
 
 // ---------- lists ----------
@@ -325,7 +366,7 @@ function renderGps(){const [l1,l2]=parentLabels();const p1=$('p1').value.trim(),
 $('gps').addEventListener('input',e=>{const t=e.target;if(!t.dataset.s)return;GP[t.dataset.s][t.dataset.k]=t.type==='checkbox'?t.checked:t.value;refresh(false)});
 
 // ---------- who blesses ----------
-function fromOptions(){const m=mode();const n2=$('name2').value.trim()||'החתן',n1=$('name').value.trim()||'הכלה';
+function fromOptions(){const m=mode();if(m==='kala')return [['kala','הכלה בעצמה']];const n2=$('name2').value.trim()||'החתן',n1=$('name').value.trim()||'הכלה';
  if(m==='child'){const [l1,l2]=parentLabels();const o=[];if(l2)o.push(['parents',l1+' ו'+l2]);o.push(['p1',l1]);if(l2)o.push(['p2',l2+(l1===l2?' (השני/ה)':'')]);
   o.push(['self',cgOf()==='m'?'החוגג בעצמו – דרשה / נאום':'החוגגת בעצמה – דרשה / נאום']);
   o.push(['grand','סבא וסבתא'],['grandma','סבתא'],['grandpa','סבא'],['sib','אח או אחות'],['sibs','כל האחים'],['friends','החברים'],['family','כל המשפחה']);return o}
@@ -428,6 +469,7 @@ function ctx(){
   if($('amom').value.trim())($('amomLate').checked?late:alive).push('אמא '+$('amom').value.trim());
   if($('adad').value.trim())($('adadLate').checked?late:alive).push('אבא '+$('adad').value.trim());
   late.forEach((x,i)=>late[i]=x.replace(/^אמא /,'אמא שלך ').replace(/^אבא /,'אבא שלך '));alive.length=0}
+ else if(m==='kala'){sg='f';rel='self'}
  else{ // wedding
   if(from==='w1'){sign=[$('w1m').value.trim()&&!$('w1mL').checked?'אמא':'',$('w1d').value.trim()&&!$('w1dL').checked?'אבא':''].filter(Boolean).join(' ו')||'ההורים';rel='wparent';if(!sign.includes(' ו'))sg=sign==='אמא'?'f':sign==='אבא'?'m':'p'}
   else if(from==='w2'){sign=[$('w2m').value.trim()&&!$('w2mL').checked?'אמא':'',$('w2d').value.trim()&&!$('w2dL').checked?'אבא':''].filter(Boolean).join(' ו')||'ההורים';rel='wparent';if(!sign.includes(' ו'))sg=sign==='אמא'?'f':sign==='אבא'?'m':'p'}
@@ -440,7 +482,10 @@ function ctx(){
  if(from==='self'){sg=cg;rel='self';sign=''}
  const selfData=from==='self'?{par:parentLabels(),pn:[$('p1').value.trim(),$('p2').value.trim()],sibs:LISTS.sibs.filter(s=>s.n).map(s=>({n:s.n,g:s.g,a:s.a}))}:null;
  const md=m==='adult'?'adult':m==='wed'?'wed':'kid';
- return {ev,m,md,cg,sg,from,rel,spk,open,signAuto:sign,name:(ev==='wed'||ev==='hina')&&name2?name+' ו'+name2:name,age:$('age').value,
+ const csv=id=>$(id).value.split(/,|\n/).map(x=>x.trim()).filter(Boolean),ck=id=>$(id).checked;
+ const kala=m==='kala'?{groom:name2,km:$('km').value.trim(),kmL:ck('kmL'),kd:$('kd').value.trim(),kdL:ck('kdL'),gm:$('kgm').value.trim(),gd:$('kgd').value.trim(),sibs:csv('ksibs'),late:csv('klate'),
+  inc:{home:ck('ki-home'),health:ck('ki-health'),par:ck('ki-par'),gpar:ck('ki-gpar'),sibs:ck('ki-sibs'),groom:ck('ki-groom'),others:ck('ki-others')},othersFree:$('kothers').value.trim(),how:$('khow').value.trim(),wish:$('kwish').value.trim()}:null;
+ return {ev,m,md,kala,cg,sg,from,rel,spk,open,signAuto:sign,name:(ev==='wed'||ev==='hina')&&name2?name+' ו'+name2:name,age:$('age').value,
   sibsMention,sibsG:typeof sibsG!=='undefined'?sibsG:null,alive,late,traits:checked('traits').map(i=>TRAITS[i]),
   hob:[...checked('hobbies').map(i=>HOB[md][i]),...$('hobbyFree').value.split(/,|\n/).map(s=>s.trim()).filter(Boolean)],
   tog:[...checked('together').map(i=>TOG[md][i]),...$('togetherFree').value.split(/,|\n/).map(s=>s.trim()).filter(Boolean)],
@@ -449,7 +494,7 @@ function ctx(){
   style:val('style'),tone:val('tone'),secs:+val('len'),sign:$('sign').value.trim(),hd:hebInfo($('evDate').value),selfData,fl:val('style')==='mod'?'':(val('fl')||'')}
 }
 function G(str,c){return str.replace(/\[(c|s):([^\]]*)\]/g,(_,k,body)=>{const p=body.split('|');const g=k==='c'?c.cg:c.sg;return p[{f:0,m:1,p:2}[g]]??p[0]}).replace(/ {2,}/g,' ').replace(/ ([,.:])/g,'$1')}
-function evName(c){return {bat:'בת מצווה',bar:'בר מצווה',bd:'יום הולדת '+(c.age||''),wed:'חתונה',hina:'חינה'}[c.ev]}
+function evName(c){return {bat:'בת מצווה',bar:'בר מצווה',bd:'יום הולדת '+(c.age||''),wed:'חתונה',hina:'חינה',kala:'ברכת כלה'}[c.ev]}
 
 // ---------- generator: returns paragraphs, each with alternatives ----------
 
@@ -513,7 +558,81 @@ function buildSelf(c){
  S.filter(s=>s.pri>0).sort((a,b)=>a.pri-b.pri||a.order-b.order).forEach(s=>{const w=words(s.alts[s.i]);if(used+w<=budget*1.08){keep.add(s);used+=w}});
  return [...keep].sort((a,b)=>a.order-b.order).map(s=>({alts:s.alts,i:s.i,t:null,sign:false,pri:s.pri}));
 }
+// ---------- ברכת כלה: the bride's own prayer before the chuppah (first person) ----------
+// based on the traditional versions on kolot-studios.com, with refreshed and modern-personal variants
+function buildKala(c){
+ const S=[];const add=(order,pri,...v)=>{v=v.filter(Boolean);if(!v.length)return;S.push({order,pri,alts:v,i:Math.floor(rnd()*v.length)})};
+ const K=c.kala||{inc:{},sibs:[],late:[]},I=K.inc||{},REL=c.style==='rel',TRAD=c.style==='trad',MOD=!REL&&!TRAD,SF=c.fl==='sf',short=c.secs<=40;
+ const n=c.name,g=(K.groom||'').trim(),bat=K.km?` בת ${K.km}`:'',ben=K.gm?` בן ${K.gm}`:'',withG=g?`עם ${g}${ben}`:'עם החתן שלי';
+ // opening
+ if(REL)S.push({order:-1,pri:0,alts:SF?['ב״ה','בס״ד']:['בס״ד'],i:0});
+ if(REL)add(0,0,`ריבונו של עולם,`,`אבינו שבשמיים,`,`אבא שבשמיים,`);
+ else if(TRAD)add(0,0,`ריבונו של עולם,`,`אבא שבשמיים,`,`אלוקים,`);
+ else add(0,0,`רגע לפני שאני נכנסת לחופה, אני רוצה לעצור לרגע ולהגיד כמה מילים מהלב.`,`עוד כמה דקות אני הולכת לחופה, והלב שלי מלא.`,`היום אני כלה. ולפני שאני נכנסת לחופה, אני רוצה להגיד תודה, ולבקש כמה בקשות קטנות.`);
+ if(!MOD)add(1,0,`אני, ${n}${bat}, עומדת לפניך ברגע הקדוש הזה, רגע לפני שאכנס לחופה ${withG}.`,
+   `הנה אני, ${n}${bat}, הכלה, ניצבת לפניך ביום החתונה שלי, רגע לפני שאכנס לחופה ${withG}.`,
+   `אני, ${n}${bat}, באה לפניך ביום הגדול של חיי. עוד מעט אכנס לחופה ${withG}, ${REL?'האיש שזיווגת לי':'האיש שבחרתי לחיות איתו'}.`);
+ // the moment
+ if(REL)add(1.5,2,`״שמעה אלוקים רינתי, הקשיבה תפילתי״. אומרים שביום החתונה נפתחים שערי שמיים, ותפילת הכלה עולה עד כיסא הכבוד.`,
+   `ביום הזה, שהוא כמו יום כיפור פרטי שלי, אני מבקשת שתמחל לי על כל מה שהיה, ותפתח לנו דף חדש ונקי.`,
+   `אומרים שביום החתונה נמחלים כל העוונות, ושתפילת הכלה נשמעת. אז אני באה לפניך בלב פתוח ומבקשת.`);
+ else if(TRAD)add(1.5,2,`״שמעה אלוקים רינתי, הקשיבה תפילתי״. אומרים שביום החתונה השמיים פתוחים, ושתפילה של כלה נשמעת.`,
+   `אומרים שביום החתונה נפתח דף חדש ונקי. אז אני באה לפניך בלב פתוח, ומבקשת כמה בקשות.`);
+ else add(1.5,2,`אומרים שביום החתונה השמיים פתוחים, ושתפילה של כלה נשמעת. אז אני רוצה לנצל את הרגע הזה.`,`אני מרגישה שהיום נסגר מעגל, ומתחיל פרק חדש לגמרי, הכי יפה שיש.`);
+ // our home
+ if(I.home){
+  if(REL)add(2,0,`אנא, זכה אותנו לבנות יחד בית נאמן בישראל. בית של תורה ומצוות, של אהבה ואחווה, שלום ורעות.`,`תן לנו בית שהשכינה שורה בו, בית של חסד ושל שמחה, שכל מי שנכנס אליו ירגיש אהוב.`,`יהי רצון שנזכה לבית של שלום, שנדע תמיד לוותר זה לזו, לכבד ולאהוב, ושתהיה בינינו אהבה גדולה כל ימינו.`);
+  else if(TRAD)add(2,0,`תן לנו בית חם ומלא אהבה, בית של שלום, של כבוד ושל שמחה.`,`יהי רצון שנבנה יחד בית של אהבה ואחווה, שלום ורעות, ושנזכה לחיות בו באושר כל ימינו.`,`שנזכה לאהוב זה את זו גם בימים הקלים וגם בימים הקשים, ושהאהבה שלנו רק תלך ותגדל.`);
+  else add(2,0,`אני מבקשת שנבנה יחד בית שמח, בית שיש בו הרבה צחוק, הרבה סבלנות והרבה אהבה.`,`אני מאחלת לנו בית שתמיד רוצים לחזור אליו. שנדע להקשיב, לוותר, ולהתחיל מחדש כשצריך.`,`אני מבקשת שנשמור תמיד על מה שיש בינינו היום: על החברות, על הצחוק, ועל הדרך שבה אנחנו מסתכלים זה על זו.`);
+  add(2.5,3,REL?`וזכנו לגדל ילדים ונכדים עוסקים בתורה ובמצוות, שיביאו לנו ולהורינו הרבה נחת.`:TRAD?`ושנזכה לגדל יחד ילדים בריאים ושמחים, ולראות מהם רק נחת.`:`ושיום אחד נגדל יחד ילדים, בבית מלא באהבה כמו זה שגדלתי בו.`)}
+ if(I.health)add(3,2,REL?`תן לנו בריאות ופרנסה בכבוד ובשפע, ונזכה לשמוח בחלקנו.`:TRAD?`שתהיה לנו בריאות, פרנסה טובה בכבוד, ושנדע תמיד לשמוח במה שיש לנו.`:`ושתמיד תהיה לנו בריאות, שקט ושמחה. זה כל מה שצריך.`);
+ // parents
+ const late=[];if(K.km&&K.kmL)late.push('אמא '+K.km);if(K.kd&&K.kdL)late.push('אבא '+K.kd);(K.late||[]).forEach(x=>late.push(x));
+ const pm=!(K.km&&K.kmL),pd=!(K.kd&&K.kdL);
+ if(I.par&&(pm||pd)){
+  if(pm&&pd)add(4,1,REL?`ברך את אמא ואבא שלי, שגידלו אותי באהבה ובמסירות, ותן להם בריאות ואריכות ימים, ושיראו מאיתנו רק נחת.`:null,
+    `אמא ואבא, תודה שגידלתם אותי באהבה כל כך גדולה, ושנתתם לי את הכלים לבנות בית משלי. כל מה שאני היום, זה בזכותכם.`,
+    `אמא ואבא, אתם הבית הראשון שלי. תודה על כל מה שנתתם לי, ואני מבטיחה לקחת את כל זה איתי לבית החדש שלנו.`);
+  else{const w=pm?'אמא':'אבא';add(4,1,REL?`ברך את ${w} שלי, ${pm?'שגידלה':'שגידל'} אותי באהבה ובמסירות, ותן ${pm?'לה':'לו'} בריאות ואריכות ימים.`:null,
+    `${w}, תודה שגידלת אותי באהבה כל כך גדולה, ושנתת לי את הכלים לבנות בית משלי. כל מה שאני היום, זה בזכותך.`,
+    `${w}, תודה על כל מה שנתת לי. אני מבטיחה לקחת את כל זה איתי לבית החדש שלנו.`)}}
+ if(I.gpar){const gw=K.gm&&K.gd?'ולאמא ולאבא של '+(g||'החתן'):'ולהורים של '+(g||'החתן');
+  add(4.3,3,REL?`וברך גם את ההורים של ${g||'החתן'}, שגידלו אותו להיות האיש שהוא, ושקיבלו אותי באהבה כמו בת.`:null,`${gw}: תודה שקיבלתם אותי באהבה, ושגידלתם את האיש המדהים שאני מתחתנת איתו היום.`)}
+ // remembering those who are not here
+ if(late.length){const one=late.length===1,fem=/^(אמא|סבתא|דודה)/.test(late[0]);
+  add(4.5,1,`ואני מזכירה באהבה את ${joinHe(late)} ז״ל. האהבה והזיכרון מלווים אותי היום אל החופה.`,
+   one?`ואני מזכירה באהבה את ${late[0]} ז״ל. אני יודעת ש${fem?'היא הייתה':'הוא היה'} כל כך רוצה להיות כאן היום, ו${fem?'שהברכה שלה':'שהברכה שלו'} מלווה אותי אל החופה.`:`ואני מזכירה באהבה את ${joinHe(late)} ז״ל, שהיו רוצים כל כך להיות כאן היום. אני יודעת שהברכה שלהם מלווה אותי אל החופה.`,
+   REL?`ואני מבקשת שתעלה את נשמת ${joinHe(late)} ז״ל, ${one?(fem?'ושהיא תהיה מליצת יושר':'ושהוא יהיה מליץ יושר'):'ושהם יהיו מליצי יושר'} עלינו ביום הזה.`:null)}
+ if(I.sibs&&K.sibs&&K.sibs.length){const one=K.sibs.length===1;
+  add(5,3,one?`ול${K.sibs[0]}: תודה שתמיד היית שם בשבילי. אני אוהבת אותך, ומחכה לשמוח גם בשמחות שלך.`:`ולאחים שלי, ${joinHe(K.sibs)}: תודה שאתם תמיד איתי. אני אוהבת אתכם, ומחכה לשמוח גם בשמחות שלכם.`,
+   REL&&!one?`ושמור על האחים שלי, ${joinHe(K.sibs)}, ותן להם לזכות לכל השמחות.`:null)}
+ // praying for others (an old custom of the bride's prayer)
+ if(I.others)add(6,2,MOD?`ואני שולחת מכאן אהבה לכל החברים והחברות שעוד מחכים לאהבה, למי שזקוק לבריאות ולכוח, ולכל מי שצריך קצת אור.`:null,
+   !MOD?`ובשעת רצון זו אני מתפללת גם על כל מי שמחכה לזיווג הגון, על החולים שיזכו לרפואה שלמה, ועל כל מי שמחכה לפרי בטן, שגם הם יזכו בקרוב לשמחה גדולה.`:null,
+   !MOD?`ואני מבקשת גם על החברים והחברות שעוד מחכים, שיזכו בקרוב לעמוד מתחת לחופה, ועל כל מי שזקוק לרפואה, לפרנסה או לנחמה.`:null);
+ if(K.othersFree)S.push({order:6.5,pri:2,alts:[(MOD?'ואני שולחת אהבה מיוחדת: ':'ואני מתפללת במיוחד: ')+K.othersFree.replace(/[.]+$/,'')+'.'],i:0});
+ // to the groom
+ if(I.groom){
+  add(7,0,g?`${g}, אהוב ליבי,`:`ולך, החתן שלי,`,g?`${g} שלי,`:null,g?`ו${g}, האיש שלי,`:`ולאיש שאני נכנסת איתו לחופה,`);
+  if(K.how)S.push({order:7.2,pri:2,alts:[`מאז שהכרנו ${K.how.replace(/[.]+$/,'')}, ידעתי שמשהו מיוחד מתחיל.`,`מאז שהכרנו ${K.how.replace(/[.]+$/,'')}, הלב שלי ידע שזה אתה.`],i:Math.floor(rnd()*2)});
+  if(REL)add(7.5,0,`אני מודה לה׳ על כל יום שזכיתי להכיר אותך. אני מבטיחה ללכת איתך יד ביד, לכבד אותך, לאהוב אותך ולבנות איתך בית של תורה ושל חסד.`,`אתה התשובה לתפילות שלי. אני מבטיחה להיות עזר כנגדך, לשמוח איתך בשמחות ולהיות לצידך בכל רגע.`);
+  else if(TRAD)add(7.5,0,`אני מבטיחה לאהוב אותך, לכבד אותך ולהיות לצידך בכל מצב, בשמחה ובקושי, כל ימי חיינו.`,`מהיום הראשון ידעתי שאיתך אני בבית. אני מבטיחה לשמור על האהבה שלנו ולבנות איתך בית חם ושמח.`);
+  else add(7.5,0,`אתה החבר הכי טוב שלי, הבית שלי והאיש שאני רוצה לגדול לצידו. אני מבטיחה להצחיק אותך, להקשיב לך ולבחור בך מחדש בכל יום.`,`איתך הכל פשוט יותר. אני מבטיחה להיות שם בשבילך, בימים הטובים וגם בימים שפחות, ולזכור תמיד כמה מזל יש לי.`)}
+ // her own words
+ if(K.wish){const w=K.wish.replace(/[.]+$/,'');S.push({order:8,pri:0,alts:[/^ש/.test(w)?`ואני מבקשת ${w}.`:w+'.'],i:0})}
+ // closing
+ if(REL)add(9,0,`תהא השעה הזאת שעת רחמים ועת רצון מלפניך. אמן.`,`ויהי רצון שנזכה לבנות יחד בית נאמן בישראל, ולשמוח יחד כל ימינו. אמן, כן יהי רצון.`,`״שמח תשמח רעים האהובים, כשמחך יצירך בגן עדן מקדם״. אמן.`,SF?`בסימן טוב ובמזל טוב, אמן ואמן!`:null);
+ else if(TRAD)add(9,0,`תהא השעה הזאת שעת רחמים ועת רצון. אמן.`,`ועכשיו, עם כל האהבה שבלב, אני הולכת לחופה. אמן.`,SF?`בסימן טוב ובמזל טוב, ועכשיו אני מוכנה. אמן!`:`ועכשיו אני מוכנה. אמן.`);
+ else add(9,0,`ועכשיו, עם כל האהבה הזו, אני מוכנה. בואו נלך לחופה.`,g?`אני מוכנה. ${g}, אני באה.`:`אני מוכנה. אני באה.`,`ועכשיו, עם לב מלא, אני הולכת לחופה.`);
+ // fit to time
+ const budget=c.secs*2;let used=0;const keep=new Set();
+ S.filter(s=>s.pri===0).forEach(s=>{keep.add(s);used+=words(s.alts[s.i])});
+ S.filter(s=>s.pri>0).sort((a,b)=>a.pri-b.pri||a.order-b.order).forEach(s=>{const w=words(s.alts[s.i]);if(used+w<=budget*1.08){keep.add(s);used+=w}});
+ return [...keep].sort((a,b)=>a.order-b.order).map(s=>({alts:s.alts,i:s.i,t:null,sign:false,pri:s.pri}));
+}
+
 function build(c){
+ if(c.m==='kala')return buildKala(c);
  if(c.from==='self')return buildSelf(c);
  const S=[];const add=(order,pri,...v)=>{v=v.filter(Boolean);if(!v.length)return;const alts=v.map(x=>G(x,c));const i=Math.floor(rnd()*alts.length);S.push({order,pri,alts,i})};
  const shuf=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
@@ -737,8 +856,11 @@ $('redo').onclick=()=>{if(hi<hist.length-1)restore(hi+1)};
 
 // ---------- form sync ----------
 function syncForm(){const ev=val('ev'),m=mode(),cg=cgOf();
- document.querySelectorAll('[data-show]').forEach(el=>{const s=el.dataset.show;el.hidden=!(s===ev||s===m)});
- const W2=ev==='wed'||ev==='hina';$('flBox').hidden=val('style')==='mod';$('nameLbl').textContent=W2?'שם הכלה':cg==='m'?'שם החוגג':'שם החוגגת';$('aboutLbl').textContent=W2?'על הזוג':cg==='m'?'על החוגג':'על החוגגת';{const gi={f:0,m:1,p:2}[cg]??0;document.querySelectorAll('#traits label').forEach((l,i)=>{if(TRAITS[i])l.textContent=TRAITS[i][gi]});
+ document.querySelectorAll('[data-show]').forEach(el=>{const s=el.dataset.show.split(' ');el.hidden=!(s.includes(ev)||s.includes(m))});
+ document.querySelectorAll('[data-hide]').forEach(el=>{el.hidden=el.dataset.hide.split(' ').includes(ev)});
+ {const sn=$('styleNote');if(!sn.dataset.def)sn.dataset.def=sn.textContent;sn.textContent=ev==='kala'?'מסורתי: הנוסח המוכר של תפילת הכלה, ״אני, ... בת ...״, בשפה חמה. דתי: לשון תפילה מלאה, פסוקים ו״תהא השעה הזאת״. מודרני: מילים אישיות שלך, בלי לשון תפילה.':sn.dataset.def;
+  $('kgt').textContent='ההורים של '+($('name2').value.trim()||'החתן');try{$('steps').querySelectorAll('button').forEach((b,i)=>{b.textContent=(i+1)+'. '+stepNames()[i]})}catch(e){}}
+ const W2=ev==='wed'||ev==='hina';$('flBox').hidden=val('style')==='mod';$('nameLbl').textContent=W2||ev==='kala'?'שם הכלה':cg==='m'?'שם החוגג':'שם החוגגת';$('aboutLbl').textContent=W2?'על הזוג':cg==='m'?'על החוגג':'על החוגגת';{const gi={f:0,m:1,p:2}[cg]??0;document.querySelectorAll('#traits label').forEach((l,i)=>{if(TRAITS[i])l.textContent=TRAITS[i][gi]});
  const self=$('from').value==='self';$('memory').placeholder=self?(cg==='m'?'למשל: כשהייתי בן חמש עליתי על הבמה בגן ולא הסכמתי לרדת':'למשל: כשהייתי בת חמש עליתי על הבמה בגן ולא הסכמתי לרדת'):W2?'למשל: הדייט הראשון שלכם, שבו הכל השתבש והיה מושלם':(cg==='m'?'למשל: כשהיית בן חמש עלית על הבמה בגן ולא הסכמת לרדת':'למשל: כשהיית בת חמש עלית על הבמה בגן ולא הסכמת לרדת');
  const sb=$('sign').closest('div');if(sb)sb.hidden=self;}$('story').placeholder=W2?'למשל: זוג מצחיק ונדיב, אוהבים לטייל ולארח חברים':cg==='m'?'למשל: מצחיק ורגיש, אוהב כדורגל ולנגן בגיטרה, ותמיד דואג לאחים הקטנים':'למשל: מצחיקה ורגישה, אוהבת לרקוד ולצייר, ותמיד דואגת לאחים הקטנים';
  $('w1t').textContent='הצד של '+($('name').value.trim()||'הכלה');$('w2t').textContent='הצד של '+($('name2').value.trim()||'החתן');
@@ -749,8 +871,8 @@ function syncForm(){const ev=val('ev'),m=mode(),cg=cgOf();
  const f=$('from').value;$('togetherBox').hidden=f==='friends'||f==='self';$('hobBox').hidden=false;
  $('togetherLbl').textContent=f==='spouse'?'מה אתם אוהבים לעשות יחד':'מה אוהבים לעשות יחד'}
 function refresh(full=true){syncForm();if(full&&mode()==='child')renderGps();renderFrom();syncForm();if(!signTouched)$('sign').value=ctx().signAuto;if(generated)render();else{draw();fitFrame()}}
-$('f').addEventListener('change',e=>{const t=e.target;if(t.dataset.l||t.dataset.s)return;if(['from','side','pick'].includes(t.id)||['pc','ev','cg','spg'].includes(t.name))signTouched=false;refresh(t.name==='pc'||t.name==='ev')});
-['name','name2','age','p1','p2','memory','hobbyFree','togetherFree','thanksFree','spouse','grandkids','amom','adad','w1m','w1d','w2m','w2d','wlate','wHow'].forEach(id=>$(id).addEventListener('input',()=>refresh(id==='p1'||id==='p2')));
+$('f').addEventListener('change',e=>{const t=e.target;if(t.dataset.l||t.dataset.s)return;if(t.name==='ev'&&t.value==='kala'&&['20','40'].includes(val('len')))$('ln-60').checked=true;if(['from','side','pick'].includes(t.id)||['pc','ev','cg','spg'].includes(t.name))signTouched=false;refresh(t.name==='pc'||t.name==='ev')});
+['km','kd','kgm','kgd','ksibs','klate','kothers','khow','kwish','name','name2','age','p1','p2','memory','hobbyFree','togetherFree','thanksFree','spouse','grandkids','amom','adad','w1m','w1d','w2m','w2d','wlate','wHow'].forEach(id=>$(id).addEventListener('input',()=>refresh(id==='p1'||id==='p2')));
 $('f').addEventListener('submit',e=>{e.preventDefault();if(!$('name').value.trim()){showStep(1);$('formWarn').textContent='כותבים קודם את השם.';$('formWarn').hidden=false;$('name').focus();return}generated=true;$('grid').classList.add('gen');render(true);setView('result')});
 $('again').onclick=()=>{if(generated)render(true)};
 $('shorter').onclick=()=>{const order=['20','40','60','80','120'];const i=order.indexOf(val('len'));if(i<=0){toast('זו כבר הגרסה הקצרה ביותר');return}$('ln-'+order[i-1]).checked=true;render();toast('קיצרנו')};
@@ -767,9 +889,10 @@ async function aiOne(i,btn){const c=ctx();const p=paras[i];btn.disabled=true;btn
 
 // ---------- wizard ----------
 const STEP_NAMES=['אירוע','משפחה','מברכים','החוגג/ת','סגנון'];let step=1,generated=false;
+function stepNames(){return val('ev')==='kala'?['אירוע','משפחה','מה לכלול','אישי','סגנון']:STEP_NAMES}
 function showStep(n){step=Math.max(1,Math.min(5,n));
  document.querySelectorAll('[data-step]').forEach(el=>el.classList.toggle('stepHidden',+el.dataset.step!==step));
- $('steps').innerHTML=STEP_NAMES.map((t,i)=>`<button type="button" data-go="${i+1}" class="${i+1===step?'on':(i+1<step?'done':'')}">${i+1}. ${t}</button>`).join('');
+ $('steps').innerHTML=stepNames().map((t,i)=>`<button type="button" data-go="${i+1}" class="${i+1===step?'on':(i+1<step?'done':'')}">${i+1}. ${t}</button>`).join('');
  $('prev').hidden=step===1;$('next').hidden=step===5;$('go').hidden=false;$('go').className=step===5?'primary':'';$('go').textContent=step===5?'יצירת ברכה ✦':'יצירה עכשיו ✦';$('next').className=step===5?'':'primary';$('formWarn').hidden=true;fitFrame()}
 $('steps').addEventListener('click',e=>{const g=e.target.dataset.go;if(g)showStep(+g)});
 $('prev').onclick=()=>showStep(step-1);
@@ -791,8 +914,8 @@ $('wa').addEventListener('click',()=>track('blessing_share_whatsapp'));
 // self-recording link: hidden until the studio turns it on (REC_ON), testable with ?rec=1 on the page
 const REC_ON=false,REC_URL='https://kolotstudios.github.io/widgets/recorder.html';
 const recEnabled=(()=>{if(REC_ON)return true;let q=location.search;try{q+=window.parent.location.search}catch(e){}return /[?&]rec=1\b/.test(q)})();
-function recHref(){const t=fullText();if(!t.trim())return '#';const self=$('from').value==='self';
- const p=new URLSearchParams({mode:self?'drasha':'blessing',name:self?$('name').value.trim():($('sign').value||'').trim(),for:$('name').value.trim(),text:t,src:'gen'});return REC_URL+'?'+p.toString()}
+function recHref(){const t=fullText();if(!t.trim())return '#';const self=$('from').value==='self',kala=val('ev')==='kala';
+ const p=new URLSearchParams(kala?{mode:'kala',name:$('name').value.trim(),text:t,src:'gen'}:{mode:self?'drasha':'blessing',name:self?$('name').value.trim():($('sign').value||'').trim(),for:$('name').value.trim(),text:t,src:'gen'});return REC_URL+'?'+p.toString()}
 // coming from a recording (?k=…&slot=…): the button sends this blessing back into that recording as one more blesser
 const RET=(()=>{let q=location.search;try{if(!/[?&]k=/.test(q))q=window.parent.location.search}catch(e){}const p=new URLSearchParams(q);const k=p.get('k');return k&&/^[a-f0-9]{20,40}$/.test(k)?{k,slot:+p.get('slot')||0}:null})();
 function retHref(){const t=fullText();if(!t.trim())return '#';const nm=($('sign').value||'').trim();return REC_URL+'#k='+RET.k+'&slot='+RET.slot+'&n='+encodeURIComponent(nm)+'&t='+encodeURIComponent(t)}
@@ -854,5 +977,10 @@ let storyT=null;$('story').addEventListener('input',()=>{clearTimeout(storyT);st
    r.onend=()=>{cur=null;b.classList.remove('on');b.textContent='🎤 הקלטה'};try{r.start();track('blessing_dictation',{field:id})}catch(e){cur=null;b.classList.remove('on');b.textContent='🎤 הקלטה'}}})})();
 
 if(restoreSaved()){showHeb();toast('שחזרנו את מה שהתחלתם')}
+// ?ev=kala (or any event) on the page link opens the generator on that event
+(()=>{let q=location.search;try{q+=window.parent.location.search}catch(e){}const m=/[?&]ev=(kala|wed|hina|bat|bar|bd)\b/.exec(q);if(!m||!$('ev-'+m[1])||val('ev')===m[1])return;$('ev-'+m[1]).checked=true;if(m[1]==='kala'&&['20','40'].includes(val('len')))$('ln-60').checked=true;signTouched=false;refresh(true);showStep(1)})();
+// bride: the recording box speaks to her
+function recCopy(){if(RET||!recEnabled)return;const k=val('ev')==='kala';$('recBox').querySelector('b').textContent=k?'או מקליטה לבד, מהטלפון, בלי לצאת מהבית':'או מקליטים לבד, מהטלפון';$('recLink').textContent=k?'להקליט את ברכת הכלה מהטלפון ←':'להקלטה מהטלפון ←'}
+$('f').addEventListener('change',recCopy);recCopy();
 </script>
 </body></html>

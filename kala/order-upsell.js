@@ -6,7 +6,7 @@ var CSS="#kolot-upsell{margin:14px 0 6px}\n#kolot-upsell .ku-h{font-weight:700;f
 (function(){
   // product page ids on the Kala purchase page
   var SONG=[75801,76215,76247,76248,76249,76210], CLIP=[75803,76144,76236,75808,75807], TAKE=[76164],
-      PRES=[75831,76038,75832], BLESS=[75898,75816,75899,76250,75985,76252,76253,76254,76255,76256,76257,76258],
+      PRES=[75831,76038,75832], BLESS=[75898,75816,75899,76250,75985,76252,76253,76254,76255,76256,76257,76258,76260,76261],
       LYR=75982, UPG=76259;
   // products that are not on the purchase page: shown from here (keep the price in sync with Kala)
   var EXTRA={76259:{title:"שדרוג שיר לטייקליפ",price:"810",slug:"שדרוג-שיר-לטייקליפ"}};

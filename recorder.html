@@ -50,12 +50,13 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 .col-main,.col-side{display:flex;flex-direction:column;gap:18px;min-width:0}
 .col-side{position:sticky;top:12px}
 @media (max-width:860px){.setup{grid-template-columns:1fr}.col-side{position:static}}
-.seg.modes{grid-template-columns:repeat(3,1fr);background:transparent;padding:0;gap:10px}
+.seg.modes{grid-template-columns:repeat(4,1fr);background:transparent;padding:0;gap:10px}
 .seg.modes button{display:grid;justify-items:start;gap:2px;text-align:start;border:1px solid var(--line);background:var(--paper);padding:12px;border-radius:12px}
 .seg.modes button svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;color:var(--accent);margin-bottom:4px}
 .seg.modes button b{font-size:16px;font-weight:600}
 .seg.modes button span{font-size:12px;color:var(--muted);font-weight:400}
 .seg.modes button[aria-pressed="true"]{border-color:var(--accent);background:var(--soft);box-shadow:inset 0 0 0 1px var(--accent);color:var(--ink)}
+@media (max-width:640px){.seg.modes{grid-template-columns:repeat(2,1fr)}}
 @media (max-width:420px){.seg.modes button{padding:10px 8px}.seg.modes button span{display:none}}
 .pv{margin:0;padding:0;list-style:none;display:grid;gap:6px;max-height:340px;overflow:auto;counter-reset:pv}
 .pv li{font-size:16px;line-height:1.5;color:var(--muted);padding:6px 10px 6px 10px;padding-inline-start:38px;position:relative;counter-increment:pv;border-radius:10px}
@@ -220,6 +221,7 @@ h3{font:700 15px var(--f-body);margin:0;color:var(--muted);letter-spacing:.02em}
           <button type="button" data-mode="blessing" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><b>ברכה</b><span>מברך אחד</span></button>
           <button type="button" data-mode="family" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3"/><circle cx="16.5" cy="9" r="2.5"/><path d="M2.5 20c.8-3.6 3-5.5 5.5-5.5s4.7 1.9 5.5 5.5M13.5 15.2c.9-.5 1.9-.7 3-.7 2.2 0 4 1.6 4.8 5.5"/></svg><b>ברכות משפחה</b><span>עד 5 מברכים</span></button>
           <button type="button" data-mode="drasha" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6z"/><path d="M9 9h6M9 13h6M9 17h4"/></svg><b>דרשה</b><span>טקסט ארוך יותר</span></button>
+          <button type="button" data-mode="kala" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.6-7 10-7 10z"/></svg><b>ברכת כלה</b><span>לפני הכניסה לחופה</span></button>
         </div>
         <p class="note" id="modeNote"></p>
       </div>
@@ -662,13 +664,16 @@ var SAMPLES={
     {name:"אבא ואמא",text:"איתי שלנו, היום אתה עולה לתורה ונכנס לעול מצוות.\nאתה ילד עם לב ענק, צחוק מדבק וסקרנות שאין לה סוף.\nתמשיך לחלום בגדול ולהאמין בעצמך. מזל טוב, אוהבים אותך."},
     {name:"נועה, אחות (15)",text:"אח שלי הקטן, מזל טוב!\nאני יודעת שלפעמים אני מעצבנת, אבל אתה תמיד יכול לסמוך עליי.\nאוהבת אותך, נועה."},
     {name:"סבא וסבתא",text:"נכד יקר שלנו, ליום הזה חיכינו הרבה שנים.\nשתזכה לבריאות, לשמחה ולהרבה נחת. מזל טוב, סבא וסבתא."}],
+  kala:[{name:"נועה",text:"ריבונו של עולם, הנני באה לפניך בשמחה ובהודיה על שהחייתני וקיימתני והגעתני לזמן הזה.\nאני נועה בת מיכל, עומדת לפניך היום מוכנה להיכנס לחופה עם דניאל בן רונית, כדת משה וישראל.\nיהי רצון מלפניך שנזכה לבנות יחד בית של אהבה ואחווה, שלום ורעות.\nשמור על הורינו ועל משפחותינו, ותן בליבנו כוח לשמח זה את זה בכל יום.\nתהא השעה הזאת שעת רחמים ועת רצון מלפניך, אמן."}],
   drasha:[{name:"איתי",text:"פרשת השבוע שלי היא פרשת מקץ.\nבפרשה, יוסף יוצא מבית הסוהר ועומד מול פרעה כדי לפתור את החלומות שלו.\nמה שמעניין בעיניי הוא שיוסף לא לוקח קרדיט לעצמו, ואומר שהפתרון מגיע מאלוהים.\nלמדתי מזה שגם כשמצליחים, חשוב לזכור את מי שעזר לנו בדרך.\nולכן אני רוצה להודות להורים שלי, למשפחה ולכל מי שליווה אותי עד היום.\nתודה שבאתם לשמוח איתי."}]
 };
 var MODE_NOTES={
   blessing:"ברכה אחת, מברך אחד. מתאים לברכת הורים, סבים או חברים.",
   family:"כל בני המשפחה אחד אחרי השני, עם כ-10 שניות של מוסיקה בין מברך למברך. עד 5 מברכים.",
-  drasha:"טקסט ארוך יותר, מוסיקה שקטה יותר ברקע."
+  drasha:"טקסט ארוך יותר, מוסיקה שקטה יותר ברקע.",
+  kala:"ברכת הכלה שמושמעת לפני הכניסה לחופה. אפשר לבחור נוסח במחולל ולהשלים את השמות."
 };
+function single(m){m=m||S.mode;return m==="drasha"||m==="kala"}
 
 /* ---------- state ---------- */
 var S={mode:"blessing",blessers:[],musicFile:null,musicFileName:"",rooms:{},aiAvailable:false};
@@ -723,9 +728,9 @@ function loadText(){
 function renderSetup(){
   document.querySelectorAll(".seg button").forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.mode===S.mode))});
   $("#modeNote").textContent=MODE_NOTES[S.mode];
-  $("#textTitle").textContent=S.mode==="drasha"?"טקסט הדרשה":(S.mode==="family"?"המברכים":"טקסט הברכה");
+  $("#textTitle").textContent=S.mode==="drasha"?"טקסט הדרשה":(S.mode==="kala"?"ברכת הכלה":(S.mode==="family"?"המברכים":"טקסט הברכה"));
   var lockedText=CLOUD.on&&S.textLocked&&!(S.editsLeft>0),editing=CLOUD.on&&S.textLocked&&S.editsLeft>0;
-  $("#addBlesser").hidden=S.mode==="drasha"||S.blessers.length>=(S.maxBlessers||5);
+  $("#addBlesser").hidden=single()||S.blessers.length>=(S.maxBlessers||5);
   $("#sampleBtn").hidden=lockedText||editing;
   $("#editNote").hidden=!(CLOUD.on&&S.textLocked);
   $("#editNote").textContent=lockedText?"נגמרו השינויים בטקסט. לשינוי נוסף פנו לאולפני קולות.":
@@ -735,12 +740,12 @@ function renderSetup(){
   S.blessers.forEach(function(b,i){
     var d=document.createElement("div");d.className="blesser";
     var head=document.createElement("div");head.className="row between";
-    var lab=document.createElement("label");lab.htmlFor="n_"+b.id;lab.textContent=S.blessers.length>1?("מברך "+(i+1)):(S.mode==="drasha"?"שם בעל/ת השמחה":"מי מברך?");
+    var lab=document.createElement("label");lab.htmlFor="n_"+b.id;lab.textContent=S.blessers.length>1?("מברך "+(i+1)):(S.mode==="drasha"?"שם בעל/ת השמחה":(S.mode==="kala"?"שם הכלה":"מי מברך?"));
     head.appendChild(lab);
     var ro=lockedText&&b.si!=null;
-    if(S.mode!=="drasha"&&!ro&&!S.localOnly&&API){var gb=document.createElement("button");gb.type="button";gb.className="btn small";gb.textContent=wc(b.text)?"✨ ברכה אחרת מהמחולל":"✨ לכתוב ברכה במחולל";gb.onclick=function(){openGenerator(b)};head.appendChild(gb)}
+    if(S.mode!=="drasha"&&!ro&&!S.localOnly&&API){var gb=document.createElement("button");gb.type="button";gb.className="btn small";gb.textContent=S.mode==="kala"?(wc(b.text)?"✨ נוסח אחר מהמחולל":"✨ לבחור נוסח במחולל"):(wc(b.text)?"✨ ברכה אחרת מהמחולל":"✨ לכתוב ברכה במחולל");gb.onclick=function(){openGenerator(b)};head.appendChild(gb)}
     if((b.si==null||!lockedText)&&S.blessers.length>1){var del=document.createElement("button");del.type="button";del.className="btn small ghost";del.textContent="הסרה";del.onclick=function(){S.blessers.splice(i,1);saveText();renderSetup()};head.appendChild(del)}
-    var inp=document.createElement("input");inp.type="text";inp.id="n_"+b.id;inp.value=b.name;inp.placeholder=S.mode==="drasha"?"למשל: איתי":"למשל: אבא ואמא";
+    var inp=document.createElement("input");inp.type="text";inp.id="n_"+b.id;inp.value=b.name;inp.placeholder=S.mode==="drasha"?"למשל: איתי":(S.mode==="kala"?"למשל: נועה":"למשל: אבא ואמא");
     inp.oninput=function(){b.name=inp.value;saveText();renderPreview();editState()};
     var ta=document.createElement("textarea");ta.id="t_"+b.id;ta.value=b.text;ta.placeholder="מדביקים כאן את הטקסט. כל שורה חדשה היא פסקה.";
     ta.oninput=function(){b.text=ta.value;saveText();cnt.textContent=countInfo(b.text);renderPreview();editState();payUI()};
@@ -800,7 +805,7 @@ function createDraft(ok){
   var qp=new URLSearchParams(location.search),forName=(qp.get("for")||"").trim(),dn=((ok[0]||{}).name||"").trim();
   return cloudApi("rc_c_draft",{mode:S.mode,name:forName&&forName!==dn?(dn?dn+" ל"+forName:forName):dn,src:qp.get("src")||"",blessers:ok.map(function(b){return {name:b.name,text:b.text}})}).then(function(r){
     if(!r.ok) throw new Error(r.error||"לא הצלחנו לשמור בענן.");
-    CLOUD.on=true;CLOUD.k=r.k;CLOUD.draft=true;CLOUD.paid=false;CLOUD.paidBlessers=null;CLOUD.code=r.code;CLOUD.fixedMode=true;S.editsLeft=5;S.maxBlessers=S.mode==="drasha"?1:5;
+    CLOUD.on=true;CLOUD.k=r.k;CLOUD.draft=true;CLOUD.paid=false;CLOUD.paidBlessers=null;CLOUD.code=r.code;CLOUD.fixedMode=true;S.editsLeft=5;S.maxBlessers=single()?1:5;
     try{history.replaceState(null,"",location.pathname+"#k="+r.k)}catch(e){location.hash="k="+r.k}
     try{localStorage.setItem(DRAFT_LS,JSON.stringify({k:r.k,at:Date.now()}))}catch(e){}
     S.blessers=ok;S.blessers.forEach(function(b,j){resplit(b);b.si=j});markSaved();
@@ -815,7 +820,7 @@ function saveCloudText(ok){
   }).then(function(r){
     if(!r.ok){if(r.noEdits){S.editsLeft=0;renderSetup()}throw new Error(r.error||"לא הצלחנו לשמור את הטקסט.")}
     S.blessers=ok;S.blessers.forEach(function(b,j){resplit(b);b.si=j});
-    if(S.mode!=="drasha") S.mode=ok.length>1?"family":"blessing";
+    if(!single()) S.mode=ok.length>1?"family":"blessing";
     if(r.editsLeft!=null) S.editsLeft=r.editsLeft;markSaved();payUI();return true;
   });
 }
@@ -841,7 +846,7 @@ function openGenerator(b){
   var st=$("#setupStatus");st.textContent="שומרים ועוברים למחולל…";
   saveAll().then(function(){
     var ok=okBlessers(),slot=ok.indexOf(b);if(slot<0) slot=ok.length;
-    location.href=GEN_URL+"?rec=1&k="+CLOUD.k+"&slot="+slot;
+    location.href=GEN_URL+"?rec=1&k="+CLOUD.k+"&slot="+slot+(S.mode==="kala"?"&ev=kala":"");
   }).catch(function(err){st.textContent=(err&&err.message)||"לא הצלחנו לשמור. מנסים שוב."});
 }
 function takeIncoming(){
@@ -1046,7 +1051,7 @@ function openStage(b,idx,single){
   setStep(2);
   P.b=b;P.idx=idx;P.single=single;P.state="idle";
   $("#stage").hidden=false;document.body.style.overflow="hidden";
-  $("#stName").textContent=(S.mode==="drasha"?"דרשה":"ברכה")+(b.name?" · "+b.name:"");
+  $("#stName").textContent=(S.mode==="drasha"?"דרשה":(S.mode==="kala"?"ברכת כלה":"ברכה"))+(b.name?" · "+b.name:"");
   renderStageText();renderFoot();updateProg();
   hint(single?"מקליטים מחדש משפט אחד. הוא יחליף את הקודם.":"לוחצים על הכפתור האדום, ואחרי ספירה של 3 מתחילים לקרוא את המשפט המודגש.");
 }
@@ -1207,7 +1212,7 @@ function renderReview(){
     var done=b.takes.filter(Boolean).length,tot=b.sentences.length,proc=b.takes.filter(function(t){return t&&!t.res}).length;
     var head=document.createElement("div");head.className="row between";
     var h=document.createElement("div");
-    var t=document.createElement("h2");t.textContent=b.name||(S.mode==="drasha"?"הדרשה":"הברכה");
+    var t=document.createElement("h2");t.textContent=b.name||(S.mode==="drasha"?"הדרשה":(S.mode==="kala"?"ברכת הכלה":"הברכה"));
     var m=document.createElement("p");m.className="note "+(done===tot?"ok":"");m.textContent=done===tot?((tot===1?"המשפט הוקלט":"כל "+tot+" המשפטים הוקלטו")+" · "+fmtDur(totalDur(b))):(done+" מתוך "+tot+" משפטים הוקלטו");
     if(proc){var pp=document.createElement("p");pp.className="note";pp.textContent=(proc===1?"מעבד משפט אחד":"מעבד "+proc+" משפטים")+" ברקע… אפשר להמשיך בינתיים.";h.append(t,m,pp)} else h.append(t,m);
     var rb=document.createElement("button");rb.type="button";rb.className="btn "+(done<tot?"primary":"");rb.textContent=done===0?"● התחלת הקלטה":(done<tot?"● המשך הקלטה":"● הקלטה חוזרת מההתחלה");
@@ -1307,7 +1312,7 @@ function applyPreset(name,quiet){
   applying=true;Object.keys(p).forEach(function(k){setSlider(k,p[k])});applying=false;
   S.preset=name;markPresets();if(!quiet) cloudSettingsSoon();
 }
-function musicLevelDb(lv){return MUSIC_LEVELS[lv]+(S.mode==="drasha"?-3:0)}
+function musicLevelDb(lv){return MUSIC_LEVELS[lv]+(S.mode==="drasha"?-3:(S.mode==="kala"?-2:0))}
 function applyLevel(lv,quiet){applying=true;setSlider("musicDb",musicLevelDb(lv));applying=false;S.mlevel=lv;markPresets();if(!quiet) cloudSettingsSoon()}
 function markPresets(){
   document.querySelectorAll("#voicePresets .preset").forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.preset===S.preset))});
@@ -1454,7 +1459,7 @@ function defaultMusic(){
   if(S.musicPicked||!MLIB.lib) return;var d=MLIB.lib.defaults&&MLIB.lib.defaults[S.mode];
   if(d&&S.music!=="m:"+d){setMusic("m:"+d,false,true);MLIB.cat="fit";renderMusic()}
 }
-var FIT_NAME={blessing:"מומלצים לברכה",family:"מומלצים לברכות משפחה",drasha:"מומלצים לדרשה"};
+var FIT_NAME={blessing:"מומלצים לברכה",family:"מומלצים לברכות משפחה",drasha:"מומלצים לדרשה",kala:"מומלצים לברכת כלה"};
 function renderMusic(){
   var L=MLIB.lib,cats=$("#musicCats"),list=$("#musicList");if(!L||!cats) return;
   if(!MLIB.cat) MLIB.cat="fit";
@@ -1791,22 +1796,23 @@ var CLOUD={on:false,k:null,dev:null,q:[],busy:false,failed:0,submitted:false,fix
 // payment: free drafts record and play with a soft chime; the clean file opens once the studio marks the draft paid
 var PAY_URL="https://kolot.kala-crm.co.il/"+encodeURIComponent("רכישה");
 // prices in ₪ – keep in sync with PRICE_* in cloudflare/recorder-worker.js
-var PRICING={base:150,extra:50,drasha:150};
+var PRICING={base:150,extra:50,drasha:150}; // ברכת כלה has the drasha price
 // Kala products (page ids): one product per number of blessers, a top-up for one more blesser, and a drasha
-var KALA_BASE="https://kolot.kala-crm.co.il/",KALA_IDS={pack:[76252,76253,76254,76255,76256],extra:76257,drasha:76258};
+var KALA_BASE="https://kolot.kala-crm.co.il/",KALA_IDS={pack:[76252,76253,76254,76255,76256],extra:76257,drasha:76258,kala:76261};
 var GEN_URL="https://kolotstudios.github.io/widgets/blessing.html";
 function nBlessers(){return Math.max(1,Math.min(5,S.blessers.filter(function(b){return wc(b.text)>0}).length))}
-function priceFor(mode,n){return mode==="drasha"?PRICING.drasha:PRICING.base+PRICING.extra*Math.max(0,n-1)}
+function priceFor(mode,n){return single(mode)?PRICING.drasha:PRICING.base+PRICING.extra*Math.max(0,n-1)}
 function extraDue(){return CLOUD.on&&CLOUD.draft&&CLOUD.paid&&CLOUD.paidBlessers!=null?Math.max(0,nBlessers()-CLOUD.paidBlessers):0}
 function needPay(){return CLOUD.on&&(!CLOUD.paid||extraDue()>0)}
 function payLink(){
-  var id=extraDue()?KALA_IDS.extra:(S.mode==="drasha"?KALA_IDS.drasha:KALA_IDS.pack[nBlessers()-1]);
+  var id=extraDue()?KALA_IDS.extra:(S.mode==="drasha"?KALA_IDS.drasha:(S.mode==="kala"?KALA_IDS.kala:KALA_IDS.pack[nBlessers()-1]));
   return id?KALA_BASE+"order/cart_buy?id="+id:PAY_URL;
 }
 function priceText(){
   var x=extraDue();
   if(x) return "השלמה על "+(x===1?"מברך נוסף":x+" מברכים נוספים")+": "+PRICING.extra*x+" ₪"+(x>1?" (בעגלה משנים את הכמות ל־"+x+")":"");
   if(S.mode==="drasha") return "דרשה: "+PRICING.drasha+" ₪";
+  if(S.mode==="kala") return "ברכת כלה: "+PRICING.drasha+" ₪";
   var n=nBlessers();
   return (n===1?"ברכה אחת":n+" מברכים")+": "+priceFor(S.mode,n)+" ₪"+(n>1?" ("+PRICING.base+" ₪ ועוד "+(n-1)+" × "+PRICING.extra+" ₪)":"");
 }
@@ -1969,7 +1975,7 @@ setInterval(function(){
 },1000);
 
 /* ---------- visible errors (prototype) ---------- */
-var VERSION="2026-11-04p";
+var VERSION="2026-11-05a";
 function reportErr(msg){
   var el=document.getElementById("errBox");
   if(!el){el=document.createElement("p");el.id="errBox";el.className="note warn";el.style.cssText="position:fixed;inset:auto 8px calc(8px + env(safe-area-inset-bottom,0px)) 8px;z-index:99;background:var(--paper);border:1px solid var(--warn);border-radius:10px;padding:8px 10px;margin:0";document.body.appendChild(el)}

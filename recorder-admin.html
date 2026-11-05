@@ -92,7 +92,7 @@ audio{width:100%}
     <div class="grid">
       <label>שם הלקוח<input id="cName" placeholder="למשל: משפחת לוי – בר מצווה של איתי"></label>
       <label>מספר הזמנה בקאלה<input id="cOrder" inputmode="numeric" placeholder="16588"></label>
-      <label>סוג<select id="cMode"><option value="blessing">ברכה</option><option value="family">ברכות משפחה</option><option value="drasha">דרשה</option></select></label>
+      <label>סוג<select id="cMode"><option value="blessing">ברכה</option><option value="family">ברכות משפחה</option><option value="drasha">דרשה</option><option value="kala">ברכת כלה</option></select></label>
       <label id="cMaxWrap" hidden>עד כמה מברכים<input id="cMax" type="number" min="1" max="5" value="5"></label>
       <label>תוקף (ימים)<input id="cDays" type="number" min="1" max="120" value="30"></label>
     </div>
@@ -181,7 +181,7 @@ $("#createBtn").onclick=function(){
 $("#copyLink").onclick=function(){copy(linkFor(lastK),this)};
 $("#copyMsg").onclick=function(){copy(msgFor(lastName,lastK),this)};
 $("#refresh").onclick=load;
-var MODES={blessing:"ברכה",family:"ברכות משפחה",drasha:"דרשה"};
+var MODES={blessing:"ברכה",family:"ברכות משפחה",drasha:"דרשה",kala:"ברכת כלה"};
 var ITEMS=[],FILTER="all";
 var FILTERS=[["all","הכול"],["waiting","ממתינים לתשלום"],["drafts","ניסיון בחינם"],["paid","שולמו"],["final","עם קובץ סופי"]];
 function statusOf(it){
@@ -240,12 +240,12 @@ function renderList(){
         var ph=it.contact.phone||"",intl=ph.replace(/^0/,"972"),loc=ph.replace(/^972/,"0");ph=loc.length===10?loc.slice(0,3)+"-"+loc.slice(3):loc;
         var pa=document.createElement("a");pa.href="https://wa.me/"+intl;pa.target="_blank";pa.rel="noopener";pa.className="ltr";pa.textContent=ph;ct.appendChild(pa);
         var ca=document.createElement("span");ca.className="note";ca.textContent="ביקש לשלם "+fmtDate(it.contact.at);ct.appendChild(ca);
-        if(it.due&&(waiting(it)||!it.state.paid)){var du=document.createElement("b");du.textContent="לתשלום: "+it.due.amount+" ₪"+(it.due.topUp?" (השלמה)":" · "+(it.mode==="drasha"?"דרשה":(it.due.n||1)+" מברכים"));ct.appendChild(du)}
+        if(it.due&&(waiting(it)||!it.state.paid)){var du=document.createElement("b");du.textContent="לתשלום: "+it.due.amount+" ₪"+(it.due.topUp?" (השלמה)":" · "+(it.mode==="drasha"||it.mode==="kala"?MODES[it.mode]:(it.due.n||1)+" מברכים"));ct.appendChild(du)}
       }
       el.appendChild(ct);
     }
     var meta=document.createElement("div");meta.className="meta";
-    [it.orderId?"הזמנה "+it.orderId:"",it.src==="gen"?"מהמחולל":"",it.state.draft&&it.mode!=="drasha"?(it.state.nb||0)+" מברכים · "+it.state.price+" ₪":"",it.state.draft&&it.state.paidBlessers?"שולם על "+it.state.paidBlessers:"",it.takes+" משפטים",it.edits?(it.edits+" שינויי טקסט"):"",it.finals>1?(it.finals+" קבצים"):"",it.state.device?("נפתח ב-"+(it.state.devices||1)+" מכשירים"):"עוד לא נפתח","עודכן "+fmtDate(it.updated),"בתוקף עד "+new Date(it.state.expires).toLocaleDateString("he-IL")]
+    [it.orderId?"הזמנה "+it.orderId:"",it.src==="gen"?"מהמחולל":"",it.state.draft&&it.mode!=="drasha"&&it.mode!=="kala"?(it.state.nb||0)+" מברכים · "+it.state.price+" ₪":"",it.state.draft&&it.state.paidBlessers?"שולם על "+it.state.paidBlessers:"",it.takes+" משפטים",it.edits?(it.edits+" שינויי טקסט"):"",it.finals>1?(it.finals+" קבצים"):"",it.state.device?("נפתח ב-"+(it.state.devices||1)+" מכשירים"):"עוד לא נפתח","עודכן "+fmtDate(it.updated),"בתוקף עד "+new Date(it.state.expires).toLocaleDateString("he-IL")]
       .filter(Boolean).forEach(function(t){var s=document.createElement("span");s.textContent=t;meta.appendChild(s)});
     el.appendChild(meta);
     var acts=document.createElement("div");acts.className="row";

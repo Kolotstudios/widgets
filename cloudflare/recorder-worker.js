@@ -328,7 +328,8 @@ const BS_PKG = {
 const BS_TYPES = { ivr: 'תפריט ניתוב', sub: 'תת־נתב', hold: 'צליל המתנה', closed: 'העסק סגור', custom: 'הודעה', jingle: "ג'ינגל מושר" };
 const BS_LANGS = { he: 'עברית', en: 'אנגלית', ar: 'ערבית', ru: 'רוסית', fr: 'צרפתית', es: 'ספרדית', uk: 'אוקראינית', ro: 'רומנית', fa: 'פרסית', th: 'תאית', fil: 'פיליפינית', hi: 'הינדית', zh: 'סינית', ka: 'גאורגית', tr: 'טורקית', pt: 'פורטוגזית', de: 'גרמנית', it: 'איטלקית', pl: 'פולנית' };
 const BS_MAX_CHARS = 1200, BS_MAX_ITEMS = 16, BS_PREVIEWS_DRAFT = 40, BS_PREVIEWS_PAID = 60, BS_IP_DAY = 40, BS_DAYS = 30, BS_YEAR = 365 * 86400000;
-const BS_VOICES_DEFAULT = { f1: 'EXAVITQu4vr4xnSDxMaL', f2: '21m00Tcm4TlvDq8ikWAM', m1: 'pNInz6obpgDQGcFmaJgB', m2: 'TxGEqnHWrfWFTfGW9XjX' };
+// women: f1 Rachel (business), f2 Jessica (young), f3 Lily (soft) · men: m1 Josh (young), m2 Brian (warm), m3 Daniel (authoritative). Override any of them with the BS_VOICES variable
+const BS_VOICES_DEFAULT = { f1: '21m00Tcm4TlvDq8ikWAM', f2: 'cgSgspJ2msm6clMCkdW9', f3: 'pFZP5JQG7iQjIQuC4Bku', m1: 'TxGEqnHWrfWFTfGW9XjX', m2: 'nPczCjzI2devNBz1zQrb', m3: 'onwK4e9ZLuTAKqWW03F9' };
 const BS_WM = { he: 'B-Sound, תצוגה מקדימה.', en: 'B-Sound preview.', ar: 'B-Sound.', ru: 'B-Sound.' };
 function bsVoices(env) { try { return Object.assign({}, BS_VOICES_DEFAULT, env.BS_VOICES ? JSON.parse(env.BS_VOICES) : {}); } catch (e) { return BS_VOICES_DEFAULT; } }
 const bsClean = (t) => String(t || '').replace(/[<>{}\[\]]/g, '').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim().slice(0, BS_MAX_CHARS);

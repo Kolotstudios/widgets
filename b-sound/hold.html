@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>צליל המתנה ונתב שיחות אונליין | B-Sound</title>
+<title>צליל המתנה, נתב שיחות וג'ינגל לעסק | B-Sound</title>
 <meta name="description" content="צליל המתנה ונתב שיחות לעסק תוך דקות. הנוסח נכתב לפי האתר שלכם, שומעים לפני התשלום. מ־150 ₪ כולל מע&quot;מ.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800;900&display=swap">
@@ -90,12 +90,25 @@ aside dt{color:#5A606A;font-size:13px}aside dd{margin:2px 0 0;font-weight:700}
 .tot b{font-size:34px;font-weight:900}
 [hidden]{display:none!important}
 @media (max-width:640px){main{padding:20px}h1{font-size:25px}aside{position:static}}
+.steps li.can{cursor:pointer}.steps li.can:hover{border-color:var(--acc)}
+.prod{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:20px}
+.prod .sc b{font-size:19px;display:block}.prod .sc span{display:block;margin-top:6px;font-size:15px;color:#C9CED6}
+.hint{font-size:13px;color:var(--muted);font-weight:400}
+.tier{background:var(--bg);border:1.5px solid var(--line);border-radius:18px;padding:18px;margin-top:12px}
+.tier.on{border-color:var(--acc)}
+.tier ul{margin:8px 0 0;padding:0;list-style:none;font-size:14px;color:#C9CED6;display:flex;flex-wrap:wrap;gap:4px 16px}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:14px}
+.opt{text-align:right;font:inherit;color:var(--ink);cursor:pointer;padding:14px 16px;border-radius:14px;background:#1E242E;border:1.5px solid var(--line2)}
+.opt.on{background:#2A2416;border-color:var(--acc)}
+.opt b{display:flex;justify-content:space-between;font-size:16px}.opt b em{font-style:normal;font-size:22px;font-weight:900}
+.opt small{display:block;color:#C9CED6;font-size:13px;margin-top:4px}
+.lyr{white-space:pre-wrap;font-size:18px;line-height:1.8}
 </style>
 </head>
 <body>
 <header><div class="wrap">
 <a class="logo" href="https://www.b-sound.co.il"><span class="bars" aria-hidden="true"><i style="height:10px"></i><i style="height:20px"></i><i style="height:15px"></i><i style="height:24px"></i></span><span dir="ltr">B·SOUND</span></a>
-<span style="color:var(--muted);font-size:15px">צליל המתנה ונתב שיחות אונליין</span>
+<span style="color:var(--muted);font-size:15px">צליל המתנה, נתב שיחות וג'ינגל לעסק</span>
 </div></header>
 
 <div class="wrap">
@@ -106,7 +119,7 @@ aside dt{color:#5A606A;font-size:13px}aside dd{margin:2px 0 0;font-weight:700}
 
 <section data-s="1">
 <h1>ספרו לנו על העסק</h1>
-<p class="sub">נקרא את האתר שלכם, נמצא את הסלוגן והשירותים, ונכתוב נוסחים שמתאימים לעסק.</p>
+<p class="sub">נקרא את האתר שלכם ונכתוב נוסחים שמתאימים בדיוק לעסק.</p>
 <div class="row">
 <label class="f">שם העסק<input type="text" id="biz" placeholder="לדוגמה: מאפיית הכיכר" maxlength="60"></label>
 <label class="f">אתר אינטרנט<input type="url" id="site" dir="ltr" placeholder="www.example.co.il" maxlength="120" style="text-align:right"></label>
@@ -114,25 +127,31 @@ aside dt{color:#5A606A;font-size:13px}aside dd{margin:2px 0 0;font-weight:700}
 <p style="margin:22px 0 10px;font-size:15px;font-weight:600">תחום העסק</p>
 <div class="pills" id="fields"></div>
 <p class="err" id="e1" hidden></p>
-<div class="acts"><button class="btn" id="analyze" type="button">קראו את האתר וכתבו לי נוסחים</button></div>
+<div class="acts"><button class="btn" id="analyze" type="button">קראו את האתר</button><span id="anMsg" style="font-size:15px;color:#C9CED6"></span></div>
 <div class="found" id="found" hidden>
 <div id="foundMsg" style="font-size:15px"></div>
-<label class="f" style="margin-top:14px">הסלוגן<input type="text" id="slogan" maxlength="80"></label>
-<div style="margin-top:12px;font-size:15px;font-weight:600">שירותים שמצאנו</div><div class="chips" id="services"></div>
-<div class="acts"><button class="btn" id="toPkg" type="button">נראה טוב · לבחירת חבילה</button></div>
+<p class="sub" style="font-size:14px;margin-top:6px">אלה הפרטים שנשתמש בהם כדי לכתוב את הנוסחים. אפשר לתקן כל דבר.</p>
+<div class="row">
+<label class="f">שם העסק <span class="hint">כפי שייאמר בהקלטה</span><input type="text" id="fName" maxlength="60"></label>
+<label class="f">סלוגן <span class="hint">נשלב אותו במשפט הפתיחה</span><input type="text" id="fSlogan" maxlength="100"></label>
+</div>
+<label class="f" style="margin-top:14px">השירותים העיקריים <span class="hint">שורה לכל שירות. נזכיר אחד או שניים מהם בהקלטה</span><textarea id="fServices" rows="4" maxlength="400"></textarea></label>
+<label class="f" style="margin-top:14px">שעות פעילות <span class="hint">להודעת "העסק סגור". לא חובה</span><input type="text" id="fHours" maxlength="100" placeholder="לדוגמה: א׳–ה׳ 9:00–18:00"></label>
+<div class="acts"><button class="btn" id="toProd" type="button">המשך</button></div>
 </div>
 </section>
 
 <section data-s="2" hidden>
-<h1>מה צריך העסק?</h1>
-<p class="sub">כל המחירים כוללים מע"מ. תיקונים והודעות נוספות נעשים אחר כך באזור הלקוח.</p>
-<div class="pk" id="pkgs"></div>
-<div class="acts"><button class="btn" data-next type="button">לכתיבת הנוסחים</button><button class="btn ghost" data-back type="button">חזרה</button></div>
+<h1>מה העסק צריך?</h1>
+<p class="sub">בוחרים עכשיו את סוג ההקלטה. את המחיר וסוג הקריינות (AI או קריין אנושי) תבחרו בסוף, אחרי שתשמעו.</p>
+<div class="prod" id="prods"></div>
+<div class="acts"><button class="btn" id="toScripts" type="button">לכתיבת הנוסחים</button><button class="btn ghost" data-back type="button">חזרה</button></div>
 </section>
 
 <section data-s="3" hidden>
-<h1>הנוסחים שלכם</h1>
-<p class="sub">כתבנו לפי האתר. אפשר לערוך כל מילה.</p>
+<h1 id="h3">הנוסחים שלכם</h1>
+<p class="sub" id="sub3">כתבנו לפי הפרטים של העסק. אפשר לערוך כל מילה.</p>
+<div class="acts" id="rewriteBox" style="margin-top:14px"><button class="btn ghost sm" id="rewrite" type="button">כתבו לי נוסחים חדשים לפי הפרטים</button><span id="rwMsg" style="font-size:14px;color:#C9CED6"></span></div>
 <div id="bIvr" class="blk" hidden>
 <h2 class="it">תפריט הניתוב <span class="badge">בלי מוזיקה · לפי תקנות הנגישות</span></h2>
 <label class="f" style="margin-top:14px">משפט הפתיחה<input type="text" id="ivrIntro" maxlength="160"></label>
@@ -143,13 +162,13 @@ aside dt{color:#5A606A;font-size:13px}aside dd{margin:2px 0 0;font-weight:700}
 <div class="meter" data-for="ivrText" data-max="90" data-music="0"><div class="t"><span>אורך משוער</span><b></b></div><div class="bar"><i></i></div></div>
 </div>
 <div id="bSub" class="blk" hidden>
-<h2 class="it">תת־נתב <span class="badge">לא חובה · בלי מוזיקה</span></h2>
+<h2 class="it">תת־נתב <span class="badge">לא חובה · בחבילות סטנדרט ופרימיום</span></h2>
 <p class="sub">תפריט נוסף למחלקה אחת. למשל: "למחלקת מכירות. לרכישה חדשה הקישו 1, למעקב הזמנה הקישו 2."</p>
 <div class="row"><label class="f">למחלקה<input type="text" id="subTitle" maxlength="40"></label></div>
 <label class="f" style="margin-top:12px">נוסח התת־נתב<textarea id="subText" rows="3" maxlength="700"></textarea></label>
 <div class="meter" data-for="subText" data-max="60" data-music="0"><div class="t"><span>אורך משוער</span><b></b></div><div class="bar"><i></i></div></div>
 </div>
-<div id="bHold" class="blk">
+<div id="bHold" class="blk" hidden>
 <h2 class="it">צליל ההמתנה <span class="badge mus">עם מוזיקה · עד 30 שניות</span></h2>
 <div id="holdOpts" style="display:flex;flex-direction:column;gap:10px;margin-top:14px"></div>
 <label class="f" style="margin-top:14px">עריכת הנוסח<textarea id="holdText" rows="4" maxlength="400"></textarea></label>
@@ -160,29 +179,44 @@ aside dt{color:#5A606A;font-size:13px}aside dd{margin:2px 0 0;font-weight:700}
 <label class="f" style="margin-top:14px">הנוסח<textarea id="closedText" rows="3" maxlength="400"></textarea></label>
 <div class="meter" data-for="closedText" data-max="40" data-music="0"><div class="t"><span>אורך משוער</span><b></b></div><div class="bar"><i></i></div></div>
 </div>
+<div id="bJingle" class="blk" hidden>
+<h2 class="it">הג'ינגל <span class="badge mus">שיר מושר עם שם העסק</span></h2>
+<label class="f" style="margin-top:14px"><span style="display:flex;justify-content:space-between"><span>אורך</span><b id="jLenO" style="color:var(--acc)"></b></span><input type="range" id="jLen" min="7" max="60" value="30"></label>
+<p class="hint" style="margin:6px 0 0">עד 15 שניות: שם העסק וסלוגן מושר. 16–30: פזמון. מעל 30: בית מחורז ופזמון.</p>
+<p style="margin:18px 0 8px;font-size:15px;font-weight:600">מי שר</p><div class="pills" id="jVocal"></div>
+<p style="margin:18px 0 8px;font-size:15px;font-weight:600">סגנון</p><div class="pills" id="jStyle"></div>
+<div class="acts"><button class="btn sm" id="jWrite" type="button">כתבו לי מילים</button><span id="jMsg" style="font-size:14px;color:#C9CED6"></span></div>
+<div id="jVers" style="display:flex;flex-direction:column;gap:10px;margin-top:14px"></div>
+<label class="f" style="margin-top:14px">המילים<textarea id="jText" rows="7" maxlength="900" class="lyr"></textarea></label>
+</div>
 <p class="err" id="e3" hidden></p>
-<div class="acts"><button class="btn" id="n3" type="button">סגרנו על הנוסחים · למוזיקה ולקול</button><button class="btn ghost" data-back type="button">חזרה</button></div>
+<div class="acts"><button class="btn" id="n3" type="button">המשך</button><button class="btn ghost" data-back type="button">חזרה</button></div>
 </section>
 
 <section data-s="4" hidden>
-<h1>מוזיקה וקול</h1>
-<p class="sub">המוזיקה רק לצליל ההמתנה. בתפריט ובהודעות אין מוזיקה.</p>
-<div id="music"></div>
-<p style="margin:24px 0 8px;font-size:15px;font-weight:600">קול (AI)</p>
+<h1 id="h4">קול ומוזיקה</h1>
+<p class="sub" id="sub4">לחצו ▶ כדי לשמוע כל קול וכל מוזיקה.</p>
+<div id="vBox">
+<p style="margin:20px 0 8px;font-size:15px;font-weight:600">קול</p>
 <div class="mgrid" id="voices"></div>
-<p style="margin:14px 0 0;font-size:14px;color:var(--muted)">מעדיפים קריין אנושי מהאולפן? <a id="humanLink" target="_blank" rel="noopener">להזמנה עם קריין</a></p>
-<div class="row">
+<p class="hint" style="margin:8px 0 0">אלה קולות AI. אם תעדיפו קריין אנושי מהאולפן, תוכלו לבחור בו בסוף, אחרי ההאזנה.</p>
+</div>
+<div id="mBox"><p style="margin:24px 0 0;font-size:15px;font-weight:600">מוזיקה לצליל ההמתנה <span class="hint">בתפריט ובהודעות אין מוזיקה</span></p><div id="music"></div></div>
+<div class="box">
+<b>לאן לשלוח את הקבצים</b>
+<div class="row" style="margin-top:8px">
 <label class="f">שם מלא<input type="text" id="name" maxlength="60" autocomplete="name"></label>
 <label class="f">טלפון נייד<input type="tel" id="phone" maxlength="15" autocomplete="tel" dir="ltr" style="text-align:right"></label>
-<label class="f">אימייל לקבלת הקבצים<input type="email" id="email" maxlength="80" autocomplete="email" dir="ltr" style="text-align:right"></label>
+<label class="f">אימייל<input type="email" id="email" maxlength="80" autocomplete="email" dir="ltr" style="text-align:right"></label>
+</div>
 </div>
 <p class="err" id="e4" hidden></p>
 <div class="acts"><button class="btn" id="n4" type="button">להאזנה</button><button class="btn ghost" data-back type="button">חזרה</button></div>
 </section>
 
 <section data-s="5" hidden>
-<h1>שמעו לפני שמשלמים</h1>
-<p class="sub">בכל האזנה יש סימן מים קולי ("B-Sound, תצוגה מקדימה"). אחרי התשלום תקבלו קבצים נקיים.</p>
+<h1 id="h5">שמעו לפני שמחליטים</h1>
+<p class="sub" id="sub5">בכל האזנה יש סימן מים קולי ("B-Sound, תצוגה מקדימה"). אחרי ההזמנה תקבלו קבצים נקיים.</p>
 <div id="pvList"></div>
 <div id="mixBox" class="box" hidden>
 <b>מיקס צליל ההמתנה</b>
@@ -192,28 +226,40 @@ aside dt{color:#5A606A;font-size:13px}aside dd{margin:2px 0 0;font-weight:700}
 </div>
 <label class="chk"><input type="checkbox" id="duck">דאקינג עדין: המוזיקה יורדת בעדינות כשהקריין מדבר</label>
 </div>
+<div id="jRecap" class="box" hidden></div>
 <p style="font-size:14px;color:var(--muted);margin:12px 0 0" id="left"></p>
 <p class="err" id="e5" hidden></p>
-<div class="acts"><button class="btn" id="n5" type="button">מאשר/ת · לתשלום</button><button class="btn ghost" id="redo" type="button">שינוי נוסחים</button></div>
+<div class="acts"><button class="btn" id="n5" type="button">אהבתי · לבחירת סוג ההפקה</button><button class="btn ghost" id="redo" type="button">שינוי נוסחים</button></div>
 </section>
 
 <section data-s="6" hidden>
+<h1>איך להפיק?</h1>
+<p class="sub" id="sub6">כל המחירים כוללים מע"מ.</p>
+<div id="choose"></div>
+<p class="err" id="e6" hidden></p>
+<div class="acts"><button class="btn" id="n6" type="button" disabled>לתשלום</button><button class="btn ghost" data-back type="button">חזרה</button></div>
+</section>
+
+<section data-s="7" hidden>
 <h1>תשלום</h1>
 <p class="sub">התשלום מאובטח דרך מערכת קאלה של אולפני קולות.</p>
 <div class="box" style="text-align:center">
 <div style="font-size:15px;color:#C9CED6">קוד ההזמנה שלכם</div>
 <div class="code" id="code"></div>
 <p style="margin:10px 0 0;font-size:15px">בטופס התשלום כתבו את הקוד בשדה <b>הערות</b>. אם הטלפון זהה, נזהה גם בלי הקוד.</p>
+<p style="margin:8px 0 0;font-size:15px" id="payWhat"></p>
 </div>
-<div class="acts"><a class="btn" id="payBtn" target="_blank" rel="noopener">לתשלום בקאלה</a><button class="btn ghost" data-back type="button">חזרה להאזנה</button></div>
+<div class="acts"><a class="btn" id="payBtn" target="_blank" rel="noopener">לתשלום בקאלה</a><button class="btn ghost" data-back type="button">חזרה</button></div>
 <p style="margin:20px 0 0;color:#C9CED6;font-size:15px"><span class="spin" aria-hidden="true"></span> מחכים לאישור התשלום. הדף יתעדכן לבד, אפשר להשאיר אותו פתוח.</p>
 </section>
 
-<section data-s="7" hidden>
+<section data-s="8" hidden>
 <h1>האזור שלכם</h1>
-<p class="sub">כאן מורידים את הקבצים, מתקנים נוסחים ומוסיפים הודעות ושפות. שמרו את הקישור לדף הזה.</p>
+<p class="sub">שמרו את הקישור לדף הזה. כאן מורידים קבצים, מתקנים נוסחים ומוסיפים הודעות ושפות.</p>
+<div id="studioBox" class="box" hidden></div>
+<div id="aiArea">
 <div class="cr" id="credits"></div>
-<p class="err" id="e7" hidden></p>
+<p class="err" id="e8" hidden></p>
 <div id="buyBox" class="box" hidden><div id="buyMsg" style="font-size:15px"></div><div class="acts" style="margin-top:12px"><a class="btn sm" id="buyBtn" target="_blank" rel="noopener"></a><span style="font-size:14px;color:var(--muted)">כתבו בהערות את הקוד <b id="buyCode" dir="ltr"></b>. אחרי התשלום הדף יתעדכן לבד.</span></div></div>
 <div id="items"></div>
 <div id="mixBox2" class="box" hidden>
@@ -224,7 +270,7 @@ aside dt{color:#5A606A;font-size:13px}aside dd{margin:2px 0 0;font-weight:700}
 </div>
 <label class="chk"><input type="checkbox" id="duck2">דאקינג עדין</label>
 </div>
-<div class="box">
+<div class="box" id="addBox">
 <b>הוספת הודעה</b>
 <div class="row">
 <label class="f">סוג<select id="addType"><option value="closed">העסק סגור</option><option value="custom">חג / חופשה / אחר</option><option value="sub">תת־נתב</option></select></label>
@@ -233,11 +279,12 @@ aside dt{color:#5A606A;font-size:13px}aside dd{margin:2px 0 0;font-weight:700}
 <label class="f" style="margin-top:12px">נוסח<textarea id="addText" rows="3" maxlength="700"></textarea></label>
 <div class="acts"><button class="btn sm" id="addBtn" type="button">הוספת הודעה</button></div>
 </div>
-<div class="box">
+<div class="box" id="langBox">
 <b>הוספת שפה</b>
 <p class="sub" style="font-size:14px">נתרגם את כל ההודעות המאושרות. תוכלו לבדוק ולתקן את התרגום לפני האישור.</p>
 <div class="row"><label class="f">שפה<select id="langSel"></select></label></div>
 <div class="acts"><button class="btn sm" id="langBtn" type="button">הוספת השפה</button></div>
+</div>
 </div>
 </section>
 
@@ -246,104 +293,126 @@ aside dt{color:#5A606A;font-size:13px}aside dd{margin:2px 0 0;font-weight:700}
 <h2>ההזמנה שלכם</h2>
 <dl>
 <div><dt>עסק</dt><dd id="sBiz">-</dd></div>
-<div><dt>חבילה</dt><dd id="sPkg">-</dd></div>
+<div><dt>מוצר</dt><dd id="sProd">-</dd></div>
+<div><dt>קול / סגנון</dt><dd id="sVoice">-</dd></div>
 <div><dt>מוזיקה</dt><dd id="sMusic">-</dd></div>
-<div><dt>קול</dt><dd id="sVoice">-</dd></div>
 </dl>
-<div class="tot"><span style="font-weight:700">סה"כ</span><b id="sPrice">-</b></div>
-<p style="margin:6px 0 0;font-size:13px;color:#5A606A">כולל מע"מ · MP3, WAV ו־WAV 8bit u-law</p>
+<div class="tot"><span style="font-weight:700">מחיר</span><b id="sPrice" style="font-size:24px">ייבחר בסוף</b></div>
+<p style="margin:6px 0 0;font-size:13px;color:#5A606A">כולל מע"מ · שומעים לפני שמחליטים</p>
 </aside>
 </div>
 </div>
-
 <script>
 (function(){
 "use strict";
 var API="https://kolot-recorder.kolot-studios.workers.dev";
 var KALA="https://kolot.kala-crm.co.il/order/cart_buy?id=";
 var Q=new URLSearchParams(location.search),TEST=Q.get("test")==="1";
-var PK={
-  "hold":{t:"צליל המתנה",p:150,id:76262,items:["hold"],rev:0,lang:0,sub:false,inc:["צליל המתנה עם מוזיקה","נוסח לפי האתר שלכם","בלי תיקונים"]},
-  "ivr-basic":{t:"נתב בייסיק",p:349,id:76264,items:["ivr","hold","closed"],rev:0,lang:0,sub:false,inc:["תפריט ניתוב עד 9 שלוחות","צליל המתנה עם מוזיקה",'הודעת "העסק סגור"',"בלי תיקונים"]},
-  "ivr-standard":{t:"נתב סטנדרט",p:749,id:76265,items:["ivr","hold","closed"],rev:2,lang:0,sub:true,inc:["כל מה שבבייסיק","תת־נתב למחלקה","2 תיקונים בשנה"]},
-  "ivr-premium":{t:"נתב פרימיום",p:1390,id:76266,items:["ivr","hold","closed"],rev:7,lang:2,sub:true,inc:["כל מה שבסטנדרט","7 תיקונים בשנה","2 שפות נוספות"]}
+/* prices and Kala ids – keep in sync with kala/b-sound-catalog.json */
+var PRICE={
+  "hold":{ai:[150,76262],human:[350,76263]},
+  "ivr-basic":{ai:[349,76264],human:[490,76267]},
+  "ivr-standard":{ai:[749,76265],human:[1090,76268]},
+  "ivr-premium":{ai:[1390,76266],human:[2090,76269]},
+  "jingle":{ai:[800,76272],human:[3000,76273]}
 };
+var TIERS=[["ivr-basic","בייסיק",["תפריט ניתוב עד 9 שלוחות","צליל המתנה","הודעת סגור","בלי תיקונים"]],["ivr-standard","סטנדרט",["כל מה שבבייסיק","תת־נתב","2 תיקונים בשנה"]],["ivr-premium","פרימיום",["כל מה שבסטנדרט","7 תיקונים בשנה","2 שפות נוספות"]]];
+var PRODUCTS=[["hold","צליל המתנה","הודעה עם מוזיקה שהלקוחות שומעים בזמן ההמתנה. עד 30 שניות."],["ivr","נתב שיחות","תפריט ניתוב (\"למכירות הקישו 1\"), צליל המתנה והודעת \"העסק סגור\"."],["jingle","ג'ינגל מושר","שיר קצר וקליט עם שם העסק, 7 עד 60 שניות. לפרסומות, לרשתות ולצליל המתנה."]];
 var CREDIT={revision:{id:76275,p:90,t:"תיקון"},message:{id:76276,p:90,t:"הודעה נוספת"},language:{id:76270,p:90,t:"שפה נוספת"}};
-var TEST_ID=76274,TEST_CREDIT=76277,HUMAN=76267;
+var TEST_ID=76274,TEST_CREDIT=76277;
 var $=function(s){return document.querySelector(s)};
 var FIELDS=[["food","מסעדה / אוכל"],["clinic","מרפאה / קליניקה"],["office",'משרד / עו"ד / רו"ח'],["shop","חנות / קמעונאות"],["garage","מוסך / רכב"],["realestate",'נדל"ן'],["other","אחר"]];
 var DEPS={food:["הזמנות","משלוחים","שירות לקוחות"],clinic:["קביעת תורים","תוצאות בדיקות","הנהלה"],office:["תיאום פגישות","הנהלת חשבונות","שירות לקוחות"],shop:["מכירות","שירות לקוחות","החזרות"],garage:["תיאום טיפול","חלקי חילוף","שירות לקוחות"],realestate:["מכירות","השכרות","שירות לקוחות"],other:["מכירות","שירות לקוחות","הנהלת חשבונות"]};
-var LINES={food:["אפשר להזמין אצלנו משלוחים ואירועים בקלות.","ניתן לבצע הזמנות ומשלוחים גם דרך האתר.","בינתיים, תחשבו מה בא לכם לאכול היום."],clinic:["הבריאות שלכם בראש סדר העדיפויות שלנו.","במקרה חירום רפואי, נא לחייג 101.","אנחנו כאן כדי לדאוג לכם."],office:["אנו מלווים את לקוחותינו באמינות ובמקצועיות.","לתיאום פגישה, נציג יענה לכם בהקדם.","יש לכם שאלה? בדיוק בשביל זה אנחנו כאן."],shop:["מבצעים חדשים מחכים לכם אצלנו.","לבירור מלאי והזמנות, נציג יענה בהקדם.","שווה לבדוק את החדשים שהגיעו השבוע."],garage:["הרכב שלכם בידיים טובות.","לקביעת תור לטיפול, נא להמתין לנציג.","עוד רגע מחזירים אתכם לכביש."],realestate:["אנחנו כאן כדי למצוא לכם את הבית הבא.","לתיאום סיור בנכס, נציג יענה בהקדם.","הבית הבא שלכם כבר מחכה."],other:["אנו מתחייבים לשירות אישי ומקצועי.","שיחתכם תיענה לפי סדר קבלתה.","תיכף נהיה איתכם."]};
-var VOICES=[["f1","קריינית · חמה","רכה ונעימה"],["f2","קריינית · עסקית","בהירה ומקצועית"],["m1","קריין · עמוק","סמכותי ובוטח"],["m2","קריין · צעיר","אנרגטי וידידותי"]];
-var STEPS=["העסק","חבילה","נוסחים","מוזיקה וקול","האזנה","תשלום","האזור שלכם"];
-var TYPES={ivr:"תפריט ניתוב",sub:"תת־נתב",hold:"צליל המתנה",closed:"העסק סגור",custom:"הודעה"};
+var LINES={food:"אפשר להזמין אצלנו משלוחים ואירועים בקלות.",clinic:"הבריאות שלכם חשובה לנו.",office:"נשמח לעזור לכם בכל שאלה.",shop:"מבצעים חדשים מחכים לכם אצלנו.",garage:"הרכב שלכם בידיים טובות.",realestate:"אנחנו כאן כדי למצוא לכם את הבית הבא.",other:"נשמח לעמוד לשירותכם."};
+var VOICES=[["f1","קריינית · חמה"],["f2","קריינית · עסקית"],["m1","קריין · עמוק"],["m2","קריין · צעיר"]];
+var VOCALS=["זמר","זמרת","דואט","מקהלה","קולות ילדים"];
+var STYLES=["מתאים לתחום","פופ","ים תיכוני","רוק","היפ הופ","ג'אז / סווינג","אלקטרוני","אקוסטי","שמח ומקפיץ"];
+var STEPS=["העסק","מה צריך","נוסחים","קול ומוזיקה","האזנה","איך להפיק","תשלום","האזור שלכם"];
 var LIB=null;
-var S={step:1,field:"food",ai:null,pkg:"ivr-basic",deps:null,ivrManual:false,holdIdx:0,music:"piano-smile",voice:"f1",vv:100,mv:35,duck:true,k:null,code:"",st:null};
-var A={};// audio buffers by key
-try{var saved=JSON.parse(localStorage.getItem("bs_order")||"null");if(saved) Object.assign(S,saved.S||{})}catch(e){saved=null}
-var hk=(location.hash.match(/k=([a-f0-9]+)/)||[])[1];if(hk&&hk!==S.k){S.k=hk;S.step=6}
-var FORM=["biz","site","slogan","ivrIntro","ivrText","subTitle","subText","holdText","closedText","name","phone","email"];
-function save(){try{var f={};FORM.forEach(function(id){f[id]=$("#"+id).value});localStorage.setItem("bs_order",JSON.stringify({S:{step:S.step,field:S.field,ai:S.ai,pkg:S.pkg,deps:S.deps,ivrManual:S.ivrManual,holdIdx:S.holdIdx,music:S.music,voice:S.voice,vv:S.vv,mv:S.mv,duck:S.duck,k:S.k,code:S.code},f:f}))}catch(e){}}
+var S={step:1,max:1,field:"food",ai:null,product:"hold",deps:null,ivrManual:false,holdIdx:0,music:"quiet-piano",voice:"f1",vv:100,mv:35,duck:true,jLen:30,jVocal:1,jStyle:0,jVers:null,choice:null,k:null,code:"",st:null};
+var A={};
+var FORM=["biz","site","fName","fSlogan","fServices","fHours","ivrIntro","ivrText","subTitle","subText","holdText","closedText","jText","name","phone","email"];
+try{var saved=JSON.parse(localStorage.getItem("bs_order2")||"null");if(saved) Object.assign(S,saved.S||{})}catch(e){saved=null}
+var hk=(location.hash.match(/k=([a-f0-9]+)/)||[])[1];if(hk&&hk!==S.k){S.k=hk;S.step=7}
+function save(){try{var f={};FORM.forEach(function(id){f[id]=$("#"+id).value});var keep={};["step","max","field","ai","product","deps","ivrManual","holdIdx","music","voice","vv","mv","duck","jLen","jVocal","jStyle","jVers","choice","k","code"].forEach(function(x){keep[x]=S[x]});localStorage.setItem("bs_order2",JSON.stringify({S:keep,f:f}))}catch(e){}}
 if(saved&&saved.f) FORM.forEach(function(id){if(saved.f[id]!=null) $("#"+id).value=saved.f[id]});
 if(TEST) $("#testBar").hidden=false;
-$("#humanLink").href=KALA+HUMAN;
 
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
 function call(o){return fetch(API,{method:"POST",headers:{"Content-Type":"text/plain"},body:JSON.stringify(o)}).then(function(r){return r.json()}).catch(function(){return {ok:false,error:"אין חיבור לשרת. נסו שוב."}})}
 function err(id,m){var e=$(id);e.textContent=m||"";e.hidden=!m}
-function bizName(){var b=$("#biz").value.trim();if(b) return b;if(S.ai&&S.ai.name) return S.ai.name;return $("#site").value.trim().replace(/^https?:\/\//,"").replace(/^www\./,"").split(/[./]/)[0]||""}
+function bizName(){return $("#fName").value.trim()||$("#biz").value.trim()||$("#site").value.trim().replace(/^https?:\/\//,"").replace(/^www\./,"").split(/[./]/)[0]||""}
+function facts(){return {name:bizName(),slogan:$("#fSlogan").value.trim(),services:$("#fServices").value.split("\n").map(function(x){return x.trim()}).filter(Boolean),hours:$("#fHours").value.trim()}}
+function fieldName(){return (FIELDS.find(function(f){return f[0]===S.field})||[])[1]}
 function words(t){return (t||"").trim().split(/\s+/).filter(Boolean).length}
 function secs(t,music){return Math.round(words(t)/2.3+(music?3.5:0.6))}
+function ils(n){return "₪"+Number(n).toLocaleString("en-US")}
+function draftPkg(){return S.product==="hold"?"hold":S.product==="jingle"?"jingle":"ivr-premium"}
 
-function renderSteps(){$("#steps").innerHTML=STEPS.map(function(l,i){var n=i+1;return '<li class="'+(S.step===n?"on":S.step>n?"done":"")+'"><b>'+n+'</b> '+l+'</li>'}).join("")}
+/* steps bar: steps already reached are clickable (before payment) */
+function renderSteps(){
+  var paidish=S.step>=7;
+  $("#steps").innerHTML=STEPS.map(function(l,i){var n=i+1,can=!paidish&&n<=S.max&&n!==S.step&&n<7;return '<li class="'+(S.step===n?"on":n<=S.max?"done":"")+(can?" can":"")+'"'+(can?' data-go="'+n+'" role="button" tabindex="0"':"")+'><b>'+n+'</b> '+l+'</li>'}).join("");
+}
+$("#steps").onclick=function(e){var li=e.target.closest("[data-go]");if(li) go(+li.dataset.go)};
+$("#steps").onkeydown=function(e){if(e.key==="Enter"){var li=e.target.closest("[data-go]");if(li) go(+li.dataset.go)}};
 function go(n){
-  if(n===5&&!S.k){n=4}
-  S.step=n;document.querySelectorAll("main section").forEach(function(s){s.hidden=+s.dataset.s!==n});
+  stop();S.step=n;if(n<7) S.max=Math.max(S.max,n);
+  document.querySelectorAll("main section").forEach(function(s){s.hidden=+s.dataset.s!==n});
   renderSteps();save();window.scrollTo({top:0,behavior:"smooth"});
-  if(n===2) renderPkgs();if(n===3) renderScripts();if(n===4){renderMusic();renderVoices()}
-  if(n===5) renderPreview();if(n===6) startPay();if(n===7) portal();
+  if(n===2) renderProds();if(n===3) renderScripts();if(n===4) renderStep4();
+  if(n===5) renderPreview();if(n===6) renderChoose();if(n===7) startPay();if(n===8) portal();
   side();
 }
 function side(){
-  $("#sBiz").textContent=bizName()||"-";var p=PK[S.pkg];$("#sPkg").textContent=p?p.t:"-";
-  var t=LIB&&LIB.tracks.find(function(x){return x.id===S.music});$("#sMusic").textContent=t?t.name:"-";
-  var v=VOICES.find(function(x){return x[0]===S.voice});$("#sVoice").textContent=v?v[1]+" (AI)":"-";
-  $("#sPrice").textContent=TEST?"₪0 (בדיקה)":p?"₪"+p.p.toLocaleString("en-US"):"-";
+  $("#sBiz").textContent=bizName()||"-";
+  var p=PRODUCTS.find(function(x){return x[0]===S.product});$("#sProd").textContent=p?p[1]+(S.choice&&S.product==="ivr"?" · "+(TIERS.find(function(t){return t[0]===S.choice.pkg})||[,""])[1]:""):"-";
+  if(S.product==="jingle"){$("#sVoice").textContent=VOCALS[S.jVocal]+" · "+STYLES[S.jStyle];$("#sMusic").textContent="-"}
+  else{var v=VOICES.find(function(x){return x[0]===S.voice});$("#sVoice").textContent=v?v[1]:"-";var t=LIB&&LIB.tracks.find(function(x){return x.id===S.music});$("#sMusic").textContent=t?t.name:"-"}
+  if(S.choice){var pr=PRICE[S.choice.pkg][S.choice.human?"human":"ai"][0];$("#sPrice").textContent=TEST?"₪0 (בדיקה)":ils(pr);$("#sPrice").style.fontSize="34px"}
+  else{$("#sPrice").textContent="ייבחר בסוף";$("#sPrice").style.fontSize="24px"}
 }
 
-/* step 1: business + site analysis */
+/* 1: business */
 $("#fields").innerHTML=FIELDS.map(function(f){return '<button type="button" class="pill" data-f="'+f[0]+'">'+f[1]+'</button>'}).join("");
 function pills(){document.querySelectorAll("#fields .pill").forEach(function(b){b.classList.toggle("on",b.dataset.f===S.field)})}
 $("#fields").onclick=function(e){var b=e.target.closest("[data-f]");if(!b)return;S.field=b.dataset.f;pills();save()};
+var waitT=0;
+function waiting(el,msgs){var i=0;el.textContent=msgs[0];clearInterval(waitT);waitT=setInterval(function(){i=Math.min(i+1,msgs.length-1);el.textContent=msgs[i]},7000)}
+function applyAi(r){
+  S.ai=r;S.deps=null;S.ivrManual=false;S.holdIdx=0;["holdText","ivrText","ivrIntro","closedText"].forEach(function(id){$("#"+id).value=""});
+}
 $("#analyze").onclick=function(){
   if(!$("#biz").value.trim()&&!$("#site").value.trim()){err("#e1","כתבו שם עסק או כתובת אתר");return}
-  err("#e1");var b=this;b.disabled=true;b.innerHTML='<span class="spin"></span> קוראים את האתר וכותבים…';
-  call({action:"bs_site",url:$("#site").value.trim(),biz:$("#biz").value.trim(),field:(FIELDS.find(function(f){return f[0]===S.field})||[])[1]}).then(function(r){
-    S.ai=r.ok&&r.ai&&r.result?r.result:null;S.deps=null;S.ivrManual=false;S.holdIdx=0;$("#holdText").value="";$("#ivrText").value="";$("#ivrIntro").value="";$("#closedText").value="";
+  err("#e1");var b=this;b.disabled=true;b.innerHTML='<span class="spin"></span>';
+  waiting($("#anMsg"),["קוראים את האתר…","מזהים את השירותים והסלוגן…","כותבים נוסחים מותאמים…","עוד כמה שניות…"]);
+  call({action:"bs_site",url:$("#site").value.trim(),biz:$("#biz").value.trim(),field:fieldName()}).then(function(r){
+    clearInterval(waitT);$("#anMsg").textContent="";
+    var res=r.ok&&r.ai&&r.result?r.result:null;applyAi(res);
     var msg;
-    if(S.ai){if(S.ai.name&&!$("#biz").value.trim()) $("#biz").value=S.ai.name;msg='<span class="ok">✓</span> '+(r.site&&r.site.read?"קראנו את האתר וכתבנו נוסחים לפי מה שמצאנו.":"כתבנו נוסחים לפי שם העסק והתחום.")}
-    else msg=(r.site&&r.site.error?r.site.error+". ":"")+"הכנו נוסחים מוכנים לפי התחום. אפשר לערוך הכול.";
-    $("#foundMsg").innerHTML=msg;$("#slogan").value=S.ai&&S.ai.slogan||(r.site&&r.site.desc||"").slice(0,80);
-    var sv=S.ai&&S.ai.services||[];$("#services").innerHTML=sv.length?sv.map(function(x){return "<span>"+esc(x)+"</span>"}).join(""):'<span style="background:none;color:var(--muted)">לא נמצאו. אפשר להמשיך.</span>';
+    if(res) msg='<span class="ok">✓</span> '+(r.site&&r.site.read?"קראנו את האתר. זה מה שמצאנו:":"לא הצלחנו לקרוא את האתר, אז כתבנו לפי שם העסק והתחום:");
+    else msg=(r.site&&r.site.error?r.site.error+". ":"")+"מלאו את הפרטים ונכתוב לפיהם.";
+    $("#foundMsg").innerHTML=msg;
+    $("#fName").value=res&&res.name||$("#biz").value.trim();$("#fSlogan").value=res&&res.slogan||(r.site&&r.site.desc||"").slice(0,90);
+    $("#fServices").value=(res&&res.services||[]).join("\n");$("#fHours").value=res&&res.hours||"";
     $("#found").hidden=false;save();
   }).then(function(){b.disabled=false;b.textContent="קראו שוב"});
 };
-$("#toPkg").onclick=function(){go(2)};
+$("#toProd").onclick=function(){if(!bizName()){err("#e1","כתבו את שם העסק");return}go(2)};
 
-/* step 2: package */
-function renderPkgs(){
-  $("#pkgs").innerHTML=Object.keys(PK).map(function(k){var p=PK[k];return '<button type="button" class="sc'+(k===S.pkg?" on":"")+'" data-p="'+k+'"><b style="font-size:18px">'+p.t+'</b><span class="pr">₪'+p.p.toLocaleString("en-US")+'</span><ul>'+p.inc.map(function(i){return "<li>✓ "+esc(i)+"</li>"}).join("")+'</ul></button>'}).join("");
-}
-$("#pkgs").onclick=function(e){var b=e.target.closest("[data-p]");if(!b)return;S.pkg=b.dataset.p;renderPkgs();side();save()};
+/* 2: product */
+function renderProds(){$("#prods").innerHTML=PRODUCTS.map(function(p){return '<button type="button" class="sc'+(p[0]===S.product?" on":"")+'" data-p="'+p[0]+'"><b>'+p[1]+'</b><span>'+esc(p[2])+'</span></button>'}).join("")}
+$("#prods").onclick=function(e){var b=e.target.closest("[data-p]");if(!b)return;if(S.product!==b.dataset.p){S.product=b.dataset.p;S.choice=null;S.k=null;S.code=""}renderProds();side();save()};
+$("#toScripts").onclick=function(){go(3)};
 
-/* step 3: scripts */
-function slogan(){var s=$("#slogan").value.trim();return s?s.replace(/[.!]+$/,"")+".":""}
+/* 3: scripts */
+function slogan(){var s=$("#fSlogan").value.trim();return s?s.replace(/[.!]+$/,"")+".":""}
 function holdOptions(){
   if(S.ai&&S.ai.hold&&S.ai.hold.length) return S.ai.hold.map(function(h){return [h.tone||"",h.text||""]});
-  var n=bizName()||"העסק",L=LINES[S.field],sl=slogan()?" "+slogan():"";
-  return [["חם ואישי","שלום, הגעתם ל"+n+"."+sl+" כל הנציגים שלנו עסוקים כרגע, אבל השיחה שלכם חשובה לנו. "+L[0]+" אנא הישארו על הקו."],
-    ["רשמי ועסקי",n+" מודה לכם על פנייתכם."+sl+" "+L[1]+" אנא המתינו, נציג יענה בהקדם."],
-    ["קליל וצעיר","היי! איזה כיף שהתקשרתם ל"+n+"."+sl+" אנחנו מסיימים שיחה ותיכף איתכם. נתראה עוד רגע!"]];
+  var n=bizName()||"העסק",sl=slogan()?" "+slogan():"",sv=facts().services[0];
+  return [["חם ואישי","שלום, הגעתם ל"+n+"."+sl+" כל הנציגים שלנו עסוקים כרגע. "+LINES[S.field]+" אנא הישארו על הקו."],
+    ["רשמי ועסקי",n+" מודה לכם על פנייתכם."+(sv?" אנו מתמחים ב"+sv+".":"")+" נציג יענה לכם בהקדם, אנא המתינו."],
+    ["קליל וצעיר","היי! תודה שהתקשרתם ל"+n+"."+sl+" אנחנו מסיימים שיחה ותיכף איתכם."]];
 }
 function composeIvr(){
   var intro=$("#ivrIntro").value.trim()||("שלום, הגעתם ל"+(bizName()||"העסק")+".");
@@ -355,24 +424,36 @@ function renderDeps(){
   $("#addDep").disabled=S.deps.length>=9;
 }
 function renderScripts(){
-  var p=PK[S.pkg];$("#bIvr").hidden=p.items.indexOf("ivr")<0;$("#bClosed").hidden=p.items.indexOf("closed")<0;$("#bSub").hidden=!p.sub;
+  var pr=S.product,ivr=pr==="ivr",jin=pr==="jingle";
+  $("#bIvr").hidden=!ivr;$("#bSub").hidden=!ivr;$("#bClosed").hidden=!ivr;$("#bHold").hidden=jin;$("#bJingle").hidden=!jin;$("#rewriteBox").hidden=jin;
+  $("#h3").textContent=jin?"מילים לג'ינגל":"הנוסחים שלכם";$("#sub3").textContent=jin?"בחרו אורך, קולות וסגנון, ונכתוב מילים עם חריזה ופזמון קליט.":"כתבנו לפי הפרטים של העסק. אפשר לערוך כל מילה.";
+  if(jin){renderJingle();return}
   if(!S.deps) S.deps=(S.ai&&S.ai.departments&&S.ai.departments.length?S.ai.departments:DEPS[S.field]).slice(0,9);
   if(!$("#ivrIntro").value) $("#ivrIntro").value=S.ai&&S.ai.ivr_intro||("שלום, הגעתם ל"+(bizName()||"העסק")+". "+slogan()).trim();
   renderDeps();if(!S.ivrManual||!$("#ivrText").value) $("#ivrText").value=composeIvr();
   var ho=holdOptions();
   $("#holdOpts").innerHTML=ho.map(function(x,i){return '<button type="button" class="sc'+(i===S.holdIdx?" on":"")+'" data-h="'+i+'"><b class="h"><span>'+esc(x[0])+'</span><span>~'+secs(x[1],1)+' שנ׳</span></b><span class="t">'+esc(x[1])+'</span></button>'}).join("");
   if(!$("#holdText").value) $("#holdText").value=(ho[S.holdIdx]||ho[0])[1];
-  if(!$("#closedText").value) $("#closedText").value=S.ai&&S.ai.closed||("שלום, הגעתם ל"+(bizName()||"העסק")+". העסק סגור כעת. שעות הפעילות שלנו: [שעות הפעילות]. נשמח לעמוד לשירותכם. תודה ולהתראות.");
+  var hrs=$("#fHours").value.trim();
+  if(!$("#closedText").value) $("#closedText").value=S.ai&&S.ai.closed&&!(hrs&&/\[שעות הפעילות\]/.test(S.ai.closed))?S.ai.closed:("שלום, הגעתם ל"+(bizName()||"העסק")+". העסק סגור כעת. שעות הפעילות שלנו: "+(hrs||"[שעות הפעילות]")+". נשמח לעזור לכם בשעות הפעילות. תודה ולהתראות.");
   if(!$("#subTitle").value&&S.deps[0]) $("#subTitle").value=S.deps[0];
   meters();
 }
+$("#rewrite").onclick=function(){
+  var b=this;b.disabled=true;waiting($("#rwMsg"),["כותבים נוסחים חדשים…","עוד כמה שניות…"]);
+  call({action:"bs_write",facts:facts(),field:fieldName()}).then(function(r){
+    clearInterval(waitT);
+    if(r.ok&&r.ai&&r.result){applyAi(r.result);renderScripts();$("#rwMsg").textContent="✓ נכתבו נוסחים חדשים"}else $("#rwMsg").textContent="לא הצלחנו לכתוב כרגע. נסו שוב בעוד דקה.";
+    b.disabled=false;save();
+  });
+};
 $("#deps").oninput=function(e){var i=e.target.dataset.d;if(i==null)return;S.deps[+i]=e.target.value;if(!S.ivrManual) $("#ivrText").value=composeIvr();meters();save()};
 $("#deps").onclick=function(e){var b=e.target.closest("[data-rm]");if(!b)return;S.deps.splice(+b.dataset.rm,1);renderDeps();if(!S.ivrManual) $("#ivrText").value=composeIvr();meters();save()};
 $("#addDep").onclick=function(){if(S.deps.length<9){S.deps.push("");renderDeps();var ins=$("#deps").querySelectorAll("input");ins[ins.length-1].focus()}};
 $("#ivrIntro").oninput=function(){if(!S.ivrManual) $("#ivrText").value=composeIvr();meters();save()};
 $("#ivrText").oninput=function(){S.ivrManual=true;meters();save()};
 $("#holdOpts").onclick=function(e){var b=e.target.closest("[data-h]");if(!b)return;S.holdIdx=+b.dataset.h;$("#holdText").value=holdOptions()[S.holdIdx][1];renderScripts();save()};
-["holdText","closedText","subText","subTitle"].forEach(function(id){$("#"+id).addEventListener("input",function(){meters();save()})});
+["holdText","closedText","subText","subTitle","jText"].forEach(function(id){$("#"+id).addEventListener("input",function(){meters();save()})});
 function meters(){
   var bad=false;
   document.querySelectorAll(".meter[data-for]").forEach(function(m){
@@ -382,24 +463,56 @@ function meters(){
   });
   return !bad;
 }
+/* jingle */
+function jPills(){
+  $("#jVocal").innerHTML=VOCALS.map(function(v,i){return '<button type="button" class="pill'+(i===S.jVocal?" on":"")+'" data-jv="'+i+'">'+v+'</button>'}).join("");
+  $("#jStyle").innerHTML=STYLES.map(function(v,i){return '<button type="button" class="pill'+(i===S.jStyle?" on":"")+'" data-js="'+i+'">'+v+'</button>'}).join("");
+  $("#jLen").value=S.jLen;$("#jLenO").textContent=S.jLen+" שניות · "+(S.jLen<=15?"שם וסלוגן":S.jLen<=30?"פזמון":"בית ופזמון");
+}
+function renderJingle(){
+  jPills();
+  $("#jVers").innerHTML=(S.jVers||[]).map(function(v,i){return '<button type="button" class="sc" data-jver="'+i+'"><b class="h"><span>גרסה '+(i+1)+'</span><span>בחירה</span></b><span class="t lyr">'+esc(v)+'</span></button>'}).join("");
+  if(!$("#jText").value&&!S.jVers) $("#jText").value=jFallback();
+}
+function jFallback(){var n=bizName()||"העסק",sl=$("#fSlogan").value.trim()||"פשוט הכי טוב";return S.jLen<=15?n+"\n"+sl+"!":n+", "+n+"\n"+sl+"\n"+n+" – תמיד איתכם!"}
+$("#jVocal").onclick=function(e){var b=e.target.closest("[data-jv]");if(!b)return;S.jVocal=+b.dataset.jv;jPills();side();save()};
+$("#jStyle").onclick=function(e){var b=e.target.closest("[data-js]");if(!b)return;S.jStyle=+b.dataset.js;jPills();side();save()};
+$("#jLen").oninput=function(){S.jLen=+this.value;jPills();save()};
+$("#jVers").onclick=function(e){var b=e.target.closest("[data-jver]");if(!b)return;$("#jText").value=S.jVers[+b.dataset.jver];save()};
+$("#jWrite").onclick=function(){
+  var b=this;b.disabled=true;waiting($("#jMsg"),["כותבים מילים…","מחפשים חריזה טובה…","עוד כמה שניות…"]);
+  call({action:"bs_jingle",facts:facts(),field:fieldName(),len:S.jLen,style:STYLES[S.jStyle],vocal:VOCALS[S.jVocal]}).then(function(r){
+    clearInterval(waitT);b.disabled=false;
+    if(r.ok&&r.versions&&r.versions.length){S.jVers=r.versions;$("#jText").value=r.versions[0];$("#jMsg").textContent="✓ שתי גרסאות. בחרו אחת וערכו כרצונכם.";renderJingle()}
+    else $("#jMsg").textContent="לא הצלחנו לכתוב כרגע. אפשר לכתוב בעצמכם או לנסות שוב.";
+    save();
+  });
+};
 function items(){
-  var p=PK[S.pkg],out=[];
-  if(p.items.indexOf("ivr")>=0) out.push({id:"ivr",type:"ivr",title:"תפריט ניתוב",script:$("#ivrText").value});
-  if(p.sub&&$("#subText").value.trim()) out.push({id:"sub",type:"sub",title:"תת־נתב · "+($("#subTitle").value.trim()||"מחלקה"),script:$("#subText").value});
+  if(S.product==="jingle") return [{id:"jingle",type:"jingle",title:"ג'ינגל מושר",script:$("#jText").value}];
+  var out=[];
+  if(S.product==="ivr") out.push({id:"ivr",type:"ivr",title:"תפריט ניתוב",script:$("#ivrText").value});
+  if(S.product==="ivr"&&$("#subText").value.trim()) out.push({id:"sub",type:"sub",title:"תת־נתב · "+($("#subTitle").value.trim()||"מחלקה"),script:$("#subText").value});
   out.push({id:"hold",type:"hold",title:"צליל המתנה",script:$("#holdText").value});
-  if(p.items.indexOf("closed")>=0) out.push({id:"closed",type:"closed",title:"העסק סגור",script:$("#closedText").value});
+  if(S.product==="ivr") out.push({id:"closed",type:"closed",title:"העסק סגור",script:$("#closedText").value});
   return out;
 }
 $("#n3").onclick=function(){
-  if(!meters()){err("#e3","אחד הנוסחים ארוך מדי. קצרו אותו כדי להמשיך.");return}
+  if(S.product!=="jingle"&&!meters()){err("#e3","אחד הנוסחים ארוך מדי. קצרו אותו כדי להמשיך.");return}
   if(items().some(function(x){return /\[שעות הפעילות\]/.test(x.script)})){err("#e3","כתבו את שעות הפעילות במקום [שעות הפעילות].");return}
-  if(items().some(function(x){return x.script.trim().length<6})){err("#e3","אחד הנוסחים ריק.");return}
+  if(items().some(function(x){return x.script.trim().length<6})){err("#e3",S.product==="jingle"?"כתבו את מילות הג'ינגל.":"אחד הנוסחים ריק.");return}
   err("#e3");go(4);
 };
 
-/* step 4: music, voice, contact */
+/* 4: voices, music, contact */
 var audio=new Audio();audio.preload="none";
 function loadLib(){return LIB?Promise.resolve(LIB):fetch("../music/library.json").then(function(r){return r.json()}).then(function(j){LIB=j;return j})}
+function renderStep4(){
+  var jin=S.product==="jingle";$("#vBox").hidden=jin;$("#mBox").hidden=jin;
+  $("#h4").textContent=jin?"פרטי קשר":"קול ומוזיקה";$("#sub4").textContent=jin?"לשם נשלח את הג'ינגל.":"לחצו ▶ כדי לשמוע כל קול וכל מוזיקה.";
+  $("#n4").textContent=jin?"לסיכום":"להאזנה";
+  if(!jin){renderVoices();renderMusic()}
+}
 function renderMusic(){
   loadLib().then(function(L){
     $("#music").innerHTML=L.categories.map(function(c){
@@ -410,18 +523,27 @@ function renderMusic(){
 }
 $("#music").onclick=function(e){
   var p=e.target.closest("[data-play]"),m=e.target.closest("[data-m]");
-  if(p){var src="../music/"+p.dataset.play+".mp3";if(audio.src.indexOf(src.slice(2))>=0&&!audio.paused){audio.pause();return}audio.src=src;audio.currentTime=0;audio.play();return}
+  if(p){stop();var src="../music/"+p.dataset.play+".mp3";if(audio.src.indexOf(src.slice(2))>=0&&!audio.paused){audio.pause();return}audio.src=src;audio.currentTime=0;audio.play();return}
   if(m){S.music=m.dataset.m;renderMusic();save()}
 };
-function renderVoices(){$("#voices").innerHTML=VOICES.map(function(v){return '<div class="mc'+(v[0]===S.voice?" on":"")+'"><button class="pick" type="button" data-v="'+v[0]+'">'+v[1]+'<small>'+v[2]+'</small></button></div>'}).join("")}
-$("#voices").onclick=function(e){var b=e.target.closest("[data-v]");if(!b)return;S.voice=b.dataset.v;renderVoices();side();save()};
+function renderVoices(){$("#voices").innerHTML=VOICES.map(function(v){return '<div class="mc'+(v[0]===S.voice?" on":"")+'"><button class="play" type="button" data-vs="'+v[0]+'" aria-label="דוגמה ל'+v[1]+'">▶</button><button class="pick" type="button" data-v="'+v[0]+'">'+v[1]+'</button></div>'}).join("")}
+var VS={};
+$("#voices").onclick=function(e){
+  var p=e.target.closest("[data-vs]"),b=e.target.closest("[data-v]");
+  if(p){audio.pause();var id=p.dataset.vs;p.innerHTML='<span class="spin"></span>';
+    (VS[id]?Promise.resolve(VS[id]):call({action:"bs_voice_sample",voice:id}).then(function(r){if(!r.ok) throw new Error(r.error);return decode(b64(r.mp3))}).then(function(x){VS[id]=x;return x}))
+    .then(function(buf){p.textContent="▶";playBuf(buf,null)}).catch(function(x){p.textContent="▶";err("#e4",x.message||"הדוגמה לא זמינה כרגע")});return}
+  if(b){S.voice=b.dataset.v;renderVoices();side();save()}
+};
+function saveOrder(pkg,human){
+  return call({action:"bs_save",k:S.k,pkg:pkg,human:!!human,items:items(),voice:S.voice,music:S.music,mix:{vv:S.vv,mv:S.mv,duck:S.duck},jingle:{len:S.jLen,style:STYLES[S.jStyle],vocal:VOCALS[S.jVocal]},biz:bizName(),site:$("#site").value,name:$("#name").value,phone:$("#phone").value,email:$("#email").value})
+  .then(function(r){if(!r.ok) throw new Error(r.error);S.k=r.k;S.code=r.code;save();return r});
+}
 $("#n4").onclick=function(){
   if($("#phone").value.replace(/\D/g,"").length<9){err("#e4","כתבו טלפון נייד. דרכו נזהה את התשלום.");return}
   if(!/.+@.+\..+/.test($("#email").value)){err("#e4","כתבו אימייל לקבלת הקבצים.");return}
-  err("#e4");var b=this;b.disabled=true;b.innerHTML='<span class="spin"></span> שומרים…';
-  call({action:"bs_save",k:S.k,pkg:S.pkg,items:items(),voice:S.voice,music:S.music,mix:{vv:S.vv,mv:S.mv,duck:S.duck},biz:bizName(),site:$("#site").value,name:$("#name").value,phone:$("#phone").value,email:$("#email").value})
-  .then(function(r){if(!r.ok) throw new Error(r.error);S.k=r.k;S.code=r.code;A={};save();go(5)})
-  .catch(function(e){err("#e4",e.message)}).then(function(){b.disabled=false;b.textContent="להאזנה"});
+  err("#e4");var b=this,lbl=b.textContent;b.disabled=true;b.innerHTML='<span class="spin"></span> שומרים…';
+  saveOrder(draftPkg(),false).then(function(){A={};go(5)}).catch(function(e){err("#e4",e.message)}).then(function(){b.disabled=false;b.textContent=lbl});
 };
 
 /* audio */
@@ -447,44 +569,75 @@ function render(vb,withMusic,maxDur){
   });
 }
 var SRC=null,RAF=0;
-function stop(){if(SRC){try{SRC.stop()}catch(e){}SRC=null}cancelAnimationFrame(RAF);document.querySelectorAll(".prog i").forEach(function(i){i.style.width=0})}
+function stop(){audio.pause();if(SRC){try{SRC.stop()}catch(e){}SRC=null}cancelAnimationFrame(RAF);document.querySelectorAll(".prog i").forEach(function(i){i.style.width=0})}
 function playBuf(buf,bar){
   if(SRC){var same=SRC.buffer===buf;stop();if(same) return}
   var c=ac();c.resume();SRC=c.createBufferSource();SRC.buffer=buf;SRC.connect(c.destination);var t0=c.currentTime;SRC.start();SRC.onended=function(){stop()};
   (function tick(){if(!SRC) return;if(bar) bar.style.width=Math.min(100,(c.currentTime-t0)/buf.duration*100)+"%";RAF=requestAnimationFrame(tick)})();
 }
 
-/* step 5: previews */
-function pvRow(it,key){return '<div class="pv" data-key="'+key+'"><button class="play" type="button" data-pv="'+it.id+'" aria-label="האזנה ל'+esc(it.title)+'">▶</button><div class="nm"><b>'+esc(it.title)+' '+(it.type==="hold"?'<span class="badge mus">מוזיקה</span>':'<span class="badge">בלי מוזיקה</span>')+'</b><small>'+esc(it.script.slice(0,90))+(it.script.length>90?"…":"")+'</small><div class="prog"><i></i></div></div></div>'}
+/* 5: listen */
+function pvRow(it){return '<div class="pv"><button class="play" type="button" data-pv="'+it.id+'" aria-label="האזנה ל'+esc(it.title)+'">▶</button><div class="nm"><b>'+esc(it.title)+' '+(it.type==="hold"?'<span class="badge mus">מוזיקה</span>':'<span class="badge">בלי מוזיקה</span>')+'</b><small>'+esc(it.script.slice(0,90))+(it.script.length>90?"…":"")+'</small><div class="prog"><i></i></div></div></div>'}
 function renderPreview(){
-  var its=items();$("#pvList").innerHTML=its.map(function(it){return pvRow(it,"p:"+it.id)}).join("");
-  $("#mixBox").hidden=false;mixUi("");
+  var jin=S.product==="jingle";$("#pvList").hidden=jin;$("#mixBox").hidden=jin;$("#jRecap").hidden=!jin;
+  $("#h5").textContent=jin?"סיכום הג'ינגל":"שמעו לפני שמחליטים";
+  $("#sub5").textContent=jin?"את הג'ינגל עצמו מפיקים אחרי ההזמנה. בהפקת AI תקבלו עד 10 גרסאות לבחירה, 2 בכל סבב, ותוכלו לבקש שינויים בין הסבבים.":"בכל האזנה יש סימן מים קולי (\"B-Sound, תצוגה מקדימה\"). אחרי ההזמנה תקבלו קבצים נקיים.";
+  $("#n5").textContent=jin?"לבחירת סוג ההפקה":"אהבתי · לבחירת סוג ההפקה";
+  if(jin){$("#jRecap").innerHTML='<b>'+esc(bizName())+' · '+S.jLen+' שניות · '+VOCALS[S.jVocal]+' · '+STYLES[S.jStyle]+'</b><p class="lyr" style="margin:12px 0 0">'+esc($("#jText").value)+'</p>';return}
+  $("#pvList").innerHTML=items().map(pvRow).join("");mixUi("");
 }
-function preview(k,it,row,script){
-  var key="p:"+it.id+":"+(script||it.script);
-  var p=A[key]?Promise.resolve(A[key]):call({action:"bs_preview",k:k,id:it.id,script:script}).then(function(r){
-    if(!r.ok){if(r.need) needBuy(r.need);throw new Error(r.error)}if(r.previewsLeft!=null) $("#left").textContent="נותרו "+r.previewsLeft+" האזנות.";return decode(b64(r.mp3))}).then(function(b){A[key]=b;return b});
+function preview(it,row,script){
+  var key="p:"+it.id+":"+(script||it.script)+":"+S.voice;
   var btn=row.querySelector(".play");btn.innerHTML='<span class="spin"></span>';
+  var p=A[key]?Promise.resolve(A[key]):call({action:"bs_preview",k:S.k,id:it.id,script:script}).then(function(r){
+    if(!r.ok){if(r.need) needBuy(r.need);throw new Error(r.error)}if(r.previewsLeft!=null) $("#left").textContent="נותרו "+r.previewsLeft+" האזנות.";return decode(b64(r.mp3))}).then(function(b){A[key]=b;return b});
   return p.then(function(vb){return render(vb,it.type==="hold",60)}).then(function(buf){btn.textContent="▶";playBuf(buf,row.querySelector(".prog i"))})
-    .catch(function(e){btn.textContent="▶";err(S.step===7?"#e7":"#e5",e.message||"ההאזנה נכשלה")});
+    .catch(function(e){btn.textContent="▶";err(S.step===8?"#e8":"#e5",e.message||"ההאזנה נכשלה")});
 }
-$("#pvList").onclick=function(e){var b=e.target.closest("[data-pv]");if(!b)return;err("#e5");var it=items().find(function(x){return x.id===b.dataset.pv});preview(S.k,it,b.closest(".pv"))};
+$("#pvList").onclick=function(e){var b=e.target.closest("[data-pv]");if(!b)return;err("#e5");var it=items().find(function(x){return x.id===b.dataset.pv});preview(it,b.closest(".pv"))};
 function mixUi(sfx){$("#vv"+sfx).value=S.vv;$("#mv"+sfx).value=S.mv;$("#duck"+sfx).checked=S.duck;$("#vvO"+sfx).textContent=S.vv+"%";$("#mvO"+sfx).textContent=S.mv+"%"}
 var mt=0;function onMix(sfx){S.vv=+$("#vv"+sfx).value;S.mv=+$("#mv"+sfx).value;S.duck=$("#duck"+sfx).checked;mixUi(sfx);save();clearTimeout(mt);mt=setTimeout(function(){if(S.k) call({action:"bs_mix",k:S.k,mix:{vv:S.vv,mv:S.mv,duck:S.duck}})},600)}
 ["","2"].forEach(function(sfx){["vv","mv","duck"].forEach(function(id){var el=$("#"+id+sfx);el.addEventListener("input",function(){onMix(sfx)});el.addEventListener("change",function(){onMix(sfx)})})});
-$("#redo").onclick=function(){stop();go(3)};
-$("#n5").onclick=function(){stop();go(6)};
+$("#redo").onclick=function(){go(3)};
+$("#n5").onclick=function(){go(6)};
 
-/* step 6: payment */
+/* 6: choose production and price */
+function optBtn(pkg,human,title,note){
+  var on=S.choice&&S.choice.pkg===pkg&&!!S.choice.human===human,pr=PRICE[pkg][human?"human":"ai"][0];
+  return '<button type="button" class="opt'+(on?" on":"")+'" data-c="'+pkg+'|'+(human?1:0)+'"><b><span>'+title+'</span><em>'+ils(pr)+'</em></b><small>'+note+'</small></button>';
+}
+function renderChoose(){
+  var h="",pr=S.product;
+  var aiNote=pr==="jingle"?"עד 10 גרסאות לבחירה, 5 סבבים של 2. מוכן בתוך שעות.":"בדיוק מה ששמעתם, בלי סימן המים. מוכן מיד.";
+  var huNote=pr==="jingle"?"לחן מקורי וזמרים באולפן, כולל שיחת אפיון וסבב תיקונים.":"קריין/ית מקצועי/ת באולפן, לפי הנוסח שאישרתם. מוכן תוך 48 שעות.";
+  if(pr==="ivr"){
+    h=TIERS.map(function(t){var on=S.choice&&S.choice.pkg===t[0];return '<div class="tier'+(on?" on":"")+'"><b style="font-size:19px">'+t[1]+'</b><ul>'+t[2].map(function(x){return "<li>✓ "+esc(x)+"</li>"}).join("")+'</ul><div class="opts">'+optBtn(t[0],false,"קריינות AI",aiNote)+optBtn(t[0],true,"קריין/ית באולפן",huNote)+'</div></div>'}).join("");
+    if($("#subText").value.trim()) h+='<p class="hint" style="margin-top:12px">התת־נתב שכתבתם כלול בסטנדרט ובפרימיום. בבייסיק הוא לא ייכלל.</p>';
+  } else {
+    var pkg=pr==="jingle"?"jingle":"hold";
+    h='<div class="opts">'+optBtn(pkg,false,pr==="jingle"?"הפקת AI":"קריינות AI",aiNote)+optBtn(pkg,true,pr==="jingle"?"מלחין ומפיק אנושי":"קריין/ית באולפן",huNote)+'</div>';
+  }
+  $("#choose").innerHTML=h;$("#n6").disabled=!S.choice;
+}
+$("#choose").onclick=function(e){var b=e.target.closest("[data-c]");if(!b)return;var p=b.dataset.c.split("|");S.choice={pkg:p[0],human:p[1]==="1"};renderChoose();side();save()};
+$("#n6").onclick=function(){
+  if(!S.choice) return;var b=this;b.disabled=true;b.innerHTML='<span class="spin"></span>';err("#e6");
+  saveOrder(S.choice.pkg,S.choice.human).then(function(){go(7)}).catch(function(e){err("#e6",e.message)}).then(function(){b.disabled=false;b.textContent="לתשלום"});
+};
+
+/* 7: payment */
 var poll=0;
 function startPay(){
-  $("#code").textContent=S.code||"…";$("#payBtn").href=KALA+(TEST?TEST_ID:PK[S.pkg].id);
+  if(!S.choice){go(6);return}
+  var c=PRICE[S.choice.pkg][S.choice.human?"human":"ai"];
+  $("#code").textContent=S.code||"…";$("#payBtn").href=KALA+(TEST?TEST_ID:c[1]);
+  $("#payWhat").textContent="לתשלום: "+(TEST?"₪0 (בדיקה)":ils(c[0]))+" כולל מע\"מ";
   if(S.k&&location.hash.indexOf(S.k)<0) history.replaceState(null,"","#k="+S.k);
   clearInterval(poll);check();poll=setInterval(check,5000);
 }
-function check(){if(!S.k) return;call({action:"bs_state",k:S.k}).then(function(r){if(!r.ok) return;S.code=r.code;S.pkg=r.pkg||S.pkg;$("#code").textContent=r.code;if(r.paid){clearInterval(poll);S.st=r;go(7)}})}
+function check(){if(!S.k) return;call({action:"bs_state",k:S.k}).then(function(r){if(!r.ok) return;S.code=r.code;$("#code").textContent=r.code;if(r.paid){clearInterval(poll);S.st=r;go(8)}})}
 
-/* step 7: client area */
+/* 8: client area */
 var ppoll=0,openEdit={};
 function portal(){
   clearInterval(poll);clearInterval(ppoll);
@@ -492,26 +645,31 @@ function portal(){
   S.st=null;refresh();ppoll=setInterval(function(){if(!document.hidden) refresh(true)},10000);
 }
 function refresh(quiet){return call({action:"bs_state",k:S.k}).then(function(r){
-  if(!r.ok){err("#e7",r.error);return}
-  if(!r.paid){go(6);return}
-  var changed=!S.st||JSON.stringify(S.st)!==JSON.stringify(r);S.st=r;S.pkg=r.pkg;S.music=r.music||S.music;S.code=r.code;
+  if(!r.ok){err("#e8",r.error);return}
+  if(!r.paid){go(7);return}
+  var changed=!S.st||JSON.stringify(S.st)!==JSON.stringify(r);S.st=r;S.music=r.music||S.music;S.code=r.code;
   if(r.mix&&!quiet){if(r.mix.vv) S.vv=+r.mix.vv;if(r.mix.mv!=null) S.mv=+r.mix.mv;if(r.mix.duck!=null) S.duck=!!r.mix.duck}
   if(changed) drawPortal();side();save();
 })}
 function drawPortal(){
-  var r=S.st,c=r.credits,p=PK[r.pkg]||PK.hold;
-  $("#credits").innerHTML='<div><small>חבילה</small><b style="font-size:19px">'+p.t+'</b><small>קוד '+esc(r.code)+'</small></div>'+
+  var r=S.st,c=r.credits;
+  $("#studioBox").hidden=!r.studio;$("#aiArea").hidden=!!r.studio;
+  if(r.studio){
+    var what=r.pkg==="jingle"?(r.human?"הג'ינגל בהפקה אצל המלחין והמפיק. נחזור אליכם תוך יום עסקים לשיחת אפיון.":"הג'ינגל בהפקה. 2 הגרסאות הראשונות יישלחו אליכם במייל ויופיעו כאן."):"הקריין/ית יקליטו באולפן את הנוסחים שאישרתם. הקבצים יישלחו אליכם במייל תוך 48 שעות.";
+    $("#studioBox").innerHTML='<b style="font-size:19px">✓ התשלום התקבל · קוד '+esc(r.code)+'</b><p style="margin:10px 0 0;font-size:16px">'+what+'</p>'+r.items.map(function(it){return '<div class="itm"><b>'+esc(it.title)+'</b><p class="scr '+(it.type==="jingle"?"lyr":"")+'" dir="auto">'+esc(it.script)+'</p></div>'}).join("");
+    return;
+  }
+  var tier=(TIERS.find(function(t){return t[0]===r.pkg})||[,"צליל המתנה"])[1];
+  $("#credits").innerHTML='<div><small>חבילה</small><b style="font-size:19px">'+esc(tier)+'</b><small>קוד '+esc(r.code)+'</small></div>'+
     '<div><small>תיקונים שנותרו</small><b>'+c.revLeft+'</b><small>'+(c.revPkg?c.revPkg+" בשנה בחבילה":"החבילה בלי תיקונים")+'</small></div>'+
     '<div><small>הודעות נוספות</small><b>'+c.msgLeft+'</b><small>לשימוש</small></div>'+
     '<div><small>שפות נוספות</small><b>'+c.langLeft+'</b><small>'+(c.langPkg?c.langPkg+" בחבילה":"לשימוש")+'</small></div>';
-  var hasHold=r.items.some(function(x){return x.type==="hold"});$("#mixBox2").hidden=!hasHold;mixUi("2");
+  $("#mixBox2").hidden=!r.items.some(function(x){return x.type==="hold"});mixUi("2");
   var groups={};r.items.forEach(function(it){(groups[it.lang]=groups[it.lang]||[]).push(it)});
-  $("#items").innerHTML=Object.keys(groups).map(function(lg){
-    return (Object.keys(groups).length>1?'<h3 class="cat" style="margin-top:24px">'+esc(r.langs[lg]||lg)+'</h3>':"")+groups[lg].map(itemCard).join("");
-  }).join("");
+  $("#items").innerHTML=Object.keys(groups).map(function(lg){return (Object.keys(groups).length>1?'<h3 class="cat" style="margin-top:24px">'+esc(r.langs[lg]||lg)+'</h3>':"")+groups[lg].map(itemCard).join("")}).join("");
   var used=r.items.map(function(x){return x.lang});
   $("#langSel").innerHTML=Object.keys(r.langs).filter(function(l){return l!=="he"&&used.indexOf(l)<0}).map(function(l){return '<option value="'+l+'">'+esc(r.langs[l])+'</option>'}).join("");
-  $("#addType").querySelector('[value="sub"]').hidden=!p.sub;
+  $("#addType").querySelector('[value="sub"]').hidden=!/ivr-(standard|premium)/.test(r.pkg);
 }
 function itemCard(it){
   var ed=openEdit[it.id],music=it.type==="hold",st=it.draft?'<span class="badge" style="background:#3A2E12;color:var(--acc)">טיוטה – לבדיקה ואישור</span>':'<span class="badge">מאושר · גרסה '+it.ver+'</span>';
@@ -533,12 +691,12 @@ function finalBuf(it){
     .then(function(vb){return render(vb,it.type==="hold",it.type==="hold"?30:120)});
 }
 $("#items").onclick=function(e){
-  var b=e.target.closest("[data-a]");if(!b) return;var card=b.closest(".itm"),id=card.dataset.id,it=S.st.items.find(function(x){return x.id===id}),a=b.dataset.a;err("#e7");
+  var b=e.target.closest("[data-a]");if(!b) return;var card=b.closest(".itm"),id=card.dataset.id,it=S.st.items.find(function(x){return x.id===id}),a=b.dataset.a;err("#e8");
   var ta=card.querySelector(".edt");
   if(a==="edit"){openEdit[id]=true;drawPortal();return}
   if(a==="cancel"){delete openEdit[id];drawPortal();return}
-  if(a==="hear"){preview(S.k,it,card.querySelector(".pv"),ta.value);return}
-  if(a==="play"){b.innerHTML='<span class="spin"></span>';finalBuf(it).then(function(buf){b.textContent="▶";playBuf(buf,card.querySelector(".prog i"))}).catch(function(x){b.textContent="▶";err("#e7",x.message)});return}
+  if(a==="hear"){preview(it,card.querySelector(".pv"),ta.value);return}
+  if(a==="play"){b.innerHTML='<span class="spin"></span>';finalBuf(it).then(function(buf){b.textContent="▶";playBuf(buf,card.querySelector(".prog i"))}).catch(function(x){b.textContent="▶";err("#e8",x.message)});return}
   if(a==="files"){
     var dl=card.querySelector(".dl");b.disabled=true;b.innerHTML='<span class="spin"></span> מכינים…';
     finalBuf(it).then(function(buf){
@@ -546,7 +704,7 @@ $("#items").onclick=function(e){
       return Promise.all([wav16(buf),ulaw(buf),mp3(buf)]).then(function(f){
         dl.innerHTML=(f[2]?'<a download="'+base+'.mp3" href="'+URL.createObjectURL(f[2])+'">MP3</a>':"")+'<a download="'+base+'.wav" href="'+URL.createObjectURL(f[0])+'">WAV</a><a download="'+base+'-8k-ulaw.wav" href="'+URL.createObjectURL(f[1])+'">WAV 8bit u-law (מרכזייה)</a>';dl.hidden=false;
       });
-    }).catch(function(x){err("#e7",x.message)}).then(function(){b.disabled=false;b.textContent="הורדת קבצים"});
+    }).catch(function(x){err("#e8",x.message)}).then(function(){b.disabled=false;b.textContent="הורדת קבצים"});
     return;
   }
   var act={savedraft:"bs_edit",commit:"bs_edit",approve:"bs_approve"}[a];if(!act) return;
@@ -554,7 +712,7 @@ $("#items").onclick=function(e){
   var go2=function(){return call({action:act,k:S.k,id:id,script:ta?ta.value:undefined})};
   (a==="approve"?call({action:"bs_edit",k:S.k,id:id,script:ta.value}).then(function(r){if(!r.ok) return r;return go2()}):go2()).then(function(r){
     b.disabled=false;
-    if(!r.ok){if(r.need) needBuy(r.need);err("#e7",r.error);return}
+    if(!r.ok){if(r.need) needBuy(r.need);err("#e8",r.error);return}
     delete openEdit[id];S.st=r;drawPortal();
   });
 };
@@ -566,16 +724,16 @@ function needBuy(kind){
   $("#buyBox").scrollIntoView({behavior:"smooth",block:"center"});
 }
 $("#addBtn").onclick=function(){
-  var b=this;b.disabled=true;err("#e7");
+  var b=this;b.disabled=true;err("#e8");
   call({action:"bs_add",k:S.k,type:$("#addType").value,title:$("#addTitle").value,script:$("#addText").value}).then(function(r){
-    b.disabled=false;if(!r.ok){if(r.need) needBuy(r.need);err("#e7",r.error);return}
+    b.disabled=false;if(!r.ok){if(r.need) needBuy(r.need);err("#e8",r.error);return}
     $("#addText").value="";$("#addTitle").value="";$("#buyBox").hidden=true;S.st=r;drawPortal();
   });
 };
 $("#langBtn").onclick=function(){
-  var b=this,l=$("#langSel").value;if(!l) return;b.disabled=true;b.innerHTML='<span class="spin"></span> מתרגמים…';err("#e7");
+  var b=this,l=$("#langSel").value;if(!l) return;b.disabled=true;b.innerHTML='<span class="spin"></span> מתרגמים…';err("#e8");
   call({action:"bs_lang",k:S.k,lang:l}).then(function(r){
-    b.disabled=false;b.textContent="הוספת השפה";if(!r.ok){if(r.need) needBuy(r.need);err("#e7",r.error);return}
+    b.disabled=false;b.textContent="הוספת השפה";if(!r.ok){if(r.need) needBuy(r.need);err("#e8",r.error);return}
     $("#buyBox").hidden=true;S.st=r;drawPortal();
   });
 };
@@ -612,12 +770,11 @@ function mp3(b){
 
 /* boot */
 pills();mixUi("");
-if(S.ai){$("#found").hidden=false;$("#foundMsg").innerHTML='<span class="ok">✓</span> הנוסחים מוכנים.';var sv=S.ai.services||[];$("#services").innerHTML=sv.map(function(x){return "<span>"+esc(x)+"</span>"}).join("")}
-document.querySelectorAll("[data-next]").forEach(function(b){b.onclick=function(){go(S.step+1)}});
-document.querySelectorAll("[data-back]").forEach(function(b){b.onclick=function(){stop();go(S.step-1)}});
+if(S.ai||$("#fName").value){$("#found").hidden=false;$("#foundMsg").innerHTML='<span class="ok">✓</span> הפרטים שמורים.'}
+document.querySelectorAll("[data-back]").forEach(function(b){b.onclick=function(){go(S.step-1)}});
 loadLib().then(side);
-var start=S.step;if(start===5&&!S.k) start=4;if(start>=6&&!S.k) start=1;
-if(start>=6&&S.k){call({action:"bs_state",k:S.k}).then(function(r){if(r.ok&&r.paid){S.st=r;go(7)}else go(r.ok?6:1)})}else go(start);
+var start=S.step;if(start===5&&!S.k) start=4;if(start>=7&&!S.k) start=1;
+if(start>=7&&S.k){call({action:"bs_state",k:S.k}).then(function(r){if(r.ok&&r.paid){S.st=r;go(8)}else go(r.ok&&S.choice?7:1)})}else go(start);
 })();
 </script>
 </body>

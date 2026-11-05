@@ -368,26 +368,32 @@ async function bsModels(env, key) {
 }
 async function bsLLM(env, prompt) {
   if (!env.GEMINI_API_KEY) throw new Error('GEMINI_API_KEY missing');
-  const key = String(env.GEMINI_API_KEY).trim(), errs = [];
+  const key = String(env.GEMINI_API_KEY).trim(), errs = [], t0 = Date.now();
   const models = await bsModels(env, key);
-  for (let round = 0; round < 2; round++) {
-    for (const model of models) {
-      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-        body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.6 } })
+  const call = async (model, thinking) => {
+    const ac = new AbortController(), timer = setTimeout(() => ac.abort(), 30000);
+    const gc = { responseMimeType: 'application/json', temperature: 0.6 };
+    if (thinking) gc.thinkingConfig = { thinkingLevel: 'low' };
+    try {
+      return await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent', {
+        method: 'POST', signal: ac.signal, headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+        body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: gc })
       });
-      if (!r.ok) {
-        errs.push(model + ' ' + r.status + ': ' + (await r.text()).replace(/\s+/g, ' ').slice(0, 140));
-        if (r.status === 404) await putJ(env, 'config/gemini_models2.json', { at: 0, models: [] }); // refresh the list next time
-        if (r.status === 404 || r.status === 429 || r.status >= 500) continue;
-        throw new Error(errs.join(' | '));
-      }
-      const j = await r.json();
-      const t = (((j.candidates || [])[0] || {}).content || {}).parts || [];
-      const txt = t.map(x => x.text || '').join('').replace(/^```(?:json)?\s*|\s*```$/g, '');
-      return JSON.parse(txt);
+    } catch (e) { return { ok: false, status: 504, text: async () => 'timeout after 30s' }; } finally { clearTimeout(timer); }
+  };
+  for (const model of models) {
+    if (Date.now() - t0 > 50000) break;
+    let r = await call(model, /^gemini-3/.test(model));
+    if (!r.ok && r.status === 400) r = await call(model, false); // model without thinking levels
+    if (!r.ok) {
+      errs.push(model + ' ' + r.status + ': ' + (await r.text()).replace(/\s+/g, ' ').slice(0, 140));
+      if (r.status === 404) await putJ(env, 'config/gemini_models2.json', { at: 0, models: [] });
+      continue;
     }
-    if (round === 0) await new Promise(res => setTimeout(res, 2500)); // short wait, then one more round on overload
+    const j = await r.json();
+    const t = (((j.candidates || [])[0] || {}).content || {}).parts || [];
+    const txt = t.filter(x => !x.thought).map(x => x.text || '').join('').replace(/^```(?:json)?\s*|\s*```$/g, '');
+    try { return JSON.parse(txt); } catch (e) { errs.push(model + ' bad json'); }
   }
   throw new Error(errs.join(' | ') || 'llm failed');
 }

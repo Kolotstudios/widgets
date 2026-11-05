@@ -8,7 +8,7 @@ from content_articles import ARTICLES
 ROOT = os.path.join(os.path.dirname(__file__), '..', 'bsound-site')
 DOMAIN = 'https://www.b-sound.co.il'
 PREVIEW = True          # True = noindex (preview on GitHub Pages). Set False when the domain points here.
-ORDER = 'https://kolotstudios.github.io/widgets/b-sound/hold.html'
+ORDER = 'order'   # relative: works on the preview and on the domain
 PHONE, PHONE_INTL = '03-6500031', '+97236500031'
 WA = 'https://wa.me/972555170280'
 TODAY = datetime.date.today().isoformat()
@@ -76,7 +76,7 @@ def head(p, depth):
 <a class="logo" href="{rel(depth, '')}" aria-label="B-Sound – דף הבית"><span class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span dir="ltr">B·SOUND</span></a>
 <button class="menu-btn" type="button" aria-expanded="false" aria-controls="nav">תפריט</button>
 <nav id="nav" aria-label="ניווט ראשי">{''.join(f'<a href="{rel(depth, s)}"' + (' aria-current="page"' if p['slug'].split('/')[0] == s else '') + f'>{n}</a>' for s, n in NAV)}</nav>
-<div class="cta-top"><a class="tel" href="tel:{PHONE_INTL}" dir="ltr">{PHONE}</a><a class="btn sm" href="{ORDER}">הזמנה אונליין</a></div>
+<div class="cta-top"><a class="tel" href="tel:{PHONE_INTL}" dir="ltr">{PHONE}</a><a class="btn sm" href="{rel(depth, 'order')}">הזמנה אונליין</a></div>
 </div></header>
 <main id="main">
 '''
@@ -87,7 +87,7 @@ def foot(depth):
 <div><a class="logo" href="{rel(depth, '')}"><span class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span dir="ltr">B·SOUND</span></a>
 <p>אולפן הקלטות לעסקים. צליל המתנה, קריינות לנתבי שיחות, ג'ינגלים מושרים, ניקוי רעשים ודיגיטציה. חלק מ<a href="https://www.kolot-studios.com">אולפני קולות</a>.</p></div>
 <div><b>שירותים</b><a href="{rel(depth, 'music-on-hold')}">צליל המתנה לעסק</a><a href="{rel(depth, 'extensions')}">קריינות לנתב שיחות</a><a href="{rel(depth, 'business-tune')}">ג'ינגל מושר לעסק</a><a href="{rel(depth, 'vo-slidshow-movies-adr')}">קריינות מקצועית</a><a href="{rel(depth, 'sound-cleaning')}">ניקוי רעשים מהקלטה</a><a href="{rel(depth, 'secret-recordings')}">חידוד הקלטות ותמלול</a><a href="{rel(depth, 'vinyl-tape')}">המרת קלטות ותקליטים</a></div>
-<div><b>עוד</b><a href="{ORDER}">הזמנה אונליין</a><a href="{rel(depth, 'blog')}">מאמרים</a><a href="{rel(depth, 'audio-gain')}">הגברת הקלטה</a><a href="{rel(depth, 'restoration')}">שחזור הקלטות</a><a href="{rel(depth, 'sound-editing')}">עריכת סאונד</a><a href="{rel(depth, 'send-us-your-files')}">שליחת קבצים</a></div>
+<div><b>עוד</b><a href="{rel(depth, 'order')}">הזמנה אונליין</a><a href="{rel(depth, 'blog')}">מאמרים</a><a href="{rel(depth, 'audio-gain')}">הגברת הקלטה</a><a href="{rel(depth, 'restoration')}">שחזור הקלטות</a><a href="{rel(depth, 'sound-editing')}">עריכת סאונד</a><a href="{rel(depth, 'send-us-your-files')}">שליחת קבצים</a></div>
 <div><b>יצירת קשר</b><a href="tel:{PHONE_INTL}" dir="ltr">{PHONE}</a><a href="{WA}">וואטסאפ</a><span>תמנע 3, חולון</span><a href="{rel(depth, 'contact')}">כל הפרטים</a></div>
 </div><div class="wrap legal">© {datetime.date.today().year} B-Sound · אולפני קולות · כל המחירים באתר כוללים מע"מ</div></footer>
 <a class="wa-float" href="{WA}" aria-label="שליחת הודעת וואטסאפ"><svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6a2.7 2.7 0 0 0 1.8-1.2 2.2 2.2 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3Z"/></svg></a>
@@ -98,7 +98,7 @@ def foot(depth):
 
 def fill(s, depth):
     """placeholders inside content: {{order}} {{wa}} {{tel}} {{phone}} {{p:slug}} {{api}}"""
-    s = s.replace('{{order}}', ORDER).replace('{{wa}}', WA).replace('{{tel}}', 'tel:' + PHONE_INTL).replace('{{phone}}', PHONE)
+    s = s.replace('{{order}}', rel(depth, 'order')).replace('{{wa}}', WA).replace('{{tel}}', 'tel:' + PHONE_INTL).replace('{{phone}}', PHONE)
     return re.sub(r'\{\{p:([a-z0-9\-/]*)\}\}', lambda m: rel(depth, m.group(1)), s)
 
 def faq_html(faq):
@@ -177,6 +177,10 @@ def main():
           '<section class="wrap hero-s"><h1>העמוד לא נמצא</h1><p class="lead">אולי הוא עבר מקום. <a href="/">לדף הבית</a></p></section>' + foot(0))
     # Cloudflare Pages: old Wix paths -> new (301)
     write('_redirects', ''.join(f'/{s} /{d} 301\n' for s, d in REDIRECTS.items()))
+    # the order app lives on the domain too: /order (source: b-sound/hold.html)
+    src = open(os.path.join(os.path.dirname(__file__), '..', 'b-sound', 'hold.html'), encoding='utf-8').read()
+    src = src.replace('href="../bsound-site/"', 'href="./"').replace('"music/', '"https://kolotstudios.github.io/widgets/b-sound/music/')
+    write('order.html', src)
     print('pages', len(PAGES), 'articles', counts)
 
 if __name__ == '__main__':

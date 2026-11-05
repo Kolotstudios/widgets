@@ -1,5 +1,5 @@
 /** Kolot – remote blessing recorder backend on Cloudflare Workers + R2.
- * Bindings: BUCKET (R2 bucket). Secret ELEVENLABS_API_KEY (B-Sound online hold tone). Optional var BS_VOICES (JSON {id: elevenlabs voice id}). No secrets: the studio password is set on first use from the admin page
+ * Bindings: BUCKET (R2 bucket). Secrets for B-Sound (bs_*): ELEVENLABS_API_KEY (voice), GEMINI_API_KEY (reads the client's site and writes scripts). Optional var BS_VOICES (JSON {id: elevenlabs voice id}). No secrets: the studio password is set on first use from the admin page
  * and stored hashed in the bucket (config/admin.json).
  * Same API as the Apps Script version: POST JSON {action, ...}, actions rc_ping / rc_setup / rc_login / rc_* (studio) / rc_c_* (client link).
  *
@@ -300,23 +300,40 @@ async function staff(d, env) {
   return { ok: false, error: 'unknown action' };
 }
 
-
-/* ---------- B-Sound: online hold tone (bs_*) ----------
-Order = bs/o/<k>.json. The client page writes the script, picks music and a voice, and asks for a preview.
-The preview is ElevenLabs TTS of the script with a spoken watermark between sentences, so the clean voice never
-leaves the server before payment. Payment comes from Kala (same webhook as the recorder, product ids in BS_PAGES),
-matched by the 6-digit order code in the order comments or by phone. After payment bs_final returns the clean voice
-(generated once, cached) and the page mixes it with the music and encodes MP3 / WAV / WAV 8bit u-law. */
-const BS_PAGES = { 76262: 'hold-ai', 76274: 'test' }; // Kala page id -> product (76274 = ₪0 test product)
-const BS_MAX_CHARS = 420, BS_MAX_PREVIEWS = 8, BS_IP_DAY = 30, BS_DAYS = 30;
+/* ---------- B-Sound: online hold tone and IVR (bs_*) ----------
+An order (bs/o/<k>.json) holds a package and its messages (items). Each item has a type:
+  ivr (main menu, no music – accessibility rules), sub (sub-menu, no music), hold (hold tone, with music, max 30 s),
+  closed / custom (extra announcements, no music). Items can have a language (he by default).
+Before payment the client saves drafts and hears previews: ElevenLabs TTS with a spoken watermark, so clean audio
+never leaves the server unpaid. Payment arrives from Kala (same webhook as the recorder): a package product marks the
+order paid; credit products (revision, extra message, extra language) add credits to a paid order. Matching is by the
+6-digit order code in the Kala order comments, or by phone.
+After payment: bs_final returns the clean voice of an approved item (cached per version), the page mixes and encodes.
+Changes after payment: bs_edit (uses a revision: package revisions per rolling year, then bought credits),
+bs_add (extra message, uses a message credit), bs_lang (translation with Gemini, uses a language credit).
+New items (added message, translated language) stay drafts – free edits and watermarked previews – until bs_approve. */
+const BS_PAGES = {
+  76262: { pkg: 'hold' }, 76264: { pkg: 'ivr-basic' }, 76265: { pkg: 'ivr-standard' }, 76266: { pkg: 'ivr-premium' },
+  76274: { test: true }, 76275: { credit: 'revision' }, 76276: { credit: 'message' }, 76270: { credit: 'language' }
+}; // Kala page ids – keep in sync with kala/b-sound-catalog.json
+const BS_PKG = {
+  'hold': { items: ['hold'], rev: 0, lang: 0, sub: false },
+  'ivr-basic': { items: ['ivr', 'hold', 'closed'], rev: 0, lang: 0, sub: false },
+  'ivr-standard': { items: ['ivr', 'hold', 'closed'], rev: 2, lang: 0, sub: true },
+  'ivr-premium': { items: ['ivr', 'hold', 'closed'], rev: 7, lang: 2, sub: true }
+};
+const BS_TYPES = { ivr: 'תפריט ניתוב', sub: 'תת־נתב', hold: 'צליל המתנה', closed: 'העסק סגור', custom: 'הודעה' };
+const BS_LANGS = { he: 'עברית', en: 'אנגלית', ar: 'ערבית', ru: 'רוסית', fr: 'צרפתית', es: 'ספרדית', uk: 'אוקראינית', ro: 'רומנית', fa: 'פרסית', th: 'תאית', fil: 'פיליפינית', hi: 'הינדית', zh: 'סינית', ka: 'גאורגית', tr: 'טורקית', pt: 'פורטוגזית', de: 'גרמנית', it: 'איטלקית', pl: 'פולנית' };
+const BS_MAX_CHARS = 1200, BS_MAX_ITEMS = 16, BS_PREVIEWS_DRAFT = 40, BS_PREVIEWS_PAID = 60, BS_IP_DAY = 40, BS_DAYS = 30, BS_YEAR = 365 * 86400000;
 const BS_VOICES_DEFAULT = { f1: 'EXAVITQu4vr4xnSDxMaL', f2: '21m00Tcm4TlvDq8ikWAM', m1: 'pNInz6obpgDQGcFmaJgB', m2: 'TxGEqnHWrfWFTfGW9XjX' };
-const BS_WM = 'B-Sound, תצוגה מקדימה.';
+const BS_WM = { he: 'B-Sound, תצוגה מקדימה.', en: 'B-Sound preview.', ar: 'B-Sound.', ru: 'B-Sound.' };
 function bsVoices(env) { try { return Object.assign({}, BS_VOICES_DEFAULT, env.BS_VOICES ? JSON.parse(env.BS_VOICES) : {}); } catch (e) { return BS_VOICES_DEFAULT; } }
-const bsClean = (t) => String(t || '').replace(/[<>{}\[\]]/g, '').replace(/\s+/g, ' ').trim().slice(0, BS_MAX_CHARS);
-function bsWatermark(t) {
+const bsClean = (t) => String(t || '').replace(/[<>{}\[\]]/g, '').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim().slice(0, BS_MAX_CHARS);
+function bsWatermark(t, lang) {
+  const wm = BS_WM[lang] || 'B-Sound.';
   const parts = t.split(/(?<=[.!?…])\s+/).filter(Boolean);
-  if (parts.length < 2) return BS_WM + ' ' + t + ' ' + BS_WM;
-  const out = [BS_WM]; parts.forEach((x, i) => { out.push(x); if (i % 2 === 1 || i === parts.length - 1) out.push(BS_WM); });
+  if (parts.length < 2) return wm + ' ' + t + ' ' + wm;
+  const out = [wm]; parts.forEach((x, i) => { out.push(x); if (i % 2 === 1 || i === parts.length - 1) out.push(wm); });
   return out.join(' ');
 }
 async function bsTts(env, text, voiceId) {
@@ -328,62 +345,227 @@ async function bsTts(env, text, voiceId) {
   if (!r.ok) throw new Error('הפקת הקול נכשלה (' + r.status + '): ' + (await r.text()).slice(0, 160));
   return new Uint8Array(await r.arrayBuffer());
 }
+async function bsLLM(env, prompt) {
+  if (!env.GEMINI_API_KEY) throw new Error('no-llm');
+  const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + env.GEMINI_API_KEY, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.6 } })
+  });
+  if (!r.ok) throw new Error('llm ' + r.status);
+  const j = await r.json();
+  const t = (((j.candidates || [])[0] || {}).content || {}).parts || [];
+  return JSON.parse(t.map(x => x.text || '').join(''));
+}
 function bsCode() { const a = new Uint32Array(1); crypto.getRandomValues(a); return String(100000 + (a[0] % 900000)); }
-async function bsIpOk(env, ip) {
-  const day = new Date().toISOString().slice(0, 10), key = 'bs/ip/' + day + '.json';
-  const m = (await getJ(env, key)) || {}; const n = (m[ip] | 0) + 1; if (n > BS_IP_DAY) return false;
+async function bsIpOk(env, ip, kind, max) {
+  const day = new Date().toISOString().slice(0, 10), key = 'bs/ip/' + kind + '-' + day + '.json';
+  const m = (await getJ(env, key)) || {}; const n = (m[ip] | 0) + 1; if (n > max) return false;
   m[ip] = n; await putJ(env, key, m); return true;
 }
+function bsSiteText(html) {
+  const pick = (re) => { const m = html.match(re); return m ? m[1].replace(/\s+/g, ' ').trim() : ''; };
+  const title = pick(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  const desc = pick(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)/i) || pick(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']*)/i);
+  const body = html.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ').replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ')
+    .replace(/<(br|\/p|\/h\d|\/li|\/div)[^>]*>/gi, '\n').replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ').replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/[ \t]+/g, ' ').replace(/\n\s*\n+/g, '\n').trim();
+  return { title, desc, text: body.slice(0, 7000) };
+}
+async function bsSite(d, env, ip) {
+  if (!(await bsIpOk(env, ip, 'site', 20))) return { ok: false, error: 'הגעתם למספר הניתוחים היומי. אפשר להמשיך עם הנוסחים המוכנים' };
+  const biz = String(d.biz || '').slice(0, 80), field = String(d.field || '').slice(0, 40);
+  let url = String(d.url || '').trim(), site = { title: '', desc: '', text: '' };
+  if (url) {
+    if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+    try {
+      const u = new URL(url); if (!/\./.test(u.hostname) || /^(localhost|127\.|10\.|192\.168\.)/.test(u.hostname)) throw new Error('bad');
+      const ac = new AbortController(); const t = setTimeout(() => ac.abort(), 9000);
+      const r = await fetch(u.toString(), { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; B-Sound script writer)', 'Accept': 'text/html' }, redirect: 'follow', signal: ac.signal });
+      clearTimeout(t);
+      if (r.ok && /html/i.test(r.headers.get('content-type') || 'text/html')) site = bsSiteText((await r.text()).slice(0, 600000));
+    } catch (e) { site.error = 'לא הצלחנו לקרוא את האתר'; }
+  }
+  const prompt = `אתה קופירייטר בכיר באולפן הקלטות שכותב הודעות למרכזיות טלפון של עסקים בישראל.
+שם העסק כפי שהלקוח כתב: "${biz}". תחום שהלקוח בחר: "${field}".
+מידע מהאתר של העסק (אם יש):
+כותרת: ${site.title}
+תיאור: ${site.desc}
+תוכן:
+${site.text}
+
+החזר JSON בלבד, במבנה:
+{"name":"","slogan":"","services":[""],"departments":[""],"hours":"","hold":[{"tone":"חם ואישי","text":""},{"tone":"רשמי ועסקי","text":""},{"tone":"קליל וצעיר","text":""}],"closed":"","ivr_intro":""}
+
+כללים:
+- עברית טבעית, תקנית ופשוטה, כמו שמדברים בטלפון. משפטים שלמים והגיוניים, נושא אחד בכל משפט, בלי ניסוחים מאולצים ובלי סלנג מוגזם.
+- אסור להמציא עובדות שלא מופיעות במידע: שעות, מחירים, כתובות, מבצעים, מספרים. אם חסר – לא לכתוב.
+- name: שם העסק כפי שהוא מופיע באתר (או כפי שהלקוח כתב).
+- slogan: אם יש באתר סלוגן או משפט מיתוג – השתמש בו כמעט מילה במילה. אחרת נסח משפט קצר (עד 8 מילים) שנאמן למה שהעסק עושה.
+- services: 3 עד 6 השירותים או המוצרים המרכזיים, כל אחד בשתיים־שלוש מילים.
+- departments: 2 עד 5 מחלקות הגיוניות לתפריט טלפוני של העסק הזה (למשל: מכירות, שירות לקוחות, תיאום תורים, הנהלת חשבונות). מילה או שתיים כל אחת, בלי "ל" בהתחלה.
+- hours: שעות הפעילות אם מופיעות באתר, אחרת מחרוזת ריקה.
+- hold: שלושה נוסחים לצליל המתנה, כל אחד 30 עד 45 מילים (עד 30 שניות). כל נוסח: פותח בשם העסק, משלב את הסלוגן ושירות אחד או שניים בצורה טבעית, ומסתיים בבקשה להישאר על הקו. בלי מספרי טלפון.
+- closed: הודעה שהעסק סגור כרגע, עד 35 מילים. אם יש שעות פעילות שלב אותן, אחרת כתוב בדיוק: [שעות הפעילות].
+- ivr_intro: משפט פתיחה אחד לתפריט: "שלום, הגעתם ל..." עם השם והסלוגן. בלי האפשרויות עצמן.`;
+  try {
+    const j = await bsLLM(env, prompt);
+    return { ok: true, ai: true, site: { title: site.title, desc: site.desc, read: !!site.text, error: site.error || '' }, result: j };
+  } catch (e) {
+    return { ok: true, ai: false, site: { title: site.title, desc: site.desc, read: !!site.text, error: site.error || '' } };
+  }
+}
+const bsYearUsed = (o) => (o.revLog || []).filter(t => Date.now() - t < BS_YEAR).length;
+function bsCredits(o) {
+  const p = BS_PKG[o.pkg] || BS_PKG.hold, c = o.credits || {};
+  const langsUsed = [...new Set((o.items || []).map(x => x.lang || 'he'))].filter(l => l !== 'he').length;
+  return {
+    revPkg: p.rev, revUsed: bsYearUsed(o), revLeft: Math.max(0, p.rev - bsYearUsed(o)) + (c.revision | 0),
+    msgLeft: c.message | 0, langPkg: p.lang, langUsed: langsUsed, langLeft: Math.max(0, p.lang - (o.langsFromPkg | 0)) + (c.language | 0)
+  };
+}
+function bsPublic(o) {
+  return {
+    ok: true, paid: !!o.paid, code: o.code, pkg: o.pkg, test: !!o.test, voice: o.voice, music: o.music, mix: o.mix || {}, biz: o.biz,
+    credits: bsCredits(o), langs: BS_LANGS,
+    items: (o.items || []).map(x => ({ id: x.id, type: x.type, title: x.title, lang: x.lang || 'he', script: x.script, draft: !!x.draft, ver: x.ver | 0, pending: x.pending || '' }))
+  };
+}
+function bsItemsIn(arr, pkg) {
+  const p = BS_PKG[pkg]; if (!p) throw new Error('חבילה לא מוכרת');
+  const out = [];
+  for (const x of (Array.isArray(arr) ? arr : []).slice(0, BS_MAX_ITEMS)) {
+    const type = BS_TYPES[x.type] ? x.type : null; if (!type) continue;
+    if (!p.items.includes(type) && !(type === 'sub' && p.sub)) continue;
+    const script = bsClean(x.script); if (script.length < 6) continue;
+    out.push({ id: String(x.id || type).replace(/[^a-z0-9-]/gi, '').slice(0, 24) || type, type, title: String(x.title || BS_TYPES[type]).slice(0, 40), lang: 'he', script, draft: true, ver: 0 });
+  }
+  for (const need of p.items) if (!out.some(x => x.type === need)) throw new Error('חסר נוסח ל' + BS_TYPES[need]);
+  return out;
+}
+async function bsSave(env, k, o) { o.updated = Date.now(); await putJ(env, 'bs/o/' + k + '.json', o); }
 async function bsound(d, env, ip) {
+  if (d.action === 'bs_site') return bsSite(d, env, ip);
   const k = String(d.k || '').replace(/[^a-f0-9]/g, '').slice(0, 28);
-  if (d.action === 'bs_voices') return { ok: true, voices: Object.keys(bsVoices(env)) };
-  if (d.action === 'bs_preview') {
-    const script = bsClean(d.script); if (script.length < 10) return { ok: false, error: 'הנוסח קצר מדי' };
-    const vmap = bsVoices(env), voice = vmap[d.voice] ? d.voice : 'f1';
-    let o = k ? await getJ(env, 'bs/o/' + k + '.json') : null; let key = k;
-    if (o && o.paid) return { ok: false, error: 'ההזמנה כבר שולמה' };
-    if (!o) { if (!(await bsIpOk(env, ip))) return { ok: false, error: 'הגעתם למספר ההאזנות היומי. נסו מחר או פנו אלינו' }; key = tok(); o = { code: bsCode(), created: Date.now(), previews: 0 }; }
-    if (o.previews >= BS_MAX_PREVIEWS) return { ok: false, error: 'הגעתם למספר ההאזנות להזמנה הזאת. פנו אלינו ונשמח לעזור' };
-    Object.assign(o, { script, voice, music: String(d.music || '').slice(0, 40), mix: d.mix || {}, biz: String(d.biz || '').slice(0, 80),
-      name: String(d.name || '').slice(0, 60), phone: String(d.phone || '').replace(/[^\d+]/g, '').slice(0, 15), email: String(d.email || '').slice(0, 80),
-      previews: (o.previews | 0) + 1, updated: Date.now(), expires: Date.now() + BS_DAYS * 86400000 });
-    const mp3 = await bsTts(env, bsWatermark(script), vmap[voice]);
-    await putJ(env, 'bs/o/' + key + '.json', o);
-    return { ok: true, k: key, code: o.code, previewsLeft: BS_MAX_PREVIEWS - o.previews, mp3: bytesToB64(mp3) };
+  const vmap = bsVoices(env);
+  if (d.action === 'bs_save') {
+    let o = k ? await getJ(env, 'bs/o/' + k + '.json') : null, key = k;
+    if (o && o.paid) return { ok: false, error: 'ההזמנה כבר שולמה. שינויים נעשים באזור הלקוח' };
+    if (!o) { if (!(await bsIpOk(env, ip, 'order', BS_IP_DAY))) return { ok: false, error: 'הגעתם למספר ההזמנות היומי. פנו אלינו ונשמח לעזור' }; key = tok(); o = { code: bsCode(), created: Date.now(), previews: 0 }; }
+    const pkg = BS_PKG[d.pkg] ? d.pkg : 'hold';
+    Object.assign(o, { pkg, items: bsItemsIn(d.items, pkg), voice: vmap[d.voice] ? d.voice : 'f1', music: String(d.music || '').slice(0, 40), mix: d.mix || {},
+      biz: String(d.biz || '').slice(0, 80), site: String(d.site || '').slice(0, 120), name: String(d.name || '').slice(0, 60),
+      phone: String(d.phone || '').replace(/[^\d+]/g, '').slice(0, 15), email: String(d.email || '').slice(0, 80), expires: Date.now() + BS_DAYS * 86400000 });
+    await bsSave(env, key, o);
+    return Object.assign(bsPublic(o), { k: key });
   }
   const o = k ? await getJ(env, 'bs/o/' + k + '.json') : null;
   if (!o) return { ok: false, error: 'ההזמנה לא נמצאה' };
-  if (d.action === 'bs_mix') { if (!o.paid) { o.mix = d.mix || {}; o.music = String(d.music || o.music || '').slice(0, 40); await putJ(env, 'bs/o/' + k + '.json', o); } return { ok: true }; }
-  if (d.action === 'bs_state') return { ok: true, paid: !!o.paid, code: o.code, product: o.product || '', test: o.product === 'test' };
+  if (d.action === 'bs_state') return bsPublic(o);
+  const item = (o.items || []).find(x => x.id === String(d.id || ''));
+  if (d.action === 'bs_preview') {
+    if (!item) return { ok: false, error: 'ההודעה לא נמצאה' };
+    const limit = o.paid ? BS_PREVIEWS_PAID : BS_PREVIEWS_DRAFT;
+    if ((o.previews | 0) >= limit) return { ok: false, error: 'הגעתם למספר ההאזנות. פנו אלינו ונשמח לעזור' };
+    // a paid, approved item is previewed with the proposed new text; the clean file stays the approved version
+    let text = item.script;
+    if (d.script != null) { text = bsClean(d.script); if (text.length < 6) return { ok: false, error: 'הנוסח קצר מדי' }; if (item.draft) item.script = text; else item.pending = text; }
+    o.previews = (o.previews | 0) + 1;
+    const mp3 = await bsTts(env, bsWatermark(text, item.lang || 'he'), vmap[o.voice] || BS_VOICES_DEFAULT.f1);
+    await bsSave(env, k, o);
+    return { ok: true, mp3: bytesToB64(mp3), previewsLeft: limit - o.previews };
+  }
+  if (d.action === 'bs_mix') { o.mix = d.mix || o.mix || {}; if (!o.paid && d.music) o.music = String(d.music).slice(0, 40); await bsSave(env, k, o); return { ok: true }; }
+  if (!o.paid) return { ok: false, error: 'ההזמנה עוד לא שולמה' };
   if (d.action === 'bs_final') {
-    if (!o.paid) return { ok: false, error: 'ההזמנה עוד לא שולמה' };
-    let b = o.voiceKey ? await getBin(env, o.voiceKey) : null;
-    if (!b) { b = await bsTts(env, o.script, bsVoices(env)[o.voice] || BS_VOICES_DEFAULT.f1); o.voiceKey = 'bs/f/' + k + '/voice.mp3'; await env.BUCKET.put(o.voiceKey, b, { httpMetadata: { contentType: 'audio/mpeg' } }); o.finalAt = Date.now(); await putJ(env, 'bs/o/' + k + '.json', o); }
-    return { ok: true, mp3: bytesToB64(b), script: o.script, voice: o.voice, music: o.music, mix: o.mix || {}, code: o.code, test: o.product === 'test' };
+    if (!item) return { ok: false, error: 'ההודעה לא נמצאה' };
+    if (item.draft) return { ok: false, error: 'צריך לאשר את ההודעה לפני ההורדה' };
+    const fk = 'bs/f/' + k + '/' + item.id + '-v' + item.ver + '.mp3';
+    let b = await getBin(env, fk);
+    if (!b) { b = await bsTts(env, item.script, vmap[o.voice] || BS_VOICES_DEFAULT.f1); await env.BUCKET.put(fk, b, { httpMetadata: { contentType: 'audio/mpeg' } }); }
+    return { ok: true, mp3: bytesToB64(b), type: item.type, music: o.music, mix: o.mix || {}, code: o.code };
+  }
+  if (d.action === 'bs_edit') {
+    if (!item) return { ok: false, error: 'ההודעה לא נמצאה' };
+    const text = bsClean(d.script != null ? d.script : item.pending); if (text.length < 6) return { ok: false, error: 'הנוסח קצר מדי' };
+    if (item.draft) { item.script = text; item.pending = ''; await bsSave(env, k, o); return bsPublic(o); }
+    if (text === item.script) return { ok: false, error: 'לא שיניתם את הנוסח' };
+    const p = BS_PKG[o.pkg] || BS_PKG.hold;
+    if (bsYearUsed(o) < p.rev) o.revLog = (o.revLog || []).concat([Date.now()]);
+    else if ((o.credits || {}).revision > 0) o.credits.revision -= 1;
+    else return { ok: false, error: 'נגמרו התיקונים בחבילה', need: 'revision' };
+    item.script = text; item.pending = ''; item.ver = (item.ver | 0) + 1; item.editedAt = Date.now();
+    await bsSave(env, k, o); return bsPublic(o);
+  }
+  if (d.action === 'bs_add') {
+    const type = ['closed', 'custom', 'sub'].includes(d.type) ? d.type : 'custom';
+    if ((o.items || []).length >= BS_MAX_ITEMS) return { ok: false, error: 'הגעתם למספר ההודעות המרבי' };
+    if (!((o.credits || {}).message > 0)) return { ok: false, error: 'כדי להוסיף הודעה צריך לרכוש הודעה נוספת', need: 'message' };
+    const script = bsClean(d.script); if (script.length < 6) return { ok: false, error: 'כתבו את נוסח ההודעה' };
+    o.credits.message -= 1;
+    const id = type + '-' + tok().slice(0, 6);
+    o.items.push({ id, type, title: String(d.title || BS_TYPES[type]).slice(0, 40), lang: 'he', script, draft: true, ver: 0 });
+    await bsSave(env, k, o); return bsPublic(o);
+  }
+  if (d.action === 'bs_approve') {
+    if (!item) return { ok: false, error: 'ההודעה לא נמצאה' };
+    if (!item.draft) return bsPublic(o);
+    item.draft = false; item.ver = 1; item.approvedAt = Date.now(); await bsSave(env, k, o); return bsPublic(o);
+  }
+  if (d.action === 'bs_lang') {
+    const lang = String(d.lang || ''); if (!BS_LANGS[lang] || lang === 'he') return { ok: false, error: 'שפה לא מוכרת' };
+    if ((o.items || []).some(x => x.lang === lang)) return { ok: false, error: 'השפה הזאת כבר קיימת' };
+    const p = BS_PKG[o.pkg] || BS_PKG.hold;
+    let fromPkg = false;
+    if ((o.langsFromPkg | 0) < p.lang) fromPkg = true;
+    else if (!((o.credits || {}).language > 0)) return { ok: false, error: 'כדי להוסיף שפה צריך לרכוש שפה נוספת', need: 'language' };
+    const src = o.items.filter(x => (x.lang || 'he') === 'he' && !x.draft);
+    if (!src.length) return { ok: false, error: 'אין הודעות מאושרות לתרגום' };
+    let tr;
+    try {
+      tr = await bsLLM(env, `תרגם הודעות של מרכזיית טלפון של עסק ישראלי ל${BS_LANGS[lang]}. ניסוח טבעי ומקצועי כמו שמדברים בטלפון, לא תרגום מילולי. שם העסק נשאר כפי שהוא (בתעתיק אם צריך). מספרי שלוחות נשארים מספרים. [שעות הפעילות] נשאר בסוגריים כפי שהוא.
+החזר JSON בלבד: {"items":[{"id":"","text":""}]}
+ההודעות:
+${JSON.stringify(src.map(x => ({ id: x.id, text: x.script })))}`);
+    } catch (e) { return { ok: false, error: 'התרגום לא זמין כרגע. נסו שוב בעוד כמה דקות' }; }
+    const map = {}; for (const t of (tr.items || [])) map[t.id] = bsClean(t.text);
+    for (const x of src) if (map[x.id]) o.items.push({ id: (x.id + '-' + lang).slice(0, 24), type: x.type, title: x.title + ' · ' + BS_LANGS[lang], lang, script: map[x.id], draft: true, ver: 0 });
+    if (fromPkg) o.langsFromPkg = (o.langsFromPkg | 0) + 1; else o.credits.language -= 1;
+    await bsSave(env, k, o); return bsPublic(o);
   }
   return { ok: false, error: 'פעולה לא מוכרת' };
 }
 async function bsPaid(d, env, pageId) {
   const cfg = await getJ(env, 'config/kala.json');
   if (!cfg || !cfg.secret || String(d.secret || '') !== cfg.secret) return { ok: false, error: 'bad secret' };
+  const info = BS_PAGES[pageId], qty = Math.max(1, parseInt(d.quantity, 10) || 1);
   const phones = [last9(d.mobile), last9(d.phone)].filter(p => p.length === 9);
   const codes = String(d.comments || '').match(/\d{6}/g) || [];
+  const orderKey = String(d.order_id || '') + ':' + pageId;
+  const wantPaid = !!info.credit; // credits go to an order that is already paid; packages to one that is not
   const cands = []; let cursor;
   do {
     const l = await env.BUCKET.list({ prefix: 'bs/o/', cursor }); cursor = l.truncated ? l.cursor : undefined;
     for (const ob of l.objects) {
-      const o = await getJ(env, ob.key); if (!o || o.paid) continue;
+      const o = await getJ(env, ob.key); if (!o) continue;
+      if ((o.kalaOrders || []).includes(orderKey)) return { ok: true, duplicate: true };
+      if (!!o.paid !== wantPaid) continue;
       const byCode = codes.includes(o.code), byPhone = o.phone && phones.includes(last9(o.phone));
       if (byCode || byPhone) cands.push({ key: ob.key, o, score: (byCode ? 2 : 0) + (byPhone ? 1 : 0) });
     }
   } while (cursor);
   const log = (await getJ(env, 'config/kala_log.json')) || [];
-  const entry = { at: Date.now(), order_id: String(d.order_id || ''), page_id: pageId, price: Number(d.price) || 0, qty: 1, name: String(d.name || '').slice(0, 60), phone: phones[0] || '', codes: codes.slice(0, 3), bsound: true };
+  const entry = { at: Date.now(), order_id: String(d.order_id || ''), page_id: pageId, price: Number(d.price) || 0, qty, name: String(d.name || '').slice(0, 60), phone: phones[0] || '', codes: codes.slice(0, 3), bsound: true };
   if (!cands.length) { entry.matched = null; await putJ(env, 'config/kala_log.json', [entry].concat(log).slice(0, 100)); return { ok: true, matched: false }; }
   cands.sort((a, b) => b.score - a.score || (b.o.updated || 0) - (a.o.updated || 0));
   const { key, o } = cands[0];
-  Object.assign(o, { paid: true, paidAt: Date.now(), paidBy: 'kala', product: BS_PAGES[pageId], orderId: entry.order_id, price: entry.price, expires: Date.now() + BS_DAYS * 86400000 });
-  await putJ(env, key, o);
+  if (info.credit) { o.credits = o.credits || {}; o.credits[info.credit] = (o.credits[info.credit] | 0) + qty; }
+  else {
+    if (info.pkg) o.pkg = info.pkg; if (info.test) o.test = true;
+    for (const x of o.items || []) { if (x.draft) { x.draft = false; x.ver = 1; x.approvedAt = Date.now(); } }
+    Object.assign(o, { paid: true, paidAt: Date.now(), paidBy: 'kala', orderId: entry.order_id, price: entry.price, expires: Date.now() + BS_YEAR });
+  }
+  o.kalaOrders = (o.kalaOrders || []).concat([orderKey]).slice(-30);
+  o.updated = Date.now(); await putJ(env, key, o);
   entry.matched = key; await putJ(env, 'config/kala_log.json', [entry].concat(log).slice(0, 100));
   return { ok: true, matched: true };
 }

@@ -115,6 +115,8 @@ aside dt{color:#5A606A;font-size:13px}aside dd{margin:2px 0 0;font-weight:700}
 #myText .it{margin-top:10px}#myText .it:first-of-type{margin-top:6px}
 .howpay{margin:12px 0 0;padding-inline-start:22px;font-size:16px;line-height:1.8}
 @media(max-width:640px){.tagline{display:none}}
+.thanks{border-color:#3DD68C!important;background:rgba(61,214,140,.08)!important;margin-bottom:18px}
+.linkbox{margin-top:16px}
 </style>
 </head>
 <body>
@@ -151,6 +153,11 @@ aside dt{color:#5A606A;font-size:13px}aside dd{margin:2px 0 0;font-weight:700}
 <label class="f" style="margin-top:14px">שעות פעילות <span class="hint">להודעת "העסק סגור". לא חובה</span><input type="text" id="fHours" maxlength="120" placeholder="לדוגמה: א׳–ה׳ 9:00–18:00"></label>
 <div class="acts"><button class="btn" id="toProd" type="button">המשך</button></div>
 </div>
+<details class="box" id="findBox" style="margin-top:24px"><summary style="cursor:pointer;font-weight:700">כבר הזמנתם? כניסה לאזור הלקוח</summary>
+<p class="hint" style="margin:8px 0 0">מספר ההזמנה (6 ספרות) מופיע בדף התשלום ובאזור הלקוח. הטלפון הוא זה שמסרתם בהזמנה.</p>
+<div class="row" style="margin-top:10px"><label class="f">מספר הזמנה<input type="text" id="fCode" inputmode="numeric" maxlength="6" dir="ltr" style="text-align:right"></label><label class="f">טלפון נייד<input type="tel" id="fPhone" maxlength="15" dir="ltr" style="text-align:right"></label></div>
+<p class="err" id="eFind" hidden></p>
+<div class="acts"><button class="btn ghost" id="findBtn" type="button">כניסה</button></div></details>
 </section>
 
 <section data-s="2" hidden>
@@ -266,13 +273,16 @@ aside dt{color:#5A606A;font-size:13px}aside dd{margin:2px 0 0;font-weight:700}
 </ol>
 </div>
 <div class="acts"><a class="btn" id="payBtn" target="_blank" rel="noopener">לתשלום מאובטח</a><button class="btn ghost" data-back type="button">חזרה</button></div>
-<p style="margin:20px 0 0;color:#C9CED6;font-size:15px"><span class="spin" aria-hidden="true"></span> מחכים לאישור התשלום…</p>
+<p style="margin:20px 0 0;color:#C9CED6;font-size:15px" id="waitMsg"><span class="spin" aria-hidden="true"></span> מחכים לאישור התשלום…</p>
+<div class="box linkbox"><b>הקישור האישי שלכם</b><p class="hint" style="margin:4px 0 8px">דרכו חוזרים לאזור הלקוח מכל מכשיר. כדאי לשמור אותו.</p><div class="acts" style="margin-top:0"><button class="btn ghost sm" type="button" data-copy>העתקת הקישור</button><a class="btn ghost sm" data-wa-self target="_blank" rel="noopener">שליחה לעצמי בוואטסאפ</a></div></div>
 <p class="hint" style="margin:8px 0 0">שילמתם עם מספר טלפון אחר? כתבו בהערות של טופס התשלום את מספר ההזמנה: <b id="code" style="letter-spacing:2px"></b></p>
 </section>
 
 <section data-s="8" hidden>
+<div class="box thanks" id="thanks" hidden><b style="font-size:22px">תודה! התשלום התקבל ✓</b><p style="margin:6px 0 0">ההזמנה שלכם מוכנה כאן למטה. קבלה נשלחה אליכם במייל מקאלה.</p></div>
 <h1>האזור שלכם</h1>
-<p class="sub">שמרו את הקישור לדף הזה. כאן מורידים קבצים, מתקנים נוסחים ומוסיפים הודעות ושפות.</p>
+<p class="sub">כאן מורידים קבצים, מתקנים נוסחים ומוסיפים הודעות ושפות.</p>
+<div class="box linkbox"><b>הקישור האישי שלכם</b><p class="hint" style="margin:4px 0 8px">דרכו חוזרים לאזור הלקוח מכל מכשיר. כדאי לשמור אותו.</p><div class="acts" style="margin-top:0"><button class="btn ghost sm" type="button" data-copy>העתקת הקישור</button><a class="btn ghost sm" data-wa-self target="_blank" rel="noopener">שליחה לעצמי בוואטסאפ</a></div></div>
 <div id="studioBox" class="box" hidden></div>
 <div id="aiArea">
 <div class="cr" id="credits"></div>
@@ -351,7 +361,7 @@ var S={step:1,max:1,field:"food",ai:null,product:"hold",deps:null,ivrManual:fals
 var A={};
 var FORM=["biz","site","fName","fSlogan","fServices","fHours","ivrIntro","ivrText","subTitle","subText","holdText","closedText","jText","name","phone","email"];
 try{var saved=JSON.parse(localStorage.getItem("bs_order2")||"null");if(saved) Object.assign(S,saved.S||{})}catch(e){saved=null}
-var hk=(location.hash.match(/k=([a-f0-9]+)/)||[])[1];if(hk&&hk!==S.k){S.k=hk;S.step=7}
+var hk=(location.hash.match(/k=([a-f0-9]+)/)||[])[1],RETURNED=/paid=1/.test(location.hash);if(hk&&hk!==S.k){S.k=hk;S.step=7}
 function save(){try{var f={};FORM.forEach(function(id){f[id]=$("#"+id).value});var keep={};["tone","step","max","field","ai","product","deps","ivrManual","holdIdx","music","voice","vv","mv","duck","jLen","jVocal","jStyle","jVers","choice","k","code"].forEach(function(x){keep[x]=S[x]});localStorage.setItem("bs_order2",JSON.stringify({S:keep,f:f}))}catch(e){}}
 if(saved&&saved.f) FORM.forEach(function(id){if(saved.f[id]!=null) $("#"+id).value=saved.f[id]});
 if(TEST) $("#testBar").hidden=false;
@@ -671,6 +681,7 @@ $("#n6").onclick=function(){
 var poll=0;
 function startPay(){
   if(!S.choice){go(6);return}
+  links();if(RETURNED) $("#waitMsg").innerHTML='<span class="spin" aria-hidden="true"></span> תודה! מחכים לאישור התשלום מקאלה. זה לוקח בדרך כלל עד דקה, והדף יתעדכן לבד.';
   var c=PRICE[S.choice.pkg][S.choice.human?"human":"ai"];
   $("#code").textContent=S.code||"…";$("#payBtn").href=payUrl(TEST?TEST_ID:c[1]);
   var what=(PRODUCTS.find(function(x){return x[0]===S.product})||[,""])[1]+(S.product==="ivr"?" "+(TIERS.find(function(t){return t[0]===S.choice.pkg})||[,""])[1]:"")+" · "+(S.choice.human?(S.product==="jingle"?"מלחין ומפיק":"קריין/ית באולפן"):(S.product==="jingle"?"הפקת AI":"קריינות AI"));
@@ -682,11 +693,17 @@ function check(){if(!S.k) return;call({action:"bs_state",k:S.k}).then(function(r
 
 function payUrl(id){
   var q="&full_name="+encodeURIComponent($("#name").value.trim().replace(/\s+/g,"\u00a0"))+"&mobile="+encodeURIComponent($("#phone").value.replace(/[^\d+]/g,""))+"&email="+encodeURIComponent($("#email").value.trim())+"&company_name="+encodeURIComponent((bizName()||"B-Sound").replace(/\s+/g,"\u00a0"));
+  q+="&completed_url="+encodeURIComponent(myLink(true));
   return KALA+id+q;
 }
+function myLink(back){return location.origin+location.pathname+(TEST?"?test=1":"")+"#k="+S.k+(back?"&paid=1":"")}
+function links(){document.querySelectorAll("[data-wa-self]").forEach(function(a){a.href="https://wa.me/?text="+encodeURIComponent("הקישור לאזור הלקוח שלי ב-B-Sound: "+myLink())})}
+document.addEventListener("click",function(e){var b=e.target.closest("[data-copy]");if(!b) return;var t=myLink();(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){b.textContent="✓ הועתק"},function(){prompt("העתיקו את הקישור:",t)})});
+$("#findBtn").onclick=function(){err("#eFind");var b=this;b.disabled=true;call({action:"bs_find",code:$("#fCode").value,phone:$("#fPhone").value}).then(function(r){b.disabled=false;if(!r.ok){err("#eFind",r.error);return}S.k=r.k;S.st=null;call({action:"bs_state",k:S.k}).then(function(st){if(st.ok&&st.paid){S.st=st;go(8)}else{S.choice={pkg:st.pkg,human:st.human};go(7)}})})};
 /* 8: client area */
 var ppoll=0,openEdit={};
 function portal(){
+  links();$("#thanks").hidden=!RETURNED;
   clearInterval(poll);clearInterval(ppoll);
   if(S.k&&location.hash.indexOf(S.k)<0) history.replaceState(null,"","#k="+S.k);
   S.st=null;refresh();ppoll=setInterval(function(){if(!document.hidden) refresh(true)},10000);
@@ -824,7 +841,7 @@ if(S.ai||$("#fName").value){$("#found").hidden=false;$("#foundMsg").innerHTML='<
 document.querySelectorAll("[data-back]").forEach(function(b){b.onclick=function(){var n=S.step-1;if(n===4&&S.product==="jingle") n=3;go(n)}});
 loadLib().then(side);
 var start=S.step;if(start===5&&!S.k) start=4;if(start>=7&&!S.k) start=1;
-if(start>=7&&S.k){call({action:"bs_state",k:S.k}).then(function(r){if(r.ok&&r.paid){S.st=r;go(8)}else go(r.ok&&S.choice?7:1)})}else go(start);
+if(start>=7&&S.k){call({action:"bs_state",k:S.k}).then(function(r){if(r.ok&&r.paid){S.st=r;go(8)}else if(r.ok){if(!S.choice) S.choice={pkg:r.pkg,human:r.human};S.code=r.code;go(7)}else go(1)})}else go(start);
 })();
 </script>
 </body>

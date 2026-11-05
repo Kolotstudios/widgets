@@ -602,12 +602,21 @@ async function bsound(d, env, ip) {
   if (d.action === 'bs_site' || d.action === 'bs_write') return bsSite(d, env, ip);
   if (d.action === 'bs_jingle') return bsJingle(d, env, ip);
   if (d.action === 'bs_voice_sample') return bsVoiceSample(d, env, ip);
+  // lost the link? order code + the phone used in the order bring it back
+  if (d.action === 'bs_find') {
+    if (!(await bsIpOk(env, ip, 'find', 20))) return { ok: false, error: 'יותר מדי ניסיונות. נסו שוב מחר או כתבו לנו בוואטסאפ' };
+    const code = String(d.code || '').replace(/\D/g, ''), ph = last9(d.phone);
+    const ix = code.length === 6 ? await getJ(env, 'bs/idx/' + code + '.json') : null;
+    const o = ix ? await getJ(env, 'bs/o/' + ix.k + '.json') : null;
+    if (!o || !o.phone || last9(o.phone) !== ph || ph.length !== 9) return { ok: false, error: 'לא מצאנו הזמנה עם הקוד והטלפון האלה' };
+    return { ok: true, k: ix.k };
+  }
   const k = String(d.k || '').replace(/[^a-f0-9]/g, '').slice(0, 28);
   const vmap = bsVoices(env);
   if (d.action === 'bs_save') {
     let o = k ? await getJ(env, 'bs/o/' + k + '.json') : null, key = k;
     if (o && o.paid) return { ok: false, error: 'ההזמנה כבר שולמה. שינויים נעשים באזור הלקוח' };
-    if (!o) { if (!(await bsIpOk(env, ip, 'order', BS_IP_DAY))) return { ok: false, error: 'הגעתם למספר ההזמנות היומי. פנו אלינו ונשמח לעזור' }; key = tok(); o = { code: bsCode(), created: Date.now(), previews: 0 }; }
+    if (!o) { if (!(await bsIpOk(env, ip, 'order', BS_IP_DAY))) return { ok: false, error: 'הגעתם למספר ההזמנות היומי. פנו אלינו ונשמח לעזור' }; key = tok(); o = { code: bsCode(), created: Date.now(), previews: 0 }; await putJ(env, 'bs/idx/' + o.code + '.json', { k: key }); }
     const pkg = BS_PKG[d.pkg] ? d.pkg : 'hold';
     Object.assign(o, { pkg, items: bsItemsIn(d.items, pkg), voice: vmap[d.voice] ? d.voice : 'f1', tone: BS_TONES[d.tone] ? d.tone : 'normal', music: String(d.music || '').slice(0, 40), mix: d.mix || {},
       human: !!d.human, jingle: pkg === 'jingle' ? { len: Math.max(7, Math.min(60, d.jingle && d.jingle.len | 0 || 30)), style: String(d.jingle && d.jingle.style || '').slice(0, 30), vocal: String(d.jingle && d.jingle.vocal || '').slice(0, 30) } : null,

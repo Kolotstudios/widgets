@@ -347,19 +347,19 @@ async function bsTts(env, text, voiceId) {
 }
 async function bsLLM(env, prompt) {
   if (!env.GEMINI_API_KEY) throw new Error('GEMINI_API_KEY missing');
-  let last = '';
-  for (const model of ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest']) {
+  const errs = [];
+  for (const model of ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-flash-latest', 'gemini-flash-lite-latest']) {
     const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent', {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': String(env.GEMINI_API_KEY).trim() },
       body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.6 } })
     });
-    if (!r.ok) { last = model + ' ' + r.status + ': ' + (await r.text()).replace(/\s+/g, ' ').slice(0, 220); if (r.status === 404 || r.status === 429 || r.status >= 500) continue; throw new Error(last); }
+    if (!r.ok) { errs.push(model + ' ' + r.status + ': ' + (await r.text()).replace(/\s+/g, ' ').slice(0, 160)); if (r.status === 404 || r.status === 429 || r.status >= 500) continue; throw new Error(errs.join(' | ')); }
     const j = await r.json();
     const t = (((j.candidates || [])[0] || {}).content || {}).parts || [];
     const txt = t.map(x => x.text || '').join('').replace(/^```(?:json)?\s*|\s*```$/g, '');
     return JSON.parse(txt);
   }
-  throw new Error(last || 'llm failed');
+  throw new Error(errs.join(' | ') || 'llm failed');
 }
 function bsCode() { const a = new Uint32Array(1); crypto.getRandomValues(a); return String(100000 + (a[0] % 900000)); }
 async function bsIpOk(env, ip, kind, max) {
@@ -416,7 +416,7 @@ ${site.text}
     const j = await bsLLM(env, prompt);
     return { ok: true, ai: true, site: { title: site.title, desc: site.desc, read: !!site.text, error: site.error || '' }, result: j };
   } catch (e) {
-    return { ok: true, ai: false, llmError: String((e && e.message) || e).slice(0, 300), site: { title: site.title, desc: site.desc, read: !!site.text, error: site.error || '' } };
+    return { ok: true, ai: false, llmError: String((e && e.message) || e).slice(0, 900), site: { title: site.title, desc: site.desc, read: !!site.text, error: site.error || '' } };
   }
 }
 const bsYearUsed = (o) => (o.revLog || []).filter(t => Date.now() - t < BS_YEAR).length;

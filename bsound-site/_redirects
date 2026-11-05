@@ -1,0 +1,4 @@
+/call-center /music-on-hold 301
+/generic-holding /music-on-hold 301
+/extensions-plans /extensions 301
+/pricing-plans/extensions-plans /extensions 301

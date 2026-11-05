@@ -124,7 +124,7 @@ aside dt{color:#5A606A;font-size:13px}aside dd{margin:2px 0 0;font-weight:700}
 </div></header>
 
 <div class="wrap">
-<p class="test" id="testBar" hidden>מצב בדיקה: התשלום עובר דרך מוצר בדיקה בקאלה ב־0 ₪.</p>
+<p class="test" id="testBar" hidden>מצב בדיקה: התשלום עובר דרך מוצר בדיקה בקאלה ב־5 ₪ (המינימום של קאלה).</p>
 <ol class="steps" id="steps" aria-label="שלבי ההזמנה"></ol>
 <div class="grid">
 <main>
@@ -387,7 +387,7 @@ function side(){
   var p=PRODUCTS.find(function(x){return x[0]===S.product});$("#sProd").textContent=p?p[1]+(S.choice&&S.product==="ivr"?" · "+(TIERS.find(function(t){return t[0]===S.choice.pkg})||[,""])[1]:""):"-";
   if(S.product==="jingle"){$("#sVoice").textContent=VOCALS[S.jVocal]+" · "+STYLES[S.jStyle];$("#sMusic").textContent="-"}
   else{var v=VOICES.find(function(x){return x[0]===S.voice});$("#sVoice").textContent=v?(v[3]==="f"?"קריינית ":"קריין ")+v[1]+(S.tone!=="normal"?" · "+(TONES.find(function(t){return t[0]===S.tone})||[,""])[1]:""):"-";var t=LIB&&LIB.tracks.find(function(x){return x.id===S.music});$("#sMusic").textContent=t?t.name:"-"}
-  if(S.choice){var pr=PRICE[S.choice.pkg][S.choice.human?"human":"ai"][0];$("#sPrice").textContent=TEST?"₪0 (בדיקה)":ils(pr);$("#sPrice").style.fontSize="34px"}
+  if(S.choice){var pr=PRICE[S.choice.pkg][S.choice.human?"human":"ai"][0];$("#sPrice").textContent=TEST?"₪5 (בדיקה)":ils(pr);$("#sPrice").style.fontSize="34px"}
   else{$("#sPrice").textContent="ייבחר בסוף";$("#sPrice").style.fontSize="24px"}
 }
 
@@ -674,7 +674,7 @@ function startPay(){
   var c=PRICE[S.choice.pkg][S.choice.human?"human":"ai"];
   $("#code").textContent=S.code||"…";$("#payBtn").href=payUrl(TEST?TEST_ID:c[1]);
   var what=(PRODUCTS.find(function(x){return x[0]===S.product})||[,""])[1]+(S.product==="ivr"?" "+(TIERS.find(function(t){return t[0]===S.choice.pkg})||[,""])[1]:"")+" · "+(S.choice.human?(S.product==="jingle"?"מלחין ומפיק":"קריין/ית באולפן"):(S.product==="jingle"?"הפקת AI":"קריינות AI"));
-  $("#payWhat").textContent=what+" · "+(TEST?"₪0 (בדיקה)":ils(c[0]))+" כולל מע\"מ";
+  $("#payWhat").textContent=what+" · "+(TEST?"₪5 (בדיקה)":ils(c[0]))+" כולל מע\"מ";
   if(S.k&&location.hash.indexOf(S.k)<0) history.replaceState(null,"","#k="+S.k);
   clearInterval(poll);check();poll=setInterval(check,5000);
 }

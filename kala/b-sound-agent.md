@@ -27,7 +27,18 @@
 ניקוי רעשים מהקלטה: דוגמית חינם ואז הצעת מחיר. [מחיר הניקוי האוטומטי ייקבע בהמשך]
 
 קישורים לשליחה ללקוח (עגלה ישירה בקאלה):
-{{LINKS}}
+- צליל המתנה – קריינות AI (150 ₪): https://kolot.kala-crm.co.il/order/cart_buy?id=76262
+- צליל המתנה – קריין/ית אנושי/ת (350 ₪): https://kolot.kala-crm.co.il/order/cart_buy?id=76263
+- נתב שיחות בייסיק – AI (349 ₪): https://kolot.kala-crm.co.il/order/cart_buy?id=76264
+- נתב שיחות סטנדרט – AI (749 ₪): https://kolot.kala-crm.co.il/order/cart_buy?id=76265
+- נתב שיחות פרימיום – AI (1390 ₪): https://kolot.kala-crm.co.il/order/cart_buy?id=76266
+- נתב שיחות בייסיק – קריין (490 ₪): https://kolot.kala-crm.co.il/order/cart_buy?id=76267
+- נתב שיחות סטנדרט – קריין (1090 ₪): https://kolot.kala-crm.co.il/order/cart_buy?id=76268
+- נתב שיחות פרימיום – קריין (2090 ₪): https://kolot.kala-crm.co.il/order/cart_buy?id=76269
+- שפה נוספת – AI (90 ₪): https://kolot.kala-crm.co.il/order/cart_buy?id=76270
+- שפה נוספת – קריין (200 ₪): https://kolot.kala-crm.co.il/order/cart_buy?id=76271
+- ג'ינגל מושר לעסק – AI (800 ₪): https://kolot.kala-crm.co.il/order/cart_buy?id=76272
+- ג'ינגל מושר – מלחין ומפיק (3000 ₪): https://kolot.kala-crm.co.il/order/cart_buy?id=76273
 
 ## לנושא 03 – מאגר הידע: KB-15 "B-Sound – קול לעסק"
 

@@ -347,7 +347,7 @@ async function bsTts(env, text, voiceId) {
 }
 // Gemini models change often: list the models this key can use (cached a day) and try the newest flash models first
 async function bsModels(env, key) {
-  const c = await getJ(env, 'config/gemini_models.json');
+  const c = await getJ(env, 'config/gemini_models2.json');
   if (c && Date.now() - c.at < 86400000 && c.models.length) return c.models;
   let models = [];
   try {
@@ -362,8 +362,8 @@ async function bsModels(env, key) {
         .slice(0, 5);
     }
   } catch (e) {}
-  models = models.concat(['gemini-flash-latest', 'gemini-flash-lite-latest'].filter(x => !models.includes(x)));
-  await putJ(env, 'config/gemini_models.json', { at: Date.now(), models });
+  models = ['gemini-3.8-flash'].concat(models.filter(x => x !== 'gemini-3.8-flash' && !/^gemini-2\./.test(x)), ['gemini-flash-latest', 'gemini-flash-lite-latest'].filter(x => !models.includes(x)));
+  await putJ(env, 'config/gemini_models2.json', { at: Date.now(), models });
   return models;
 }
 async function bsLLM(env, prompt) {
@@ -378,7 +378,7 @@ async function bsLLM(env, prompt) {
       });
       if (!r.ok) {
         errs.push(model + ' ' + r.status + ': ' + (await r.text()).replace(/\s+/g, ' ').slice(0, 140));
-        if (r.status === 404) await putJ(env, 'config/gemini_models.json', { at: 0, models: [] }); // refresh the list next time
+        if (r.status === 404) await putJ(env, 'config/gemini_models2.json', { at: 0, models: [] }); // refresh the list next time
         if (r.status === 404 || r.status === 429 || r.status >= 500) continue;
         throw new Error(errs.join(' | '));
       }

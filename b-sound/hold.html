@@ -344,7 +344,7 @@ var VOCALS=["זמר","זמרת","דואט","מקהלה","קולות ילדים"]
 var STYLES=["מתאים לתחום","פופ","ים תיכוני","רוק","היפ הופ","ג'אז / סווינג","אלקטרוני","אקוסטי","שמח ומקפיץ"];
 var STEPS=["העסק","מה צריך","נוסחים","קול ומוזיקה","האזנה","איך להפיק","תשלום","האזור שלכם"];
 var LIB=null;
-var S={step:1,max:1,field:"food",ai:null,product:"hold",deps:null,ivrManual:false,holdIdx:0,music:"quiet-piano",mcat:null,voice:"f1",vv:100,mv:35,duck:true,jLen:30,jVocal:1,jStyle:0,jVers:null,choice:null,k:null,code:"",st:null};
+var S={step:1,max:1,field:"food",ai:null,product:"hold",deps:null,ivrManual:false,holdIdx:0,music:"hold-pattern",mcat:null,voice:"f1",vv:100,mv:35,duck:true,jLen:30,jVocal:1,jStyle:0,jVers:null,choice:null,k:null,code:"",st:null};
 var A={};
 var FORM=["biz","site","fName","fSlogan","fServices","fHours","ivrIntro","ivrText","subTitle","subText","holdText","closedText","jText","name","phone","email"];
 try{var saved=JSON.parse(localStorage.getItem("bs_order2")||"null");if(saved) Object.assign(S,saved.S||{})}catch(e){saved=null}
@@ -522,7 +522,7 @@ $("#n3").onclick=function(){
 
 /* 4: voices, music, contact */
 var audio=new Audio();audio.preload="none";
-function loadLib(){return LIB?Promise.resolve(LIB):fetch("../music/library.json").then(function(r){return r.json()}).then(function(j){LIB=j;return j})}
+function loadLib(){return LIB?Promise.resolve(LIB):fetch("music/library.json").then(function(r){return r.json()}).then(function(j){LIB=j;if(!j.tracks.some(function(t){return t.id===S.music})){S.music=j.tracks[0].id;S.mcat=null}return j})}
 function renderStep4(){
   var jin=S.product==="jingle";
   if(jin){go(5);return}
@@ -544,7 +544,7 @@ $("#mCats").onclick=function(e){var b=e.target.closest("[data-mc]");if(!b)return
 $("#music").onclick=function(e){
   var p=e.target.closest("[data-play]"),m=e.target.closest("[data-m]");
   if(p){var id=p.dataset.play,was=PLAYING==="m:"+id;stop();if(was){renderMusic();return}
-    audio.src="../music/"+id+".mp3";audio.currentTime=0;audio.play();PLAYING="m:"+id;audio.onended=function(){stop()};renderMusic();return}
+    audio.src="music/"+id+".mp3";audio.currentTime=0;audio.play();PLAYING="m:"+id;audio.onended=function(){stop()};renderMusic();return}
   if(m){S.music=m.dataset.m;renderMusic();save()}
 };
 function vRow(v){var on=PLAYING==="v:"+v[0];return '<div class="vrow'+(v[0]===S.voice?" on":"")+'"><button class="play'+(on?" on":"")+'" type="button" data-vs="'+v[0]+'" aria-label="דוגמה">'+(on?"■":"▶")+'</button><button class="pick" type="button" data-v="'+v[0]+'">'+(v[3]==="f"?"קריינית ":"קריין ")+v[1]+'<small>'+v[2]+(v[0]===S.voice?" · ✓ נבחר":"")+'</small></button></div>'}
@@ -572,7 +572,7 @@ $("#n4").onclick=function(){
 var AC=null;function ac(){if(!AC) AC=new (window.AudioContext||window.webkitAudioContext)();return AC}
 function b64(s){var bin=atob(s),u=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i);return u.buffer}
 function decode(ab){return new Promise(function(res,rej){ac().decodeAudioData(ab,res,rej)})}
-var MB={};function musicBuf(id){if(MB[id]) return Promise.resolve(MB[id]);return fetch("../music/"+id+".mp3").then(function(r){return r.arrayBuffer()}).then(decode).then(function(b){MB[id]=b;return b})}
+var MB={};function musicBuf(id){if(MB[id]) return Promise.resolve(MB[id]);return fetch("music/"+id+".mp3").then(function(r){return r.arrayBuffer()}).then(decode).then(function(b){MB[id]=b;return b})}
 function render(vb,withMusic,maxDur){
   var sr=44100;
   if(!withMusic){

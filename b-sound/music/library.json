@@ -1,0 +1,162 @@
+{
+ "categories": [
+  {
+   "id": "biz",
+   "name": "עסקי"
+  },
+  {
+   "id": "modern",
+   "name": "מודרני וקצבי"
+  },
+  {
+   "id": "calm",
+   "name": "רגוע ונעים"
+  },
+  {
+   "id": "world",
+   "name": "ים תיכוני ועולמי"
+  }
+ ],
+ "tracks": [
+  {
+   "id": "hold-pattern",
+   "cat": "biz",
+   "name": "קורפורייט 3",
+   "dur": 90.0,
+   "orig": 115.3
+  },
+  {
+   "id": "hold-2",
+   "cat": "biz",
+   "name": "קורפורייט 2",
+   "dur": 90.0,
+   "orig": 170.7
+  },
+  {
+   "id": "hold-1",
+   "cat": "biz",
+   "name": "קורפורייט 1",
+   "dur": 39.4,
+   "orig": 39.4
+  },
+  {
+   "id": "phone-bg",
+   "cat": "biz",
+   "name": "רקע עסקי",
+   "dur": 90.0,
+   "orig": 120.1
+  },
+  {
+   "id": "phone-bg-2",
+   "cat": "biz",
+   "name": "רקע עסקי 2",
+   "dur": 90.0,
+   "orig": 126.6
+  },
+  {
+   "id": "on-hold-upbeat",
+   "cat": "biz",
+   "name": "אופטימי",
+   "dur": 90.0,
+   "orig": 170.8
+  },
+  {
+   "id": "hiphop",
+   "cat": "modern",
+   "name": "היפ הופ",
+   "dur": 90.0,
+   "orig": 116.2
+  },
+  {
+   "id": "groove",
+   "cat": "modern",
+   "name": "גרוב",
+   "dur": 21.8,
+   "orig": 21.8
+  },
+  {
+   "id": "rock",
+   "cat": "modern",
+   "name": "רוק",
+   "dur": 90.0,
+   "orig": 113.9
+  },
+  {
+   "id": "dj-party",
+   "cat": "modern",
+   "name": "קצבי",
+   "dur": 90.0,
+   "orig": 95.7
+  },
+  {
+   "id": "relax",
+   "cat": "calm",
+   "name": "שאנטי",
+   "dur": 90.0,
+   "orig": 162.3
+  },
+  {
+   "id": "happy",
+   "cat": "calm",
+   "name": "שמח",
+   "dur": 90.0,
+   "orig": 337.7
+  },
+  {
+   "id": "classical",
+   "cat": "calm",
+   "name": "קלאסי",
+   "dur": 85.1,
+   "orig": 85.1
+  },
+  {
+   "id": "jazz",
+   "cat": "calm",
+   "name": "ג׳אז",
+   "dur": 76.4,
+   "orig": 76.4
+  },
+  {
+   "id": "blues",
+   "cat": "calm",
+   "name": "בלוז",
+   "dur": 90.0,
+   "orig": 155.9
+  },
+  {
+   "id": "kids",
+   "cat": "calm",
+   "name": "ילדותי",
+   "dur": 21.4,
+   "orig": 21.4
+  },
+  {
+   "id": "med",
+   "cat": "world",
+   "name": "ים תיכוני",
+   "dur": 90.0,
+   "orig": 161.2
+  },
+  {
+   "id": "mizrahi",
+   "cat": "world",
+   "name": "מזרחי",
+   "dur": 90.0,
+   "orig": 187.5
+  },
+  {
+   "id": "world",
+   "cat": "world",
+   "name": "מוזיקת עולם",
+   "dur": 90.0,
+   "orig": 146.2
+  },
+  {
+   "id": "salsa",
+   "cat": "world",
+   "name": "סלסה",
+   "dur": 90.0,
+   "orig": 119.1
+  }
+ ]
+}

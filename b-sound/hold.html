@@ -262,7 +262,6 @@ aside dt{color:#5A606A;font-size:13px}aside dd{margin:2px 0 0;font-weight:700}
 <b style="font-size:19px" id="payWhat"></b>
 <ol class="howpay">
 <li>לחצו על "לתשלום מאובטח". טופס התשלום ייפתח בלשונית חדשה, והשם, הטלפון והאימייל כבר ימולאו בו.</li>
-<li>בשדה "סוג אירוע" בחרו "אחר" (כבר כתוב שם "עסק").</li>
 <li>אחרי התשלום חזרו לדף הזה. הוא יעבור לבד לאזור שלכם.</li>
 </ol>
 </div>
@@ -682,7 +681,7 @@ function startPay(){
 function check(){if(!S.k) return;call({action:"bs_state",k:S.k}).then(function(r){if(!r.ok) return;S.code=r.code;$("#code").textContent=r.code;if(r.paid){clearInterval(poll);S.st=r;go(8)}})}
 
 function payUrl(id){
-  var q="&full_name="+encodeURIComponent($("#name").value.trim().replace(/\s+/g,"\u00a0"))+"&mobile="+encodeURIComponent($("#phone").value.replace(/[^\d+]/g,""))+"&email="+encodeURIComponent($("#email").value.trim())+"&event_type="+encodeURIComponent("עסק");
+  var q="&full_name="+encodeURIComponent($("#name").value.trim().replace(/\s+/g,"\u00a0"))+"&mobile="+encodeURIComponent($("#phone").value.replace(/[^\d+]/g,""))+"&email="+encodeURIComponent($("#email").value.trim())+"&company_name="+encodeURIComponent((bizName()||"B-Sound").replace(/\s+/g,"\u00a0"));
   return KALA+id+q;
 }
 /* 8: client area */

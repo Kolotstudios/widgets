@@ -303,14 +303,18 @@ aside dt{color:#5A606A;font-size:13px}aside dd{margin:2px 0 0;font-weight:700}
 <label class="f">סוג<select id="addType"><option value="closed">העסק סגור</option><option value="custom">חג / חופשה / אחר</option><option value="sub">תת־נתב</option></select></label>
 <label class="f">כותרת<input type="text" id="addTitle" maxlength="40" placeholder="לדוגמה: סגור בחג"></label>
 </div>
+<p class="hint" style="margin:12px 0 6px">בחרו תבנית ונמלא אותה בשם העסק, או כתבו בעצמכם:</p>
+<div class="chips" id="addTpl"></div>
 <label class="f" style="margin-top:12px">נוסח<textarea id="addText" rows="3" maxlength="700"></textarea></label>
 <div class="acts"><button class="btn sm" id="addBtn" type="button">הוספת הודעה</button></div>
+<p class="hint" id="addNote" style="margin:8px 0 0"></p>
 </div>
 <div class="box" id="langBox">
 <b>הוספת שפה</b>
 <p class="sub" style="font-size:14px">נתרגם את כל ההודעות המאושרות. תוכלו לבדוק ולתקן את התרגום לפני האישור.</p>
 <div class="row"><label class="f">שפה<select id="langSel"></select></label></div>
 <div class="acts"><button class="btn sm" id="langBtn" type="button">הוספת השפה</button></div>
+<p class="hint" id="langNote" style="margin:8px 0 0"></p>
 </div>
 </div>
 </section>
@@ -734,6 +738,7 @@ function drawPortal(){
   var used=r.items.map(function(x){return x.lang});
   $("#langSel").innerHTML=Object.keys(r.langs).filter(function(l){return l!=="he"&&used.indexOf(l)<0}).map(function(l){return '<option value="'+l+'">'+esc(r.langs[l])+'</option>'}).join("");
   $("#addType").querySelector('[value="sub"]').hidden=!/ivr-(standard|premium)/.test(r.pkg);
+  drawTpl();creditLabels();setTimeout(runPend,300);
 }
 function itemCard(it){
   var ed=openEdit[it.id],music=it.type==="hold",st=it.draft?'<span class="badge" style="background:#3A2E12;color:var(--acc)">טיוטה – לבדיקה ואישור</span>':'<span class="badge">מאושר · גרסה '+it.ver+'</span>';
@@ -781,23 +786,52 @@ $("#items").onclick=function(e){
   });
 };
 $("#items").addEventListener("input",function(e){if(e.target.classList.contains("edt")){var id=e.target.closest(".itm").dataset.id;openEdit[id]=e.target.value}});
-function needBuy(kind){
+var TPL=[
+ ["closed","משרד סגור","המשרד סגור","שלום, הגעתם ל{n}. המשרד סגור כעת. שעות הפעילות שלנו: {h}. השאירו הודעה או כתבו לנו בוואטסאפ, ונחזור אליכם בהקדם. תודה ולהתראות."],
+ ["custom","סגור בחג","סגור בחג","שלום, הגעתם ל{n}. לרגל החג המשרד סגור, ונחזור לפעילות מלאה מיד אחרי החג. חג שמח מכל הצוות!"],
+ ["custom","חופשה","חופשה","שלום, הגעתם ל{n}. יצאנו לחופשה קצרה, ונחזור אליכם ברגע שהפעילות תתחדש. תודה על הסבלנות ולהתראות."],
+ ["custom","סגור היום","סגור היום","שלום, הגעתם ל{n}. היום המשרד סגור בשל אירוע מיוחד. נחזור לפעילות רגילה מחר. תודה על ההבנה."],
+ ["custom","שעות חדשות","שעות פעילות חדשות","שלום, הגעתם ל{n}. שימו לב, שעות הפעילות שלנו השתנו: {h}. נשמח לעמוד לשירותכם."]
+];
+function bizN(){return (S.st&&S.st.biz)||bizName()||"העסק"}
+function hoursTxt(){var h=$("#fHours").value.trim();if(h) return h;var c=S.st&&S.st.items.find(function(x){return x.type==="closed"});var m=c&&c.script.match(/שעות הפעילות שלנו:?\s*([^.]+)/);return m?m[1].trim():"[שעות הפעילות]"}
+function drawTpl(){$("#addTpl").innerHTML=TPL.map(function(t,i){return '<button type="button" class="pill" data-tp="'+i+'">'+t[1]+'</button>'}).join("")}
+$("#addTpl").onclick=function(e){var b=e.target.closest("[data-tp]");if(!b) return;var t=TPL[+b.dataset.tp];$("#addType").value=t[0];$("#addTitle").value=t[2];$("#addText").value=t[3].replace("{n}",bizN()).replace("{h}",hoursTxt());$("#addText").focus()};
+// a paid add-on (message / language) is remembered here, and finished by itself once the credit arrives
+function pendKey(){return "bs_pend_"+S.k}
+function setPend(p){try{p?localStorage.setItem(pendKey(),JSON.stringify(p)):localStorage.removeItem(pendKey())}catch(e){}}
+function getPend(){try{return JSON.parse(localStorage.getItem(pendKey())||"null")}catch(e){return null}}
+function creditLabels(){
+  var c=S.st.credits;
+  $("#addBtn").textContent=c.msgLeft>0?"הוספת הודעה (נשארו "+c.msgLeft+")":"הוספת הודעה · 90 ₪";
+  $("#addNote").textContent=c.msgLeft>0?"ההודעה תתווסף מיד ותופיע למעלה לבדיקה ואישור.":"הודעה נוספת עולה 90 ₪ כולל מע\"מ. אחרי התשלום תחזרו לכאן, וההודעה שכתבתם תתווסף לבד.";
+  $("#langBtn").textContent=c.langLeft>0?"הוספת השפה (נשארו "+c.langLeft+")":"הוספת השפה · 90 ₪";
+  $("#langNote").textContent=c.langLeft>0?"נתרגם את ההודעות ותוכלו לבדוק את התרגום לפני האישור.":"שפה נוספת עולה 90 ₪ כולל מע\"מ. אחרי התשלום תחזרו לכאן, והתרגום יתחיל לבד.";
+}
+function runPend(){
+  var p=getPend(),c=S.st&&S.st.credits;if(!p||!c) return;
+  if(p.kind==="add"&&c.msgLeft>0){setPend(null);$("#addType").value=p.type;$("#addTitle").value=p.title;$("#addText").value=p.script;$("#addBtn").click()}
+  if(p.kind==="lang"&&c.langLeft>0){setPend(null);$("#langSel").value=p.lang;$("#langBtn").click()}
+}
+function needBuy(kind,pend){
   var c=CREDIT[kind];if(!c) return;
-  $("#buyMsg").innerHTML="כדי להמשיך צריך לרכוש <b>"+c.t+"</b> ב־"+c.p+" ₪ (כולל מע\"מ).";
+  if(pend) setPend(pend);
+  $("#buyMsg").innerHTML="כדי להמשיך צריך לרכוש <b>"+c.t+"</b> ב־"+c.p+" ₪ (כולל מע\"מ)."+(pend?" שמרנו את מה שביקשתם: אחרי התשלום תחזרו לכאן והוא יבוצע לבד.":"");
   $("#buyBtn").href=payUrl(TEST?TEST_CREDIT:c.id);$("#buyBtn").textContent="לרכישה בקאלה";$("#buyCode").textContent=S.code;$("#buyBox").hidden=false;
   $("#buyBox").scrollIntoView({behavior:"smooth",block:"center"});
 }
 $("#addBtn").onclick=function(){
+  if($("#addText").value.trim().length<6){err("#e8","כתבו נוסח להודעה, או בחרו תבנית.");return}
   var b=this;b.disabled=true;err("#e8");
   call({action:"bs_add",k:S.k,type:$("#addType").value,title:$("#addTitle").value,script:$("#addText").value}).then(function(r){
-    b.disabled=false;if(!r.ok){if(r.need) needBuy(r.need);err("#e8",r.error);return}
+    b.disabled=false;if(!r.ok){if(r.need){needBuy(r.need,{kind:"add",type:$("#addType").value,title:$("#addTitle").value,script:$("#addText").value});return}err("#e8",r.error);return}
     $("#addText").value="";$("#addTitle").value="";$("#buyBox").hidden=true;S.st=r;drawPortal();
   });
 };
 $("#langBtn").onclick=function(){
   var b=this,l=$("#langSel").value;if(!l) return;b.disabled=true;b.innerHTML='<span class="spin"></span> מתרגמים…';err("#e8");
   call({action:"bs_lang",k:S.k,lang:l}).then(function(r){
-    b.disabled=false;b.textContent="הוספת השפה";if(!r.ok){if(r.need) needBuy(r.need);err("#e8",r.error);return}
+    b.disabled=false;creditLabels();if(!r.ok){if(r.need){needBuy(r.need,{kind:"lang",lang:l});return}err("#e8",r.error);return}
     $("#buyBox").hidden=true;S.st=r;drawPortal();
   });
 };

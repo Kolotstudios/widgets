@@ -114,12 +114,13 @@ aside dt{color:#5A606A;font-size:13px}aside dd{margin:2px 0 0;font-weight:700}
 #myText .t{white-space:pre-wrap;font-size:16px;line-height:1.7;margin:6px 0 0}
 #myText .it{margin-top:10px}#myText .it:first-of-type{margin-top:6px}
 .howpay{margin:12px 0 0;padding-inline-start:22px;font-size:16px;line-height:1.8}
+@media(max-width:640px){.tagline{display:none}}
 </style>
 </head>
 <body>
 <header><div class="wrap">
 <a class="logo" href="https://www.b-sound.co.il"><span class="bars" aria-hidden="true"><i style="height:10px"></i><i style="height:20px"></i><i style="height:15px"></i><i style="height:24px"></i></span><span dir="ltr">B·SOUND</span></a>
-<span style="color:var(--muted);font-size:15px">צליל המתנה, נתב שיחות וג'ינגל לעסק</span>
+<span style="display:flex;align-items:center;gap:14px"><span class="tagline" style="color:var(--muted);font-size:15px">צליל המתנה, נתב שיחות וג'ינגל לעסק</span><button type="button" class="btn ghost sm" id="restart" hidden>הזמנה חדשה</button></span>
 </div></header>
 
 <div class="wrap">
@@ -210,7 +211,9 @@ aside dt{color:#5A606A;font-size:13px}aside dd{margin:2px 0 0;font-weight:700}
 <div class="box" id="myText"></div>
 <div id="vBox">
 <p style="margin:22px 0 8px;font-size:17px;font-weight:800">1. בחרו קול</p>
-<div class="vcols"><div><p class="hint" style="margin:0 0 6px">קרייניות</p><div class="vlist" id="voicesF"></div></div><div><p class="hint" style="margin:0 0 6px">קריינים</p><div class="vlist" id="voicesM"></div></div></div>
+<div class="vcols" style="margin-bottom:6px"><div><p class="hint" style="margin:0 0 6px">קרייניות</p><div class="vlist" id="voicesF"></div></div><div><p class="hint" style="margin:0 0 6px">קריינים</p><div class="vlist" id="voicesM"></div></div></div>
+<p style="margin:16px 0 8px;font-size:15px;font-weight:700">איך להקריא? <span class="hint" style="font-weight:400">אחרי שבוחרים, לחצו ▶ על הקול ותשמעו את ההבדל</span></p>
+<div class="chips" id="tones"></div>
 </div>
 <div id="mBox"><p style="margin:26px 0 8px;font-size:17px;font-weight:800">2. בחרו מוזיקה <span class="hint" style="font-weight:400">רק לצליל ההמתנה. בתפריט ובהודעות אין מוזיקה</span></p><div class="chips" id="mCats"></div><div class="vlist" id="music"></div></div>
 <p class="err" id="e4" hidden></p>
@@ -338,17 +341,18 @@ var $=function(s){return document.querySelector(s)};
 var FIELDS=[["food","מסעדה / אוכל"],["clinic","מרפאה / קליניקה"],["office",'משרד / עו"ד / רו"ח'],["shop","חנות / קמעונאות"],["garage","מוסך / רכב"],["realestate",'נדל"ן'],["other","אחר"]];
 var DEPS={food:["הזמנות","משלוחים","שירות לקוחות"],clinic:["קביעת תורים","תוצאות בדיקות","הנהלה"],office:["תיאום פגישות","הנהלת חשבונות","שירות לקוחות"],shop:["מכירות","שירות לקוחות","החזרות"],garage:["תיאום טיפול","חלקי חילוף","שירות לקוחות"],realestate:["מכירות","השכרות","שירות לקוחות"],other:["מכירות","שירות לקוחות","הנהלת חשבונות"]};
 var LINES={food:"אפשר להזמין אצלנו משלוחים ואירועים בקלות.",clinic:"הבריאות שלכם חשובה לנו.",office:"נשמח לעזור לכם בכל שאלה.",shop:"מבצעים חדשים מחכים לכם אצלנו.",garage:"הרכב שלכם בידיים טובות.",realestate:"אנחנו כאן כדי למצוא לכם את הבית הבא.",other:"נשמח לעמוד לשירותכם."};
+var TONES=[["normal","רגיל"],["happy","שמח"],["excited","נלהב"],["energetic","אנרגטי"],["calm","רגוע"],["warm","חם ואישי"],["formal","רשמי"]];
 var VOICES=[["f1","עסקית","בהירה ומקצועית","f"],["f2","צעירה","רעננה וקלילה","f"],["f3","רכה","שקטה ונעימה","f"],["m1","צעיר","אנרגטי וחברי","m"],["m2","חם","בוגר ובטוח","m"],["m3","סמכותי","רשמי ויציב","m"]];
 var VOCALS=["זמר","זמרת","דואט","מקהלה","קולות ילדים"];
 var STYLES=["מתאים לתחום","פופ","ים תיכוני","רוק","היפ הופ","ג'אז / סווינג","אלקטרוני","אקוסטי","שמח ומקפיץ"];
 var STEPS=["העסק","מה צריך","נוסחים","קול ומוזיקה","האזנה","איך להפיק","תשלום","האזור שלכם"];
 var LIB=null;
-var S={step:1,max:1,field:"food",ai:null,product:"hold",deps:null,ivrManual:false,holdIdx:0,music:"hold-pattern",mcat:null,voice:"f1",vv:100,mv:35,duck:true,jLen:30,jVocal:1,jStyle:0,jVers:null,choice:null,k:null,code:"",st:null};
+var S={step:1,max:1,field:"food",ai:null,product:"hold",deps:null,ivrManual:false,holdIdx:0,music:"hold-pattern",mcat:null,tone:"normal",voice:"f1",vv:100,mv:35,duck:true,jLen:30,jVocal:1,jStyle:0,jVers:null,choice:null,k:null,code:"",st:null};
 var A={};
 var FORM=["biz","site","fName","fSlogan","fServices","fHours","ivrIntro","ivrText","subTitle","subText","holdText","closedText","jText","name","phone","email"];
 try{var saved=JSON.parse(localStorage.getItem("bs_order2")||"null");if(saved) Object.assign(S,saved.S||{})}catch(e){saved=null}
 var hk=(location.hash.match(/k=([a-f0-9]+)/)||[])[1];if(hk&&hk!==S.k){S.k=hk;S.step=7}
-function save(){try{var f={};FORM.forEach(function(id){f[id]=$("#"+id).value});var keep={};["step","max","field","ai","product","deps","ivrManual","holdIdx","music","voice","vv","mv","duck","jLen","jVocal","jStyle","jVers","choice","k","code"].forEach(function(x){keep[x]=S[x]});localStorage.setItem("bs_order2",JSON.stringify({S:keep,f:f}))}catch(e){}}
+function save(){try{var f={};FORM.forEach(function(id){f[id]=$("#"+id).value});var keep={};["tone","step","max","field","ai","product","deps","ivrManual","holdIdx","music","voice","vv","mv","duck","jLen","jVocal","jStyle","jVers","choice","k","code"].forEach(function(x){keep[x]=S[x]});localStorage.setItem("bs_order2",JSON.stringify({S:keep,f:f}))}catch(e){}}
 if(saved&&saved.f) FORM.forEach(function(id){if(saved.f[id]!=null) $("#"+id).value=saved.f[id]});
 if(TEST) $("#testBar").hidden=false;
 
@@ -373,7 +377,7 @@ $("#steps").onkeydown=function(e){if(e.key==="Enter"){var li=e.target.closest("[
 function go(n){
   stop();S.step=n;if(n<7) S.max=Math.max(S.max,n);
   document.querySelectorAll("main section").forEach(function(s){s.hidden=+s.dataset.s!==n});
-  renderSteps();save();window.scrollTo({top:0,behavior:"smooth"});
+  renderSteps();save();upRestart();window.scrollTo({top:0,behavior:"smooth"});
   if(n===2) renderProds();if(n===3) renderScripts();if(n===4) renderStep4();
   if(n===5) renderPreview();if(n===6) renderChoose();if(n===7) startPay();if(n===8) portal();
   side();
@@ -382,7 +386,7 @@ function side(){
   $("#sBiz").textContent=bizName()||"-";
   var p=PRODUCTS.find(function(x){return x[0]===S.product});$("#sProd").textContent=p?p[1]+(S.choice&&S.product==="ivr"?" · "+(TIERS.find(function(t){return t[0]===S.choice.pkg})||[,""])[1]:""):"-";
   if(S.product==="jingle"){$("#sVoice").textContent=VOCALS[S.jVocal]+" · "+STYLES[S.jStyle];$("#sMusic").textContent="-"}
-  else{var v=VOICES.find(function(x){return x[0]===S.voice});$("#sVoice").textContent=v?(v[3]==="f"?"קריינית ":"קריין ")+v[1]:"-";var t=LIB&&LIB.tracks.find(function(x){return x.id===S.music});$("#sMusic").textContent=t?t.name:"-"}
+  else{var v=VOICES.find(function(x){return x[0]===S.voice});$("#sVoice").textContent=v?(v[3]==="f"?"קריינית ":"קריין ")+v[1]+(S.tone!=="normal"?" · "+(TONES.find(function(t){return t[0]===S.tone})||[,""])[1]:""):"-";var t=LIB&&LIB.tracks.find(function(x){return x.id===S.music});$("#sMusic").textContent=t?t.name:"-"}
   if(S.choice){var pr=PRICE[S.choice.pkg][S.choice.human?"human":"ai"][0];$("#sPrice").textContent=TEST?"₪0 (בדיקה)":ils(pr);$("#sPrice").style.fontSize="34px"}
   else{$("#sPrice").textContent="ייבחר בסוף";$("#sPrice").style.fontSize="24px"}
 }
@@ -528,7 +532,7 @@ function renderStep4(){
   $("#mBox").hidden=!items().some(function(x){return x.type==="hold"});
   $("#myText").innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><b>הנוסח שלכם</b><button class="btn ghost sm" type="button" id="editTxt">עריכה</button></div>'+items().map(function(it){return '<div class="it"><small class="hint">'+esc(it.title)+'</small><p class="t" dir="auto">'+esc(it.script)+'</p></div>'}).join("");
   $("#editTxt").onclick=function(){go(3)};
-  renderVoices();renderMusic();
+  renderVoices();renderTones();renderMusic();prefetchVoices();
 }
 function renderMusic(){
   loadLib().then(function(L){
@@ -546,6 +550,11 @@ $("#music").onclick=function(e){
     audio.src="music/"+id+".mp3";audio.currentTime=0;audio.play();PLAYING="m:"+id;audio.onended=function(){stop()};renderMusic();return}
   if(m){S.music=m.dataset.m;renderMusic();save()}
 };
+function renderTones(){$("#tones").innerHTML=TONES.map(function(t){return '<button type="button" class="pill'+(t[0]===S.tone?" on":"")+'" data-t="'+t[0]+'">'+t[1]+'</button>'}).join("")}
+$("#tones").onclick=function(e){var b=e.target.closest("[data-t]");if(!b)return;S.tone=b.dataset.t;renderTones();stop();prefetchVoices();side();save()};
+var VSP={};
+function sample(id){var key=id+":"+S.tone;if(!VSP[key]) VSP[key]=call({action:"bs_voice_sample",voice:id,tone:S.tone}).then(function(r){if(!r.ok) throw new Error(r.error);return decode(b64(r.mp3))}).catch(function(e){delete VSP[key];throw e});return VSP[key]}
+function prefetchVoices(){var order=[S.voice].concat(VOICES.map(function(v){return v[0]}).filter(function(x){return x!==S.voice}));var i=0;(function next(){if(i>=order.length) return;var id=order[i++];sample(id).catch(function(){}).then(function(){setTimeout(next,0)})})();setTimeout(function(){sample(order[1]).catch(function(){})},50)}
 function vRow(v){var on=PLAYING==="v:"+v[0];return '<div class="vrow'+(v[0]===S.voice?" on":"")+'"><button class="play'+(on?" on":"")+'" type="button" data-vs="'+v[0]+'" aria-label="דוגמה">'+(on?"■":"▶")+'</button><button class="pick" type="button" data-v="'+v[0]+'">'+(v[3]==="f"?"קריינית ":"קריין ")+v[1]+'<small>'+v[2]+(v[0]===S.voice?" · ✓ נבחר":"")+'</small></button></div>'}
 function renderVoices(){$("#voicesF").innerHTML=VOICES.filter(function(v){return v[3]==="f"}).map(vRow).join("");$("#voicesM").innerHTML=VOICES.filter(function(v){return v[3]==="m"}).map(vRow).join("")}
 var VS={};
@@ -553,13 +562,12 @@ function onVoice(e){
   var p=e.target.closest("[data-vs]"),b=e.target.closest("[data-v]");
   if(p){var id=p.dataset.vs,was=PLAYING==="v:"+id;stop();renderVoices();if(was) return;
     var pb=document.querySelector('[data-vs="'+id+'"]');pb.innerHTML='<span class="spin"></span>';
-    (VS[id]?Promise.resolve(VS[id]):call({action:"bs_voice_sample",voice:id}).then(function(r){if(!r.ok) throw new Error(r.error);return decode(b64(r.mp3))}).then(function(x){VS[id]=x;return x}))
-    .then(function(buf){playBuf(buf,null,"v:"+id);renderVoices()}).catch(function(x){renderVoices();err("#e4",x.message||"הדוגמה לא זמינה כרגע")});return}
+    sample(id).then(function(buf){playBuf(buf,null,"v:"+id);renderVoices()}).catch(function(x){renderVoices();err("#e4",x.message||"הדוגמה לא זמינה כרגע")});return}
   if(b){S.voice=b.dataset.v;renderVoices();side();save()}
 }
 $("#voicesF").onclick=onVoice;$("#voicesM").onclick=onVoice;
 function saveOrder(pkg,human){
-  return call({action:"bs_save",k:S.k,pkg:pkg,human:!!human,items:items(),voice:S.voice,music:S.music,mix:{vv:S.vv,mv:S.mv,duck:S.duck},jingle:{len:S.jLen,style:STYLES[S.jStyle],vocal:VOCALS[S.jVocal]},biz:bizName(),site:$("#site").value,name:$("#name").value,phone:$("#phone").value,email:$("#email").value})
+  return call({action:"bs_save",k:S.k,pkg:pkg,human:!!human,items:items(),voice:S.voice,tone:S.tone,music:S.music,mix:{vv:S.vv,mv:S.mv,duck:S.duck},jingle:{len:S.jLen,style:STYLES[S.jStyle],vocal:VOCALS[S.jVocal]},biz:bizName(),site:$("#site").value,name:$("#name").value,phone:$("#phone").value,email:$("#email").value})
   .then(function(r){if(!r.ok) throw new Error(r.error);S.k=r.k;S.code=r.code;save();return r});
 }
 $("#n4").onclick=function(){
@@ -614,7 +622,7 @@ function renderPreview(){
   $("#pvList").innerHTML=items().map(pvRow).join("");mixUi("");
 }
 function preview(it,row,script){
-  var key="p:"+it.id+":"+(script||it.script)+":"+S.voice;
+  var key="p:"+it.id+":"+(script||it.script)+":"+S.voice+":"+S.tone;
   var btn=row.querySelector(".play");
   if(PLAYING==="p:"+it.id){stop();return}
   stop();btn.innerHTML='<span class="spin"></span>';
@@ -807,6 +815,9 @@ function mp3(b){
   });
 }
 
+/* restart */
+function upRestart(){$("#restart").hidden=!(S.max>1||S.k)}
+$("#restart").onclick=function(){if(!confirm("להתחיל הזמנה חדשה? הנוסחים והבחירות יימחקו מהדף הזה.")) return;try{localStorage.removeItem("bs_order2")}catch(e){}location.href=location.pathname+(TEST?"?test=1":"")};
 /* boot */
 pills();mixUi("");
 if(S.ai||$("#fName").value){$("#found").hidden=false;$("#foundMsg").innerHTML='<span class="ok">✓</span> הפרטים שמורים.'}

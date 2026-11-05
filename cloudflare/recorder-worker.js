@@ -340,6 +340,12 @@ function bsWatermark(t, lang) {
   const out = [wm]; parts.forEach((x, i) => { out.push(x); if (i % 2 === 1 || i === parts.length - 1) out.push(wm); });
   return out.join(' ');
 }
+// ElevenLabs v3 audio tags: a delivery style is set by a tag in front of each sentence
+const BS_TONES = { normal: '', happy: '[cheerfully]', excited: '[excited]', energetic: '[energetic]', calm: '[calmly]', warm: '[warmly]', formal: '[professional tone]' };
+function bsTone(t, tone) {
+  const tag = BS_TONES[tone] || ''; if (!tag) return t;
+  return t.split(/(?<=[.!?…])\s+/).filter(Boolean).map(x => tag + ' ' + x).join(' ');
+}
 async function bsTts(env, text, voiceId) {
   if (!env.ELEVENLABS_API_KEY) throw new Error('חסר מפתח ElevenLabs בשרת');
   const r = await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + voiceId + '?output_format=mp3_44100_128', {
@@ -524,11 +530,12 @@ async function bsJingle(d, env, ip) {
 }
 async function bsVoiceSample(d, env, ip) {
   const vmap = bsVoices(env), v = vmap[d.voice] ? d.voice : null; if (!v) return { ok: false, error: 'קול לא מוכר' };
-  const key = 'bs/vs/' + v + '-' + vmap[v] + '.mp3';
+  const tone = BS_TONES[d.tone] ? d.tone : 'normal';
+  const key = 'bs/vs/' + v + '-' + vmap[v] + (tone === 'normal' ? '' : '-' + tone) + '.mp3';
   let b = await getBin(env, key);
   if (!b) {
     if (!(await bsIpOk(env, ip, 'vs', 30))) return { ok: false, error: 'נסו שוב מאוחר יותר' };
-    b = await bsTts(env, 'שלום, הגעתם לבי סאונד. כל הנציגים שלנו עסוקים כרגע, אבל השיחה שלכם תיענה בהקדם. תודה שהמתנתם.', vmap[v]);
+    b = await bsTts(env, bsTone('שלום, הגעתם לבי סאונד. כל הנציגים שלנו עסוקים כרגע, אבל השיחה שלכם תיענה בהקדם. תודה שהמתנתם.', tone), vmap[v]);
     await env.BUCKET.put(key, b, { httpMetadata: { contentType: 'audio/mpeg' } });
   }
   return { ok: true, mp3: bytesToB64(b) };
@@ -545,7 +552,7 @@ function bsCredits(o) {
 function bsPublic(o) {
   return {
     ok: true, paid: !!o.paid, code: o.code, pkg: o.pkg, human: !!o.human, studio: !!o.human || o.pkg === 'jingle', jingle: o.jingle || null,
-    test: !!o.test, voice: o.voice, music: o.music, mix: o.mix || {}, biz: o.biz,
+    test: !!o.test, voice: o.voice, tone: o.tone || 'normal', music: o.music, mix: o.mix || {}, biz: o.biz,
     credits: bsCredits(o), langs: BS_LANGS,
     items: (o.items || []).map(x => ({ id: x.id, type: x.type, title: x.title, lang: x.lang || 'he', script: x.script, draft: !!x.draft, ver: x.ver | 0, pending: x.pending || '' }))
   };
@@ -574,7 +581,7 @@ async function bsound(d, env, ip) {
     if (o && o.paid) return { ok: false, error: 'ההזמנה כבר שולמה. שינויים נעשים באזור הלקוח' };
     if (!o) { if (!(await bsIpOk(env, ip, 'order', BS_IP_DAY))) return { ok: false, error: 'הגעתם למספר ההזמנות היומי. פנו אלינו ונשמח לעזור' }; key = tok(); o = { code: bsCode(), created: Date.now(), previews: 0 }; }
     const pkg = BS_PKG[d.pkg] ? d.pkg : 'hold';
-    Object.assign(o, { pkg, items: bsItemsIn(d.items, pkg), voice: vmap[d.voice] ? d.voice : 'f1', music: String(d.music || '').slice(0, 40), mix: d.mix || {},
+    Object.assign(o, { pkg, items: bsItemsIn(d.items, pkg), voice: vmap[d.voice] ? d.voice : 'f1', tone: BS_TONES[d.tone] ? d.tone : 'normal', music: String(d.music || '').slice(0, 40), mix: d.mix || {},
       human: !!d.human, jingle: pkg === 'jingle' ? { len: Math.max(7, Math.min(60, d.jingle && d.jingle.len | 0 || 30)), style: String(d.jingle && d.jingle.style || '').slice(0, 30), vocal: String(d.jingle && d.jingle.vocal || '').slice(0, 30) } : null,
       biz: String(d.biz || '').slice(0, 80), site: String(d.site || '').slice(0, 120), name: String(d.name || '').slice(0, 60),
       phone: String(d.phone || '').replace(/[^\d+]/g, '').slice(0, 15), email: String(d.email || '').slice(0, 80), expires: Date.now() + BS_DAYS * 86400000 });
@@ -593,7 +600,7 @@ async function bsound(d, env, ip) {
     let text = item.script;
     if (d.script != null) { text = bsClean(d.script); if (text.length < 6) return { ok: false, error: 'הנוסח קצר מדי' }; if (item.draft) item.script = text; else item.pending = text; }
     o.previews = (o.previews | 0) + 1;
-    const mp3 = await bsTts(env, bsWatermark(text, item.lang || 'he'), vmap[o.voice] || BS_VOICES_DEFAULT.f1);
+    const mp3 = await bsTts(env, bsTone(bsWatermark(text, item.lang || 'he'), o.tone), vmap[o.voice] || BS_VOICES_DEFAULT.f1);
     await bsSave(env, k, o);
     return { ok: true, mp3: bytesToB64(mp3), previewsLeft: limit - o.previews };
   }
@@ -603,9 +610,9 @@ async function bsound(d, env, ip) {
     if (!item) return { ok: false, error: 'ההודעה לא נמצאה' };
     if (o.human || o.pkg === 'jingle') return { ok: false, studio: true, error: 'ההפקה נעשית באולפן. הקבצים יגיעו אליכם במייל' };
     if (item.draft) return { ok: false, error: 'צריך לאשר את ההודעה לפני ההורדה' };
-    const fk = 'bs/f/' + k + '/' + item.id + '-v' + item.ver + '.mp3';
+    const fk = 'bs/f/' + k + '/' + item.id + '-v' + item.ver + (o.tone && o.tone !== 'normal' ? '-' + o.tone : '') + '.mp3';
     let b = await getBin(env, fk);
-    if (!b) { b = await bsTts(env, item.script, vmap[o.voice] || BS_VOICES_DEFAULT.f1); await env.BUCKET.put(fk, b, { httpMetadata: { contentType: 'audio/mpeg' } }); }
+    if (!b) { b = await bsTts(env, bsTone(item.script, o.tone), vmap[o.voice] || BS_VOICES_DEFAULT.f1); await env.BUCKET.put(fk, b, { httpMetadata: { contentType: 'audio/mpeg' } }); }
     return { ok: true, mp3: bytesToB64(b), type: item.type, music: o.music, mix: o.mix || {}, code: o.code };
   }
   if (d.action === 'bs_edit') {

@@ -314,7 +314,7 @@ bs_add (extra message, uses a message credit), bs_lang (translation with Gemini,
 New items (added message, translated language) stay drafts – free edits and watermarked previews – until bs_approve. */
 const BS_PAGES = {
   76262: { pkg: 'hold' }, 76264: { pkg: 'ivr-basic' }, 76265: { pkg: 'ivr-standard' }, 76266: { pkg: 'ivr-premium' },
-  76274: { test: true }, 76275: { credit: 'revision' }, 76276: { credit: 'message' }, 76270: { credit: 'language' }
+  76274: { test: true }, 76277: { credit: 'test' }, 76275: { credit: 'revision' }, 76276: { credit: 'message' }, 76270: { credit: 'language' }
 }; // Kala page ids – keep in sync with kala/b-sound-catalog.json
 const BS_PKG = {
   'hold': { items: ['hold'], rev: 0, lang: 0, sub: false },
@@ -558,7 +558,10 @@ async function bsPaid(d, env, pageId) {
   if (!cands.length) { entry.matched = null; await putJ(env, 'config/kala_log.json', [entry].concat(log).slice(0, 100)); return { ok: true, matched: false }; }
   cands.sort((a, b) => b.score - a.score || (b.o.updated || 0) - (a.o.updated || 0));
   const { key, o } = cands[0];
-  if (info.credit) { o.credits = o.credits || {}; o.credits[info.credit] = (o.credits[info.credit] | 0) + qty; }
+  if (info.credit) {
+    o.credits = o.credits || {};
+    for (const c of info.credit === 'test' ? ['revision', 'message', 'language'] : [info.credit]) o.credits[c] = (o.credits[c] | 0) + qty;
+  }
   else {
     if (info.pkg) o.pkg = info.pkg; if (info.test) o.test = true;
     for (const x of o.items || []) { if (x.draft) { x.draft = false; x.ver = 1; x.approvedAt = Date.now(); } }

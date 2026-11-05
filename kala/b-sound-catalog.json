@@ -231,7 +231,8 @@
     "category_widget": 16323,
     "purchase_page": 76245,
     "test_product": 76274,
-    "cart_link": "https://kolot.kala-crm.co.il/order/cart_buy?id=<kala_id>"
+    "cart_link": "https://kolot.kala-crm.co.il/order/cart_buy?id=<kala_id>",
+    "test_credit_product": 76277
   },
   "packages": {
     "hold": {

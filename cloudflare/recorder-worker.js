@@ -346,14 +346,42 @@ function bsTone(t, tone) {
   const tag = BS_TONES[tone] || ''; if (!tag) return t;
   return t.split(/(?<=[.!?…])\s+/).filter(Boolean).map(x => tag + ' ' + x).join(' ');
 }
-async function bsTts(env, text, voiceId) {
+async function bsTts(env, text, voiceId, fmt) {
   if (!env.ELEVENLABS_API_KEY) throw new Error('חסר מפתח ElevenLabs בשרת');
-  const r = await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + voiceId + '?output_format=mp3_44100_128', {
-    method: 'POST', headers: { 'xi-api-key': env.ELEVENLABS_API_KEY, 'Content-Type': 'application/json', 'Accept': 'audio/mpeg' },
+  const r = await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + voiceId + '?output_format=' + (fmt || 'mp3_44100_128'), {
+    method: 'POST', headers: { 'xi-api-key': env.ELEVENLABS_API_KEY, 'Content-Type': 'application/json', 'Accept': fmt && /^pcm/.test(fmt) ? 'audio/pcm' : 'audio/mpeg' },
     body: JSON.stringify({ text, model_id: 'eleven_v3' })
   });
   if (!r.ok) throw new Error('הפקת הקול נכשלה (' + r.status + '): ' + (await r.text()).slice(0, 160));
   return new Uint8Array(await r.arrayBuffer());
+}
+// One clean take per (voice, tone, text), kept only on the server. The preview is the same take with hiss bursts over it,
+// and after payment the customer gets exactly that take without the hiss.
+const BS_SR = 22050;
+async function bsHash(t) { const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)); return [...new Uint8Array(d)].slice(0, 12).map(b => b.toString(16).padStart(2, '0')).join(''); }
+async function bsTake(env, text, voiceId, tone) {
+  const key = 'bs/c/' + (await bsHash(voiceId + '|' + (tone || 'normal') + '|' + text)) + '.pcm';
+  let b = await getBin(env, key);
+  if (!b) { b = await bsTts(env, bsTone(text, tone), voiceId, 'pcm_' + BS_SR); if (b.length % 2) b = b.subarray(0, b.length - 1); await env.BUCKET.put(key, b); }
+  return b;
+}
+function bsWav(pcm) {
+  const out = new Uint8Array(44 + pcm.length), v = new DataView(out.buffer), w = (o, t) => { for (let i = 0; i < t.length; i++) out[o + i] = t.charCodeAt(i); };
+  w(0, 'RIFF'); v.setUint32(4, 36 + pcm.length, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, BS_SR, true); v.setUint32(28, BS_SR * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, pcm.length, true);
+  out.set(pcm, 44); return out;
+}
+// hiss burst of 1.2 s every 8 s (first at 2 s), loud enough that the take can't be reused
+function bsMark(pcm) {
+  const src = new Int16Array(pcm.buffer, pcm.byteOffset, pcm.length / 2), x = new Int16Array(src), n = x.length;
+  const len = Math.round(1.2 * BS_SR), fade = Math.round(0.04 * BS_SR);
+  for (let start = 2 * BS_SR; start < n; start += 8 * BS_SR) {
+    for (let i = 0; i < len && start + i < n; i++) {
+      const g = Math.min(1, i / fade, (len - i) / fade), noise = (Math.random() * 2 - 1) * 0.3 * 32767 * g;
+      x[start + i] = Math.max(-32768, Math.min(32767, Math.round(x[start + i] * (1 - 0.35 * g) + noise)));
+    }
+  }
+  return new Uint8Array(x.buffer);
 }
 // Gemini models change often: list the models this key can use (cached a day) and try the newest flash models first
 async function bsModels(env, key) {
@@ -600,7 +628,7 @@ async function bsound(d, env, ip) {
     let text = item.script;
     if (d.script != null) { text = bsClean(d.script); if (text.length < 6) return { ok: false, error: 'הנוסח קצר מדי' }; if (item.draft) item.script = text; else item.pending = text; }
     o.previews = (o.previews | 0) + 1;
-    const mp3 = await bsTts(env, bsTone(bsWatermark(text, item.lang || 'he'), o.tone), vmap[o.voice] || BS_VOICES_DEFAULT.f1);
+    const mp3 = bsWav(bsMark(await bsTake(env, text, vmap[o.voice] || BS_VOICES_DEFAULT.f1, o.tone)));
     await bsSave(env, k, o);
     return { ok: true, mp3: bytesToB64(mp3), previewsLeft: limit - o.previews };
   }
@@ -610,9 +638,7 @@ async function bsound(d, env, ip) {
     if (!item) return { ok: false, error: 'ההודעה לא נמצאה' };
     if (o.human || o.pkg === 'jingle') return { ok: false, studio: true, error: 'ההפקה נעשית באולפן. הקבצים יגיעו אליכם במייל' };
     if (item.draft) return { ok: false, error: 'צריך לאשר את ההודעה לפני ההורדה' };
-    const fk = 'bs/f/' + k + '/' + item.id + '-v' + item.ver + (o.tone && o.tone !== 'normal' ? '-' + o.tone : '') + '.mp3';
-    let b = await getBin(env, fk);
-    if (!b) { b = await bsTts(env, bsTone(item.script, o.tone), vmap[o.voice] || BS_VOICES_DEFAULT.f1); await env.BUCKET.put(fk, b, { httpMetadata: { contentType: 'audio/mpeg' } }); }
+    const b = bsWav(await bsTake(env, item.script, vmap[o.voice] || BS_VOICES_DEFAULT.f1, o.tone));
     return { ok: true, mp3: bytesToB64(b), type: item.type, music: o.music, mix: o.mix || {}, code: o.code };
   }
   if (d.action === 'bs_edit') {

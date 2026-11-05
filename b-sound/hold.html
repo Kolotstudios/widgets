@@ -222,7 +222,7 @@ aside dt{color:#5A606A;font-size:13px}aside dd{margin:2px 0 0;font-weight:700}
 
 <section data-s="5" hidden>
 <h1 id="h5">שמעו לפני שמחליטים</h1>
-<p class="sub" id="sub5">בכל האזנה יש סימן מים קולי ("B-Sound, תצוגה מקדימה"). אחרי ההזמנה תקבלו קבצים נקיים.</p>
+<p class="sub" id="sub5">בהאזנה יש רחש קצר כל 8 שניות. אחרי ההזמנה תקבלו בדיוק את אותה הקלטה ששמעתם, בלי הרחש.</p>
 <div id="pvList"></div>
 <div id="mixBox" class="box" hidden>
 <b>מיקס צליל ההמתנה</b>
@@ -616,7 +616,7 @@ function pvRow(it){return '<div class="pv"><button class="play" type="button" da
 function renderPreview(){
   var jin=S.product==="jingle";if($("#back5")) $("#back5").hidden=jin;$("#pvList").hidden=jin;$("#mixBox").hidden=jin;$("#jRecap").hidden=!jin;
   $("#h5").textContent=jin?"סיכום הג'ינגל":"שמעו לפני שמחליטים";
-  $("#sub5").textContent=jin?"את הג'ינגל עצמו מפיקים אחרי ההזמנה. בהפקת AI תקבלו עד 10 גרסאות לבחירה, 2 בכל סבב, ותוכלו לבקש שינויים בין הסבבים.":"בכל האזנה יש סימן מים קולי (\"B-Sound, תצוגה מקדימה\"). אחרי ההזמנה תקבלו קבצים נקיים.";
+  $("#sub5").textContent=jin?"את הג'ינגל עצמו מפיקים אחרי ההזמנה. בהפקת AI תקבלו עד 10 גרסאות לבחירה, 2 בכל סבב, ותוכלו לבקש שינויים בין הסבבים.":"בהאזנה יש רחש קצר כל 8 שניות. אחרי ההזמנה תקבלו בדיוק את אותה הקלטה ששמעתם, בלי הרחש.";
   $("#n5").textContent=jin?"לבחירת סוג ההפקה":"אהבתי · לבחירת סוג ההפקה";
   if(jin){$("#jRecap").innerHTML='<b>'+esc(bizName())+' · '+S.jLen+' שניות · '+VOCALS[S.jVocal]+' · '+STYLES[S.jStyle]+'</b><p class="lyr" style="margin:12px 0 0">'+esc($("#jText").value)+'</p>';return}
   $("#pvList").innerHTML=items().map(pvRow).join("");mixUi("");

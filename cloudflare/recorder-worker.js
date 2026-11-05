@@ -345,19 +345,49 @@ async function bsTts(env, text, voiceId) {
   if (!r.ok) throw new Error('הפקת הקול נכשלה (' + r.status + '): ' + (await r.text()).slice(0, 160));
   return new Uint8Array(await r.arrayBuffer());
 }
+// Gemini models change often: list the models this key can use (cached a day) and try the newest flash models first
+async function bsModels(env, key) {
+  const c = await getJ(env, 'config/gemini_models.json');
+  if (c && Date.now() - c.at < 86400000 && c.models.length) return c.models;
+  let models = [];
+  try {
+    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', { headers: { 'x-goog-api-key': key } });
+    if (r.ok) {
+      const j = await r.json();
+      const ver = (n) => { const m = n.match(/gemini-(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : 0; };
+      models = (j.models || []).filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
+        .map(m => m.name.replace(/^models\//, ''))
+        .filter(n => /^gemini-[\d.]+-flash/.test(n) && !/(image|tts|audio|live|vision|thinking|embedding|exp)/.test(n))
+        .sort((a, b) => ver(b) - ver(a) || (/preview/.test(a) ? 1 : 0) - (/preview/.test(b) ? 1 : 0) || (/lite/.test(a) ? 1 : 0) - (/lite/.test(b) ? 1 : 0))
+        .slice(0, 5);
+    }
+  } catch (e) {}
+  models = models.concat(['gemini-flash-latest', 'gemini-flash-lite-latest'].filter(x => !models.includes(x)));
+  await putJ(env, 'config/gemini_models.json', { at: Date.now(), models });
+  return models;
+}
 async function bsLLM(env, prompt) {
   if (!env.GEMINI_API_KEY) throw new Error('GEMINI_API_KEY missing');
-  const errs = [];
-  for (const model of ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-flash-latest', 'gemini-flash-lite-latest']) {
-    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent', {
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': String(env.GEMINI_API_KEY).trim() },
-      body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.6 } })
-    });
-    if (!r.ok) { errs.push(model + ' ' + r.status + ': ' + (await r.text()).replace(/\s+/g, ' ').slice(0, 160)); if (r.status === 404 || r.status === 429 || r.status >= 500) continue; throw new Error(errs.join(' | ')); }
-    const j = await r.json();
-    const t = (((j.candidates || [])[0] || {}).content || {}).parts || [];
-    const txt = t.map(x => x.text || '').join('').replace(/^```(?:json)?\s*|\s*```$/g, '');
-    return JSON.parse(txt);
+  const key = String(env.GEMINI_API_KEY).trim(), errs = [];
+  const models = await bsModels(env, key);
+  for (let round = 0; round < 2; round++) {
+    for (const model of models) {
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+        body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.6 } })
+      });
+      if (!r.ok) {
+        errs.push(model + ' ' + r.status + ': ' + (await r.text()).replace(/\s+/g, ' ').slice(0, 140));
+        if (r.status === 404) await putJ(env, 'config/gemini_models.json', { at: 0, models: [] }); // refresh the list next time
+        if (r.status === 404 || r.status === 429 || r.status >= 500) continue;
+        throw new Error(errs.join(' | '));
+      }
+      const j = await r.json();
+      const t = (((j.candidates || [])[0] || {}).content || {}).parts || [];
+      const txt = t.map(x => x.text || '').join('').replace(/^```(?:json)?\s*|\s*```$/g, '');
+      return JSON.parse(txt);
+    }
+    if (round === 0) await new Promise(res => setTimeout(res, 2500)); // short wait, then one more round on overload
   }
   throw new Error(errs.join(' | ') || 'llm failed');
 }

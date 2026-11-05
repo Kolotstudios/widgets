@@ -1,5 +1,5 @@
 /** Kolot – remote blessing recorder backend on Cloudflare Workers + R2.
- * Bindings: BUCKET (R2 bucket). No secrets: the studio password is set on first use from the admin page
+ * Bindings: BUCKET (R2 bucket). Secret ELEVENLABS_API_KEY (B-Sound online hold tone). Optional var BS_VOICES (JSON {id: elevenlabs voice id}). No secrets: the studio password is set on first use from the admin page
  * and stored hashed in the bucket (config/admin.json).
  * Same API as the Apps Script version: POST JSON {action, ...}, actions rc_ping / rc_setup / rc_login / rc_* (studio) / rc_c_* (client link).
  *
@@ -59,6 +59,7 @@ const state = (e) => ({ paid: isPaid(e), draft: !!e.draft, nb: e.nb | 0, paidBle
 async function handle(d, env, ip) {
   if (d.action === 'rc_c_draft') return draft(d, env, ip);
   if (d.action === 'kala_paid') return kalaPaid(d, env);
+  if (/^bs_/.test(d.action)) return bsound(d, env, ip);
   if (d.action === 'rc_ping') { const c = await getJ(env, 'config/admin.json'); return { ok: true, service: 'kolot-recorder', admin: !!c }; }
   if (/^rc_c_/.test(d.action)) return client(d, env);
   const c = await getJ(env, 'config/admin.json');
@@ -87,6 +88,7 @@ async function kalaPaid(d, env) {
   const cfg = await getJ(env, 'config/kala.json');
   if (!cfg || !cfg.secret || String(d.secret || '') !== cfg.secret) return { ok: false, error: 'bad secret' };
   const pageId = parseInt(d.page_id, 10), qty = Math.max(1, parseInt(d.quantity, 10) || 1);
+  if (pageId in BS_PAGES) return bsPaid(d, env, pageId);
   if (!(pageId in KALA_PACKS) && pageId !== KALA_EXTRA) return { ok: true, ignored: true };
   const orderKey = String(d.order_id || '') + ':' + pageId;
   const phones = [last9(d.mobile), last9(d.phone)].filter(p => p.length === 9);
@@ -296,4 +298,92 @@ async function staff(d, env) {
     e.updated = Date.now(); await putJ(env, 'e/' + k, e); return { ok: true, state: state(e) };
   }
   return { ok: false, error: 'unknown action' };
+}
+
+
+/* ---------- B-Sound: online hold tone (bs_*) ----------
+Order = bs/o/<k>.json. The client page writes the script, picks music and a voice, and asks for a preview.
+The preview is ElevenLabs TTS of the script with a spoken watermark between sentences, so the clean voice never
+leaves the server before payment. Payment comes from Kala (same webhook as the recorder, product ids in BS_PAGES),
+matched by the 6-digit order code in the order comments or by phone. After payment bs_final returns the clean voice
+(generated once, cached) and the page mixes it with the music and encodes MP3 / WAV / WAV 8bit u-law. */
+const BS_PAGES = { 76262: 'hold-ai', 76274: 'test' }; // Kala page id -> product (76274 = ₪0 test product)
+const BS_MAX_CHARS = 420, BS_MAX_PREVIEWS = 8, BS_IP_DAY = 30, BS_DAYS = 30;
+const BS_VOICES_DEFAULT = { f1: 'EXAVITQu4vr4xnSDxMaL', f2: '21m00Tcm4TlvDq8ikWAM', m1: 'pNInz6obpgDQGcFmaJgB', m2: 'TxGEqnHWrfWFTfGW9XjX' };
+const BS_WM = 'B-Sound, תצוגה מקדימה.';
+function bsVoices(env) { try { return Object.assign({}, BS_VOICES_DEFAULT, env.BS_VOICES ? JSON.parse(env.BS_VOICES) : {}); } catch (e) { return BS_VOICES_DEFAULT; } }
+const bsClean = (t) => String(t || '').replace(/[<>{}\[\]]/g, '').replace(/\s+/g, ' ').trim().slice(0, BS_MAX_CHARS);
+function bsWatermark(t) {
+  const parts = t.split(/(?<=[.!?…])\s+/).filter(Boolean);
+  if (parts.length < 2) return BS_WM + ' ' + t + ' ' + BS_WM;
+  const out = [BS_WM]; parts.forEach((x, i) => { out.push(x); if (i % 2 === 1 || i === parts.length - 1) out.push(BS_WM); });
+  return out.join(' ');
+}
+async function bsTts(env, text, voiceId) {
+  if (!env.ELEVENLABS_API_KEY) throw new Error('חסר מפתח ElevenLabs בשרת');
+  const r = await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + voiceId + '?output_format=mp3_44100_128', {
+    method: 'POST', headers: { 'xi-api-key': env.ELEVENLABS_API_KEY, 'Content-Type': 'application/json', 'Accept': 'audio/mpeg' },
+    body: JSON.stringify({ text, model_id: 'eleven_v3' })
+  });
+  if (!r.ok) throw new Error('הפקת הקול נכשלה (' + r.status + '): ' + (await r.text()).slice(0, 160));
+  return new Uint8Array(await r.arrayBuffer());
+}
+function bsCode() { const a = new Uint32Array(1); crypto.getRandomValues(a); return String(100000 + (a[0] % 900000)); }
+async function bsIpOk(env, ip) {
+  const day = new Date().toISOString().slice(0, 10), key = 'bs/ip/' + day + '.json';
+  const m = (await getJ(env, key)) || {}; const n = (m[ip] | 0) + 1; if (n > BS_IP_DAY) return false;
+  m[ip] = n; await putJ(env, key, m); return true;
+}
+async function bsound(d, env, ip) {
+  const k = String(d.k || '').replace(/[^a-f0-9]/g, '').slice(0, 28);
+  if (d.action === 'bs_voices') return { ok: true, voices: Object.keys(bsVoices(env)) };
+  if (d.action === 'bs_preview') {
+    const script = bsClean(d.script); if (script.length < 10) return { ok: false, error: 'הנוסח קצר מדי' };
+    const vmap = bsVoices(env), voice = vmap[d.voice] ? d.voice : 'f1';
+    let o = k ? await getJ(env, 'bs/o/' + k + '.json') : null; let key = k;
+    if (o && o.paid) return { ok: false, error: 'ההזמנה כבר שולמה' };
+    if (!o) { if (!(await bsIpOk(env, ip))) return { ok: false, error: 'הגעתם למספר ההאזנות היומי. נסו מחר או פנו אלינו' }; key = tok(); o = { code: bsCode(), created: Date.now(), previews: 0 }; }
+    if (o.previews >= BS_MAX_PREVIEWS) return { ok: false, error: 'הגעתם למספר ההאזנות להזמנה הזאת. פנו אלינו ונשמח לעזור' };
+    Object.assign(o, { script, voice, music: String(d.music || '').slice(0, 40), mix: d.mix || {}, biz: String(d.biz || '').slice(0, 80),
+      name: String(d.name || '').slice(0, 60), phone: String(d.phone || '').replace(/[^\d+]/g, '').slice(0, 15), email: String(d.email || '').slice(0, 80),
+      previews: (o.previews | 0) + 1, updated: Date.now(), expires: Date.now() + BS_DAYS * 86400000 });
+    const mp3 = await bsTts(env, bsWatermark(script), vmap[voice]);
+    await putJ(env, 'bs/o/' + key + '.json', o);
+    return { ok: true, k: key, code: o.code, previewsLeft: BS_MAX_PREVIEWS - o.previews, mp3: bytesToB64(mp3) };
+  }
+  const o = k ? await getJ(env, 'bs/o/' + k + '.json') : null;
+  if (!o) return { ok: false, error: 'ההזמנה לא נמצאה' };
+  if (d.action === 'bs_mix') { if (!o.paid) { o.mix = d.mix || {}; o.music = String(d.music || o.music || '').slice(0, 40); await putJ(env, 'bs/o/' + k + '.json', o); } return { ok: true }; }
+  if (d.action === 'bs_state') return { ok: true, paid: !!o.paid, code: o.code, product: o.product || '', test: o.product === 'test' };
+  if (d.action === 'bs_final') {
+    if (!o.paid) return { ok: false, error: 'ההזמנה עוד לא שולמה' };
+    let b = o.voiceKey ? await getBin(env, o.voiceKey) : null;
+    if (!b) { b = await bsTts(env, o.script, bsVoices(env)[o.voice] || BS_VOICES_DEFAULT.f1); o.voiceKey = 'bs/f/' + k + '/voice.mp3'; await env.BUCKET.put(o.voiceKey, b, { httpMetadata: { contentType: 'audio/mpeg' } }); o.finalAt = Date.now(); await putJ(env, 'bs/o/' + k + '.json', o); }
+    return { ok: true, mp3: bytesToB64(b), script: o.script, voice: o.voice, music: o.music, mix: o.mix || {}, code: o.code, test: o.product === 'test' };
+  }
+  return { ok: false, error: 'פעולה לא מוכרת' };
+}
+async function bsPaid(d, env, pageId) {
+  const cfg = await getJ(env, 'config/kala.json');
+  if (!cfg || !cfg.secret || String(d.secret || '') !== cfg.secret) return { ok: false, error: 'bad secret' };
+  const phones = [last9(d.mobile), last9(d.phone)].filter(p => p.length === 9);
+  const codes = String(d.comments || '').match(/\d{6}/g) || [];
+  const cands = []; let cursor;
+  do {
+    const l = await env.BUCKET.list({ prefix: 'bs/o/', cursor }); cursor = l.truncated ? l.cursor : undefined;
+    for (const ob of l.objects) {
+      const o = await getJ(env, ob.key); if (!o || o.paid) continue;
+      const byCode = codes.includes(o.code), byPhone = o.phone && phones.includes(last9(o.phone));
+      if (byCode || byPhone) cands.push({ key: ob.key, o, score: (byCode ? 2 : 0) + (byPhone ? 1 : 0) });
+    }
+  } while (cursor);
+  const log = (await getJ(env, 'config/kala_log.json')) || [];
+  const entry = { at: Date.now(), order_id: String(d.order_id || ''), page_id: pageId, price: Number(d.price) || 0, qty: 1, name: String(d.name || '').slice(0, 60), phone: phones[0] || '', codes: codes.slice(0, 3), bsound: true };
+  if (!cands.length) { entry.matched = null; await putJ(env, 'config/kala_log.json', [entry].concat(log).slice(0, 100)); return { ok: true, matched: false }; }
+  cands.sort((a, b) => b.score - a.score || (b.o.updated || 0) - (a.o.updated || 0));
+  const { key, o } = cands[0];
+  Object.assign(o, { paid: true, paidAt: Date.now(), paidBy: 'kala', product: BS_PAGES[pageId], orderId: entry.order_id, price: entry.price, expires: Date.now() + BS_DAYS * 86400000 });
+  await putJ(env, key, o);
+  entry.matched = key; await putJ(env, 'config/kala_log.json', [entry].concat(log).slice(0, 100));
+  return { ok: true, matched: true };
 }

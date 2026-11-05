@@ -384,8 +384,11 @@ async function bsLLM(env, prompt) {
       });
     } catch (e) { return { ok: false, status: 504, text: async () => 'timeout after 30s' }; } finally { clearTimeout(timer); }
   };
-  for (const model of models) {
+  // busy (503) or per-minute quota (429): wait a moment and go over the list a second time
+  const list = models.concat(['__wait__'], models);
+  for (const model of list) {
     if (Date.now() - t0 > 50000) break;
+    if (model === '__wait__') { await new Promise(r => setTimeout(r, 2500)); continue; }
     let r = await call(model, /^gemini-3/.test(model));
     if (!r.ok && r.status === 400) r = await call(model, false); // model without thinking levels
     if (!r.ok) {
@@ -415,6 +418,12 @@ function bsSiteText(html) {
     .replace(/&nbsp;/g, ' ').replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/[ \t]+/g, ' ').replace(/\n\s*\n+/g, '\n').trim();
   return { title, desc, text: body.slice(0, 7000) };
 }
+function bsHours(t) {
+  const lines = String(t || '').split('\n').map(x => x.trim()).filter(x => x.length < 140);
+  const re = /(שעות|ימים|א['׳]?\s*[-–]\s*ה['׳]?|ראשון|שישי|ו['׳]|פתוח|sunday|monday|hours)/i, tm = /\d{1,2}[:.]\d{2}/;
+  const hit = []; lines.forEach((x, i) => { if (tm.test(x) && (re.test(x) || re.test(lines[i - 1] || ''))) hit.push(x); });
+  return [...new Set(hit)].slice(0, 4).join(' · ');
+}
 function bsFacts(d) {
   const f = d.facts || {};
   return { name: String(f.name || d.biz || '').slice(0, 80), slogan: String(f.slogan || '').slice(0, 120), hours: String(f.hours || '').slice(0, 120),
@@ -430,7 +439,26 @@ async function bsReadSite(url) {
     const ac = new AbortController(); const t = setTimeout(() => ac.abort(), 9000);
     const r = await fetch(u.toString(), { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; B-Sound script writer)', 'Accept': 'text/html' }, redirect: 'follow', signal: ac.signal });
     clearTimeout(t);
-    if (r.ok && /html/i.test(r.headers.get('content-type') || 'text/html')) return bsSiteText((await r.text()).slice(0, 600000));
+    if (r.ok && /html/i.test(r.headers.get('content-type') || 'text/html')) {
+      const html = (await r.text()).slice(0, 600000), out = bsSiteText(html);
+      // hours and contact details usually live on the contact page: read it too
+      const links = [...html.matchAll(/href=["']([^"'#]+)["']/gi)].map(m => m[1]).filter(h => /contact|צור|קשר|%D7%A6%D7%95%D7%A8|about|אודות/i.test(h));
+      const base = new URL(r.url || u.toString());
+      const seen = new Set();
+      for (const h of links) {
+        let lu; try { lu = new URL(h, base); } catch (e) { continue; }
+        if (lu.hostname !== base.hostname || seen.has(lu.pathname) || lu.pathname === base.pathname) continue;
+        seen.add(lu.pathname); if (seen.size > 2) break;
+        try {
+          const ac2 = new AbortController(); const t2 = setTimeout(() => ac2.abort(), 6000);
+          const r2 = await fetch(lu.toString(), { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; B-Sound script writer)', 'Accept': 'text/html' }, redirect: 'follow', signal: ac2.signal });
+          clearTimeout(t2);
+          if (r2.ok) out.text += '\n\n[עמוד ' + decodeURIComponent(lu.pathname) + ']\n' + bsSiteText((await r2.text()).slice(0, 400000)).text.slice(0, 3500);
+        } catch (e) {}
+      }
+      out.hoursHint = bsHours(out.text);
+      return out;
+    }
   } catch (e) { site.error = 'לא הצלחנו לקרוא את האתר'; }
   return site;
 }
@@ -447,7 +475,7 @@ async function bsWrite(env, facts, site) {
 שעות פעילות: "${facts.hours}"
 תחום: "${facts.field}"
 ${site && site.text ? `מידע מהאתר של העסק:
-כותרת: ${site.title}
+${site.hoursHint ? 'שורות שנראות כמו שעות פעילות: ' + site.hoursHint + '\n' : ''}כותרת: ${site.title}
 תיאור: ${site.desc}
 תוכן:
 ${site.text}
@@ -460,7 +488,7 @@ ${BS_STYLE}
 - slogan: אם נמסר סלוגן – בדיוק אותו סלוגן. אחרת: סלוגן או משפט מיתוג מהאתר כמעט מילה במילה, ואם אין – משפט קצר (עד 7 מילים) שנאמן למה שהעסק עושה.
 - services: אם נמסרו שירותים – אותם שירותים. אחרת 3 עד 5 השירותים המרכזיים מהאתר, כל אחד בשתיים־שלוש מילים.
 - departments: 2 עד 4 מחלקות הגיוניות לתפריט טלפוני של העסק (למשל: מכירות, שירות לקוחות, תיאום תורים, הנהלת חשבונות). מילה או שתיים, בלי "ל" בהתחלה.
-- hours: שעות הפעילות כפי שנמסרו או כפי שמופיעות באתר, אחרת מחרוזת ריקה.
+- hours: שעות הפעילות כפי שנמסרו או כפי שמופיעות באתר (גם בעמוד צור קשר), בקיצור, למשל "א׳–ה׳ 9:00–18:00, ו׳ 9:00–13:00". אם אין – מחרוזת ריקה.
 - hold: שלושה נוסחים לצליל המתנה, 25 עד 40 מילים כל אחד (פחות מ־30 שניות עם מוזיקה). מבנה: פתיחה עם שם העסק, משפט אחד עם הסלוגן או עם שירות אחד או שניים (לא יותר), ובקשה פשוטה להישאר על הקו. בלי מספרי טלפון.
 - closed: הודעה שהעסק סגור כרגע, עד 30 מילים. אם יש שעות פעילות – שלב אותן, אחרת כתוב בדיוק: [שעות הפעילות].
 - ivr_intro: משפט פתיחה קצר לתפריט, עד 14 מילים: "שלום, הגעתם ל[שם העסק]." ואם הסלוגן קצר – אחריו. בלי רשימת שירותים ובלי האפשרויות עצמן.`;
@@ -470,9 +498,9 @@ async function bsSite(d, env, ip) {
   if (!(await bsIpOk(env, ip, 'site', 25))) return { ok: false, error: 'הגעתם למספר הניתוחים היומי. אפשר להמשיך עם הנוסחים המוכנים' };
   const facts = bsFacts(d);
   const site = d.action === 'bs_site' ? await bsReadSite(String(d.url || '').trim()) : { title: '', desc: '', text: '' };
-  const meta = { title: site.title, desc: site.desc, read: !!site.text, error: site.error || '' };
+  const meta = { title: site.title, desc: site.desc, read: !!site.text, error: site.error || '', hours: site.hoursHint || '' };
   try { return { ok: true, ai: true, site: meta, result: await bsWrite(env, facts, site) }; }
-  catch (e) { return { ok: true, ai: false, llmError: String((e && e.message) || e).slice(0, 900), site: meta }; }
+  catch (e) { const m = String((e && e.message) || e); return { ok: true, ai: false, busy: /429|503|timeout/.test(m), llmError: m.slice(0, 900), site: meta }; }
 }
 async function bsJingle(d, env, ip) {
   if (!(await bsIpOk(env, ip, 'site', 25))) return { ok: false, error: 'הגעתם למספר הכתיבות היומי. נסו מחר או פנו אלינו' };

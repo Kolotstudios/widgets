@@ -133,10 +133,10 @@ aside dt{color:#5A606A;font-size:13px}aside dd{margin:2px 0 0;font-weight:700}
 <p class="sub" style="font-size:14px;margin-top:6px">אלה הפרטים שנשתמש בהם כדי לכתוב את הנוסחים. אפשר לתקן כל דבר.</p>
 <div class="row">
 <label class="f">שם העסק <span class="hint">כפי שייאמר בהקלטה</span><input type="text" id="fName" maxlength="60"></label>
-<label class="f">סלוגן <span class="hint">נשלב אותו במשפט הפתיחה</span><input type="text" id="fSlogan" maxlength="100"></label>
+<label class="f">סלוגן <span class="hint">נשלב אותו במשפט הפתיחה</span><textarea id="fSlogan" rows="2" maxlength="120" style="min-height:0"></textarea></label>
 </div>
 <label class="f" style="margin-top:14px">השירותים העיקריים <span class="hint">שורה לכל שירות. נזכיר אחד או שניים מהם בהקלטה</span><textarea id="fServices" rows="4" maxlength="400"></textarea></label>
-<label class="f" style="margin-top:14px">שעות פעילות <span class="hint">להודעת "העסק סגור". לא חובה</span><input type="text" id="fHours" maxlength="100" placeholder="לדוגמה: א׳–ה׳ 9:00–18:00"></label>
+<label class="f" style="margin-top:14px">שעות פעילות <span class="hint">להודעת "העסק סגור". לא חובה</span><input type="text" id="fHours" maxlength="120" placeholder="לדוגמה: א׳–ה׳ 9:00–18:00"></label>
 <div class="acts"><button class="btn" id="toProd" type="button">המשך</button></div>
 </div>
 </section>
@@ -388,15 +388,16 @@ $("#analyze").onclick=function(){
   waiting($("#anMsg"),["קוראים את האתר…","מזהים את השירותים והסלוגן…","כותבים נוסחים מותאמים…","עוד כמה שניות…"]);
   call({action:"bs_site",url:$("#site").value.trim(),biz:$("#biz").value.trim(),field:fieldName()}).then(function(r){
     clearInterval(waitT);$("#anMsg").textContent="";
-    var res=r.ok&&r.ai&&r.result?r.result:null;applyAi(res);
-    var msg;
-    if(res) msg='<span class="ok">✓</span> '+(r.site&&r.site.read?"קראנו את האתר. זה מה שמצאנו:":"לא הצלחנו לקרוא את האתר, אז כתבנו לפי שם העסק והתחום:");
-    else msg=(r.site&&r.site.error?r.site.error+". ":"")+"מלאו את הפרטים ונכתוב לפיהם.";
-    $("#foundMsg").innerHTML=msg;
-    $("#fName").value=res&&res.name||$("#biz").value.trim();$("#fSlogan").value=res&&res.slogan||(r.site&&r.site.desc||"").slice(0,90);
-    $("#fServices").value=(res&&res.services||[]).join("\n");$("#fHours").value=res&&res.hours||"";
+    var res=r.ok&&r.ai&&r.result?r.result:null;
+    if(!res&&r.ok&&r.busy&&!b.dataset.retried){b.dataset.retried="1";$("#anMsg").textContent="מערכת הכתיבה עמוסה, מנסים שוב…";setTimeout(function(){b.disabled=false;b.click()},1500);return "retry"}
+    delete b.dataset.retried;
+    if(!res){$("#foundMsg").innerHTML=(r.site&&r.site.error?r.site.error+". ":r.busy?"מערכת הכתיבה עמוסה כרגע. ":"")+'לחצו "קראו שוב" בעוד רגע, או מלאו את הפרטים בעצמכם.';$("#found").hidden=false;if(!$("#fName").value) $("#fName").value=$("#biz").value.trim();if(!$("#fHours").value&&r.site&&r.site.hours) $("#fHours").value=r.site.hours;save();return}
+    applyAi(res);
+    $("#foundMsg").innerHTML='<span class="ok">✓</span> '+(r.site&&r.site.read?"קראנו את האתר. זה מה שמצאנו:":"לא הצלחנו לקרוא את האתר, אז כתבנו לפי שם העסק והתחום:");
+    $("#fName").value=res.name||$("#biz").value.trim();$("#fSlogan").value=res.slogan||"";
+    $("#fServices").value=(res.services||[]).join("\n");$("#fHours").value=res.hours||(r.site&&r.site.hours)||"";
     $("#found").hidden=false;save();
-  }).then(function(){b.disabled=false;b.textContent="קראו שוב"});
+  }).then(function(x){if(x==="retry") return;b.disabled=false;b.textContent="קראו שוב"});
 };
 $("#toProd").onclick=function(){if(!bizName()){err("#e1","כתבו את שם העסק");return}go(2)};
 

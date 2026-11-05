@@ -304,8 +304,8 @@ html.embedded .wrap{padding-block:12px 16px}
           <div class="pair"><span>אבא</span><input type="text" id="kd" placeholder="למשל: אבי"><label class="late"><input type="checkbox" id="kdL"> ז״ל</label></div>
         </div>
         <div class="box"><div class="t" id="kgt">ההורים של החתן</div>
-          <div class="pair"><span>אמא</span><input type="text" id="kgm" placeholder="למשל: רונית"></div>
-          <div class="pair"><span>אבא</span><input type="text" id="kgd" placeholder="למשל: יוסי"></div>
+          <div class="pair"><span>אמא</span><input type="text" id="kgm" placeholder="למשל: רונית"><label class="late"><input type="checkbox" id="kgmL"> ז״ל</label></div>
+          <div class="pair"><span>אבא</span><input type="text" id="kgd" placeholder="למשל: יוסי"><label class="late"><input type="checkbox" id="kgdL"> ז״ל</label></div>
         </div>
         <p class="note">בנוסח המסורתי הכלה אומרת ״אני, נועה בת מיכל... עם דניאל בן רונית״, לכן כדאי למלא את שמות האמהות.</p>
         <div><label for="ksibs">אחים ואחיות <span class="hint">(שמות, מופרדים בפסיק, לא חובה)</span></label><input type="text" id="ksibs" placeholder="למשל: שירה, איתי"></div>
@@ -583,7 +583,7 @@ function ctx(){
  const selfData=from==='self'?{par:parentLabels(),pn:[$('p1').value.trim(),$('p2').value.trim()],sibs:LISTS.sibs.filter(s=>s.n).map(s=>({n:s.n,g:s.g,a:s.a}))}:null;
  const md=m==='adult'?'adult':m==='wed'?'wed':'kid';
  const csv=id=>$(id).value.split(/,|\n/).map(x=>x.trim()).filter(Boolean),ck=id=>$(id).checked;
- const kala=m==='kala'?{groom:name2,km:$('km').value.trim(),kmL:ck('kmL'),kd:$('kd').value.trim(),kdL:ck('kdL'),gm:$('kgm').value.trim(),gd:$('kgd').value.trim(),sibs:csv('ksibs'),late:csv('klate'),
+ const kala=m==='kala'?{groom:name2,km:$('km').value.trim(),kmL:ck('kmL'),kd:$('kd').value.trim(),kdL:ck('kdL'),gm:$('kgm').value.trim(),gmL:ck('kgmL'),gd:$('kgd').value.trim(),gdL:ck('kgdL'),sibs:csv('ksibs'),late:csv('klate'),
   inc:{home:ck('ki-home'),health:ck('ki-health'),par:ck('ki-par'),gpar:ck('ki-gpar'),sibs:ck('ki-sibs'),groom:ck('ki-groom'),others:ck('ki-others')},othersFree:$('kothers').value.trim(),how:$('khow').value.trim(),wish:$('kwish').value.trim()}:null;
  return {ev,m,md,kala,cg,sg,from,rel,spk,open,signAuto:sign,name:(ev==='wed'||ev==='hina')&&name2?name+' ו'+name2:name,age:$('age').value,
   sibsMention,sibsG:typeof sibsG!=='undefined'?sibsG:null,alive,late,traits:checked('traits').map(i=>TRAITS[i]),
@@ -687,7 +687,7 @@ function buildKala(c){
   add(2.5,3,REL?`וזכנו לגדל ילדים ונכדים עוסקים בתורה ובמצוות, שיביאו לנו ולהורינו הרבה נחת.`:TRAD?`ושנזכה לגדל יחד ילדים בריאים ושמחים, ולראות מהם רק נחת.`:`ושיום אחד נגדל יחד ילדים, בבית מלא באהבה כמו זה שגדלתי בו.`)}
  if(I.health)add(3,2,REL?`תן לנו בריאות ופרנסה בכבוד ובשפע, ונזכה לשמוח בחלקנו.`:TRAD?`שתהיה לנו בריאות, פרנסה טובה בכבוד, ושנדע תמיד לשמוח במה שיש לנו.`:`ושתמיד תהיה לנו בריאות, שקט ושמחה. זה כל מה שצריך.`);
  // parents
- const late=[];if(K.km&&K.kmL)late.push('אמא '+K.km);if(K.kd&&K.kdL)late.push('אבא '+K.kd);(K.late||[]).forEach(x=>late.push(x));
+ const late=[];if(K.km&&K.kmL)late.push('אמא '+K.km);if(K.kd&&K.kdL)late.push('אבא '+K.kd);let lateFem=null,lateBoth=false;{const gn=g||'החתן',bm=K.gm&&K.gmL,bd=K.gd&&K.gdL;if(bm&&bd){lateBoth=true;late.push(K.gm+' ו'+K.gd+' הוריו של '+gn)}else if(bm){late.push(K.gm+' אמו של '+gn);lateFem=true}else if(bd){late.push(K.gd+' אביו של '+gn);lateFem=false}}(K.late||[]).forEach(x=>late.push(x));
  const pm=!(K.km&&K.kmL),pd=!(K.kd&&K.kdL);
  if(I.par&&(pm||pd)){
   if(pm&&pd)add(4,1,REL?`ברך את אמא ואבא שלי, שגידלו אותי באהבה ובמסירות, ותן להם בריאות ואריכות ימים, ושיראו מאיתנו רק נחת.`:null,
@@ -696,10 +696,13 @@ function buildKala(c){
   else{const w=pm?'אמא':'אבא';add(4,1,REL?`ברך את ${w} שלי, ${pm?'שגידלה':'שגידל'} אותי באהבה ובמסירות, ותן ${pm?'לה':'לו'} בריאות ואריכות ימים.`:null,
     `${w}, תודה שגידלת אותי באהבה כל כך גדולה, ושנתת לי את הכלים לבנות בית משלי. כל מה שאני היום, זה בזכותך.`,
     `${w}, תודה על כל מה שנתת לי. אני מבטיחה לקחת את כל זה איתי לבית החדש שלנו.`)}}
- if(I.gpar){const gw=K.gm&&K.gd?'ולאמא ולאבא של '+(g||'החתן'):'ולהורים של '+(g||'החתן');
-  add(4.3,3,REL?`וברך גם את ההורים של ${g||'החתן'}, שגידלו אותו להיות האיש שהוא, ושקיבלו אותי באהבה כמו בת.`:null,`${gw}: תודה שקיבלתם אותי באהבה, ושגידלתם את האיש המדהים שאני מתחתנת איתו היום.`)}
+ if(I.gpar){const gn=g||'החתן',am=K.gm&&!K.gmL,ad=K.gd&&!K.gdL,anyLate=(K.gm&&K.gmL)||(K.gd&&K.gdL);
+  if(!anyLate){const gw=K.gm&&K.gd?'ולאמא ולאבא של '+gn:'ולהורים של '+gn;
+   add(4.3,3,REL?`וברך גם את ההורים של ${gn}, שגידלו אותו להיות האיש שהוא, ושקיבלו אותי באהבה כמו בת.`:null,`${gw}: תודה שקיבלתם אותי באהבה, ושגידלתם את האיש המדהים שאני מתחתנת איתו היום.`)}
+  else if(am||ad){const w=am?'אמא':'אבא',f=am;
+   add(4.3,3,REL?`וברך גם את ${w} של ${gn}, ${f?'שגידלה':'שגידל'} אותו להיות האיש שהוא, ${f?'וקיבלה':'וקיבל'} אותי באהבה כמו בת.`:null,`ול${w} של ${gn}: תודה שקיבלת אותי באהבה, ושגידלת את האיש המדהים שאני מתחתנת איתו היום.`)}}
  // remembering those who are not here
- if(late.length){const one=late.length===1,fem=/^(אמא|סבתא|דודה)/.test(late[0]);
+ if(late.length){const one=late.length===1&&!lateBoth,fem=(late.length===1&&lateFem!==null&&!(K.km&&K.kmL)&&!(K.kd&&K.kdL))?lateFem:/^(אמא|סבתא|דודה)/.test(late[0]);
   add(4.5,1,`ואני מזכירה באהבה את ${joinHe(late)} ז״ל. האהבה והזיכרון מלווים אותי היום אל החופה.`,
    one?`ואני מזכירה באהבה את ${late[0]} ז״ל. אני יודעת ש${fem?'היא הייתה':'הוא היה'} כל כך רוצה להיות כאן היום, ו${fem?'שהברכה שלה':'שהברכה שלו'} מלווה אותי אל החופה.`:`ואני מזכירה באהבה את ${joinHe(late)} ז״ל, שהיו רוצים כל כך להיות כאן היום. אני יודעת שהברכה שלהם מלווה אותי אל החופה.`,
    REL?`ואני מבקשת שתעלה את נשמת ${joinHe(late)} ז״ל, ${one?(fem?'ושהיא תהיה מליצת יושר':'ושהוא יהיה מליץ יושר'):'ושהם יהיו מליצי יושר'} עלינו ביום הזה.`:null)}

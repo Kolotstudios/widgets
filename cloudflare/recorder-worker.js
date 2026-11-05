@@ -314,15 +314,18 @@ bs_add (extra message, uses a message credit), bs_lang (translation with Gemini,
 New items (added message, translated language) stay drafts – free edits and watermarked previews – until bs_approve. */
 const BS_PAGES = {
   76262: { pkg: 'hold' }, 76264: { pkg: 'ivr-basic' }, 76265: { pkg: 'ivr-standard' }, 76266: { pkg: 'ivr-premium' },
+  76263: { pkg: 'hold', human: true }, 76267: { pkg: 'ivr-basic', human: true }, 76268: { pkg: 'ivr-standard', human: true }, 76269: { pkg: 'ivr-premium', human: true },
+  76272: { pkg: 'jingle' }, 76273: { pkg: 'jingle', human: true },
   76274: { test: true }, 76277: { credit: 'test' }, 76275: { credit: 'revision' }, 76276: { credit: 'message' }, 76270: { credit: 'language' }
 }; // Kala page ids – keep in sync with kala/b-sound-catalog.json
 const BS_PKG = {
   'hold': { items: ['hold'], rev: 0, lang: 0, sub: false },
   'ivr-basic': { items: ['ivr', 'hold', 'closed'], rev: 0, lang: 0, sub: false },
   'ivr-standard': { items: ['ivr', 'hold', 'closed'], rev: 2, lang: 0, sub: true },
-  'ivr-premium': { items: ['ivr', 'hold', 'closed'], rev: 7, lang: 2, sub: true }
+  'ivr-premium': { items: ['ivr', 'hold', 'closed'], rev: 7, lang: 2, sub: true },
+  'jingle': { items: ['jingle'], rev: 0, lang: 0, sub: false }
 };
-const BS_TYPES = { ivr: 'תפריט ניתוב', sub: 'תת־נתב', hold: 'צליל המתנה', closed: 'העסק סגור', custom: 'הודעה' };
+const BS_TYPES = { ivr: 'תפריט ניתוב', sub: 'תת־נתב', hold: 'צליל המתנה', closed: 'העסק סגור', custom: 'הודעה', jingle: "ג'ינגל מושר" };
 const BS_LANGS = { he: 'עברית', en: 'אנגלית', ar: 'ערבית', ru: 'רוסית', fr: 'צרפתית', es: 'ספרדית', uk: 'אוקראינית', ro: 'רומנית', fa: 'פרסית', th: 'תאית', fil: 'פיליפינית', hi: 'הינדית', zh: 'סינית', ka: 'גאורגית', tr: 'טורקית', pt: 'פורטוגזית', de: 'גרמנית', it: 'איטלקית', pl: 'פולנית' };
 const BS_MAX_CHARS = 1200, BS_MAX_ITEMS = 16, BS_PREVIEWS_DRAFT = 40, BS_PREVIEWS_PAID = 60, BS_IP_DAY = 40, BS_DAYS = 30, BS_YEAR = 365 * 86400000;
 const BS_VOICES_DEFAULT = { f1: 'EXAVITQu4vr4xnSDxMaL', f2: '21m00Tcm4TlvDq8ikWAM', m1: 'pNInz6obpgDQGcFmaJgB', m2: 'TxGEqnHWrfWFTfGW9XjX' };
@@ -412,48 +415,92 @@ function bsSiteText(html) {
     .replace(/&nbsp;/g, ' ').replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/[ \t]+/g, ' ').replace(/\n\s*\n+/g, '\n').trim();
   return { title, desc, text: body.slice(0, 7000) };
 }
-async function bsSite(d, env, ip) {
-  if (!(await bsIpOk(env, ip, 'site', 20))) return { ok: false, error: 'הגעתם למספר הניתוחים היומי. אפשר להמשיך עם הנוסחים המוכנים' };
-  const biz = String(d.biz || '').slice(0, 80), field = String(d.field || '').slice(0, 40);
-  let url = String(d.url || '').trim(), site = { title: '', desc: '', text: '' };
-  if (url) {
-    if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
-    try {
-      const u = new URL(url); if (!/\./.test(u.hostname) || /^(localhost|127\.|10\.|192\.168\.)/.test(u.hostname)) throw new Error('bad');
-      const ac = new AbortController(); const t = setTimeout(() => ac.abort(), 9000);
-      const r = await fetch(u.toString(), { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; B-Sound script writer)', 'Accept': 'text/html' }, redirect: 'follow', signal: ac.signal });
-      clearTimeout(t);
-      if (r.ok && /html/i.test(r.headers.get('content-type') || 'text/html')) site = bsSiteText((await r.text()).slice(0, 600000));
-    } catch (e) { site.error = 'לא הצלחנו לקרוא את האתר'; }
-  }
+function bsFacts(d) {
+  const f = d.facts || {};
+  return { name: String(f.name || d.biz || '').slice(0, 80), slogan: String(f.slogan || '').slice(0, 120), hours: String(f.hours || '').slice(0, 120),
+    services: (Array.isArray(f.services) ? f.services : String(f.services || '').split(/[\n,]/)).map(x => String(x).trim()).filter(Boolean).slice(0, 8).map(x => x.slice(0, 50)),
+    field: String(d.field || '').slice(0, 40) };
+}
+async function bsReadSite(url) {
+  const site = { title: '', desc: '', text: '' };
+  if (!url) return site;
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  try {
+    const u = new URL(url); if (!/\./.test(u.hostname) || /^(localhost|127\.|10\.|192\.168\.)/.test(u.hostname)) throw new Error('bad');
+    const ac = new AbortController(); const t = setTimeout(() => ac.abort(), 9000);
+    const r = await fetch(u.toString(), { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; B-Sound script writer)', 'Accept': 'text/html' }, redirect: 'follow', signal: ac.signal });
+    clearTimeout(t);
+    if (r.ok && /html/i.test(r.headers.get('content-type') || 'text/html')) return bsSiteText((await r.text()).slice(0, 600000));
+  } catch (e) { site.error = 'לא הצלחנו לקרוא את האתר'; }
+  return site;
+}
+const BS_STYLE = `כללי כתיבה:
+- עברית טבעית, תקנית ופשוטה, כמו שאדם נעים מדבר בטלפון. משפטים קצרים, שלמים והגיוניים, נושא אחד בכל משפט.
+- בלי ניסוחים מאולצים או "פרסומיים" מדי, בלי קלישאות כמו "אנו מתחייבים" או "המענה שלכם חשוב לנו", בלי לוכסנים (לא "בר/בת"), בלי רשימות ארוכות.
+- אסור להמציא עובדות שלא נמסרו: שעות, מחירים, כתובות, מבצעים, מספרים.`;
+async function bsWrite(env, facts, site) {
   const prompt = `אתה קופירייטר בכיר באולפן הקלטות שכותב הודעות למרכזיות טלפון של עסקים בישראל.
-שם העסק כפי שהלקוח כתב: "${biz}". תחום שהלקוח בחר: "${field}".
-מידע מהאתר של העסק (אם יש):
+פרטים שהלקוח מסר או אישר:
+שם העסק: "${facts.name}"
+סלוגן: "${facts.slogan}"
+שירותים עיקריים: ${facts.services.join(', ')}
+שעות פעילות: "${facts.hours}"
+תחום: "${facts.field}"
+${site && site.text ? `מידע מהאתר של העסק:
 כותרת: ${site.title}
 תיאור: ${site.desc}
 תוכן:
 ${site.text}
-
+` : ''}
 החזר JSON בלבד, במבנה:
 {"name":"","slogan":"","services":[""],"departments":[""],"hours":"","hold":[{"tone":"חם ואישי","text":""},{"tone":"רשמי ועסקי","text":""},{"tone":"קליל וצעיר","text":""}],"closed":"","ivr_intro":""}
 
+${BS_STYLE}
+- name: שם העסק. אם הלקוח מסר שם – בדיוק אותו שם.
+- slogan: אם נמסר סלוגן – בדיוק אותו סלוגן. אחרת: סלוגן או משפט מיתוג מהאתר כמעט מילה במילה, ואם אין – משפט קצר (עד 7 מילים) שנאמן למה שהעסק עושה.
+- services: אם נמסרו שירותים – אותם שירותים. אחרת 3 עד 5 השירותים המרכזיים מהאתר, כל אחד בשתיים־שלוש מילים.
+- departments: 2 עד 4 מחלקות הגיוניות לתפריט טלפוני של העסק (למשל: מכירות, שירות לקוחות, תיאום תורים, הנהלת חשבונות). מילה או שתיים, בלי "ל" בהתחלה.
+- hours: שעות הפעילות כפי שנמסרו או כפי שמופיעות באתר, אחרת מחרוזת ריקה.
+- hold: שלושה נוסחים לצליל המתנה, 25 עד 40 מילים כל אחד (פחות מ־30 שניות עם מוזיקה). מבנה: פתיחה עם שם העסק, משפט אחד עם הסלוגן או עם שירות אחד או שניים (לא יותר), ובקשה פשוטה להישאר על הקו. בלי מספרי טלפון.
+- closed: הודעה שהעסק סגור כרגע, עד 30 מילים. אם יש שעות פעילות – שלב אותן, אחרת כתוב בדיוק: [שעות הפעילות].
+- ivr_intro: משפט פתיחה קצר לתפריט, עד 14 מילים: "שלום, הגעתם ל[שם העסק]." ואם הסלוגן קצר – אחריו. בלי רשימת שירותים ובלי האפשרויות עצמן.`;
+  return bsLLM(env, prompt);
+}
+async function bsSite(d, env, ip) {
+  if (!(await bsIpOk(env, ip, 'site', 25))) return { ok: false, error: 'הגעתם למספר הניתוחים היומי. אפשר להמשיך עם הנוסחים המוכנים' };
+  const facts = bsFacts(d);
+  const site = d.action === 'bs_site' ? await bsReadSite(String(d.url || '').trim()) : { title: '', desc: '', text: '' };
+  const meta = { title: site.title, desc: site.desc, read: !!site.text, error: site.error || '' };
+  try { return { ok: true, ai: true, site: meta, result: await bsWrite(env, facts, site) }; }
+  catch (e) { return { ok: true, ai: false, llmError: String((e && e.message) || e).slice(0, 900), site: meta }; }
+}
+async function bsJingle(d, env, ip) {
+  if (!(await bsIpOk(env, ip, 'site', 25))) return { ok: false, error: 'הגעתם למספר הכתיבות היומי. נסו מחר או פנו אלינו' };
+  const f = bsFacts(d), len = Math.max(7, Math.min(60, d.len | 0 || 30));
+  const shape = len <= 15 ? 'שם העסק והסלוגן בלבד, מושרים בצורה קליטה (2 שורות קצרות).' : len <= 30 ? 'פזמון אחד של 3–4 שורות, שם העסק מופיע פעמיים.' : 'בית אחד של 4 שורות מחורזות על מה שהעסק עושה, ואחריו פזמון של 3–4 שורות ששם העסק מופיע בו פעמיים.';
+  const prompt = `אתה כותב ג'ינגלים מנוסה בישראל. כתוב מילים לג'ינגל מושר לעסק.
+שם העסק: "${f.name}". סלוגן: "${f.slogan}". שירותים: ${f.services.join(', ')}. תחום: "${f.field}".
+אורך: ${len} שניות. סגנון: "${String(d.style || '').slice(0, 30)}". קולות: "${String(d.vocal || '').slice(0, 30)}".
+מבנה: ${shape}
 כללים:
-- עברית טבעית, תקנית ופשוטה, כמו שמדברים בטלפון. משפטים שלמים והגיוניים, נושא אחד בכל משפט, בלי ניסוחים מאולצים ובלי סלנג מוגזם.
-- אסור להמציא עובדות שלא מופיעות במידע: שעות, מחירים, כתובות, מבצעים, מספרים. אם חסר – לא לכתוב.
-- name: שם העסק כפי שהוא מופיע באתר (או כפי שהלקוח כתב).
-- slogan: אם יש באתר סלוגן או משפט מיתוג – השתמש בו כמעט מילה במילה. אחרת נסח משפט קצר (עד 8 מילים) שנאמן למה שהעסק עושה.
-- services: 3 עד 6 השירותים או המוצרים המרכזיים, כל אחד בשתיים־שלוש מילים.
-- departments: 2 עד 5 מחלקות הגיוניות לתפריט טלפוני של העסק הזה (למשל: מכירות, שירות לקוחות, תיאום תורים, הנהלת חשבונות). מילה או שתיים כל אחת, בלי "ל" בהתחלה.
-- hours: שעות הפעילות אם מופיעות באתר, אחרת מחרוזת ריקה.
-- hold: שלושה נוסחים לצליל המתנה, כל אחד 30 עד 45 מילים (עד 30 שניות). כל נוסח: פותח בשם העסק, משלב את הסלוגן ושירות אחד או שניים בצורה טבעית, ומסתיים בבקשה להישאר על הקו. בלי מספרי טלפון.
-- closed: הודעה שהעסק סגור כרגע, עד 35 מילים. אם יש שעות פעילות שלב אותן, אחרת כתוב בדיוק: [שעות הפעילות].
-- ivr_intro: משפט פתיחה אחד לתפריט: "שלום, הגעתם ל..." עם השם והסלוגן. בלי האפשרויות עצמן.`;
-  try {
-    const j = await bsLLM(env, prompt);
-    return { ok: true, ai: true, site: { title: site.title, desc: site.desc, read: !!site.text, error: site.error || '' }, result: j };
-  } catch (e) {
-    return { ok: true, ai: false, llmError: String((e && e.message) || e).slice(0, 900), site: { title: site.title, desc: site.desc, read: !!site.text, error: site.error || '' } };
+- עברית פשוטה, טבעית ותקנית. כל שורה היא משפט הגיוני שעומד בפני עצמו. אף שורה לא נכתבת רק בשביל החריזה.
+- חריזה מלאה ומוכרת עדיפה על חריזה מקורית ומאולצת. בלי מילים מוזרות או לא טבעיות.
+- שם העסק בפזמון. הפזמון קליט, קל לשיר ולזכור.
+- בלי להמציא עובדות, מחירים או מבצעים.
+החזר JSON בלבד: {"versions":[{"lyrics":""},{"lyrics":""}]} – שתי גרסאות שונות, שורות מופרדות ב-\\n.`;
+  try { const j = await bsLLM(env, prompt); return { ok: true, ai: true, versions: (j.versions || []).map(v => bsClean(v.lyrics)).filter(Boolean).slice(0, 2) }; }
+  catch (e) { return { ok: true, ai: false, llmError: String((e && e.message) || e).slice(0, 300) }; }
+}
+async function bsVoiceSample(d, env, ip) {
+  const vmap = bsVoices(env), v = vmap[d.voice] ? d.voice : null; if (!v) return { ok: false, error: 'קול לא מוכר' };
+  const key = 'bs/vs/' + v + '-' + vmap[v] + '.mp3';
+  let b = await getBin(env, key);
+  if (!b) {
+    if (!(await bsIpOk(env, ip, 'vs', 30))) return { ok: false, error: 'נסו שוב מאוחר יותר' };
+    b = await bsTts(env, 'שלום, הגעתם לבי סאונד. כל הנציגים שלנו עסוקים כרגע, אבל השיחה שלכם תיענה בהקדם. תודה שהמתנתם.', vmap[v]);
+    await env.BUCKET.put(key, b, { httpMetadata: { contentType: 'audio/mpeg' } });
   }
+  return { ok: true, mp3: bytesToB64(b) };
 }
 const bsYearUsed = (o) => (o.revLog || []).filter(t => Date.now() - t < BS_YEAR).length;
 function bsCredits(o) {
@@ -466,7 +513,8 @@ function bsCredits(o) {
 }
 function bsPublic(o) {
   return {
-    ok: true, paid: !!o.paid, code: o.code, pkg: o.pkg, test: !!o.test, voice: o.voice, music: o.music, mix: o.mix || {}, biz: o.biz,
+    ok: true, paid: !!o.paid, code: o.code, pkg: o.pkg, human: !!o.human, studio: !!o.human || o.pkg === 'jingle', jingle: o.jingle || null,
+    test: !!o.test, voice: o.voice, music: o.music, mix: o.mix || {}, biz: o.biz,
     credits: bsCredits(o), langs: BS_LANGS,
     items: (o.items || []).map(x => ({ id: x.id, type: x.type, title: x.title, lang: x.lang || 'he', script: x.script, draft: !!x.draft, ver: x.ver | 0, pending: x.pending || '' }))
   };
@@ -485,7 +533,9 @@ function bsItemsIn(arr, pkg) {
 }
 async function bsSave(env, k, o) { o.updated = Date.now(); await putJ(env, 'bs/o/' + k + '.json', o); }
 async function bsound(d, env, ip) {
-  if (d.action === 'bs_site') return bsSite(d, env, ip);
+  if (d.action === 'bs_site' || d.action === 'bs_write') return bsSite(d, env, ip);
+  if (d.action === 'bs_jingle') return bsJingle(d, env, ip);
+  if (d.action === 'bs_voice_sample') return bsVoiceSample(d, env, ip);
   const k = String(d.k || '').replace(/[^a-f0-9]/g, '').slice(0, 28);
   const vmap = bsVoices(env);
   if (d.action === 'bs_save') {
@@ -494,6 +544,7 @@ async function bsound(d, env, ip) {
     if (!o) { if (!(await bsIpOk(env, ip, 'order', BS_IP_DAY))) return { ok: false, error: 'הגעתם למספר ההזמנות היומי. פנו אלינו ונשמח לעזור' }; key = tok(); o = { code: bsCode(), created: Date.now(), previews: 0 }; }
     const pkg = BS_PKG[d.pkg] ? d.pkg : 'hold';
     Object.assign(o, { pkg, items: bsItemsIn(d.items, pkg), voice: vmap[d.voice] ? d.voice : 'f1', music: String(d.music || '').slice(0, 40), mix: d.mix || {},
+      human: !!d.human, jingle: pkg === 'jingle' ? { len: Math.max(7, Math.min(60, d.jingle && d.jingle.len | 0 || 30)), style: String(d.jingle && d.jingle.style || '').slice(0, 30), vocal: String(d.jingle && d.jingle.vocal || '').slice(0, 30) } : null,
       biz: String(d.biz || '').slice(0, 80), site: String(d.site || '').slice(0, 120), name: String(d.name || '').slice(0, 60),
       phone: String(d.phone || '').replace(/[^\d+]/g, '').slice(0, 15), email: String(d.email || '').slice(0, 80), expires: Date.now() + BS_DAYS * 86400000 });
     await bsSave(env, key, o);
@@ -519,6 +570,7 @@ async function bsound(d, env, ip) {
   if (!o.paid) return { ok: false, error: 'ההזמנה עוד לא שולמה' };
   if (d.action === 'bs_final') {
     if (!item) return { ok: false, error: 'ההודעה לא נמצאה' };
+    if (o.human || o.pkg === 'jingle') return { ok: false, studio: true, error: 'ההפקה נעשית באולפן. הקבצים יגיעו אליכם במייל' };
     if (item.draft) return { ok: false, error: 'צריך לאשר את ההודעה לפני ההורדה' };
     const fk = 'bs/f/' + k + '/' + item.id + '-v' + item.ver + '.mp3';
     let b = await getBin(env, fk);
@@ -604,7 +656,7 @@ async function bsPaid(d, env, pageId) {
     for (const c of info.credit === 'test' ? ['revision', 'message', 'language'] : [info.credit]) o.credits[c] = (o.credits[c] | 0) + qty;
   }
   else {
-    if (info.pkg) o.pkg = info.pkg; if (info.test) o.test = true;
+    if (info.pkg) { o.pkg = info.pkg; o.human = !!info.human; } if (info.test) o.test = true;
     for (const x of o.items || []) { if (x.draft) { x.draft = false; x.ver = 1; x.approvedAt = Date.now(); } }
     Object.assign(o, { paid: true, paidAt: Date.now(), paidBy: 'kala', orderId: entry.order_id, price: entry.price, expires: Date.now() + BS_YEAR });
   }

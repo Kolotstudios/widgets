@@ -1,6 +1,7 @@
 /** Kolot – remote blessing recorder backend on Cloudflare Workers + R2.
  * Bindings: BUCKET (R2 bucket). Secrets for B-Sound (bs_*): ELEVENLABS_API_KEY (voice), GEMINI_API_KEY (reads the client's site and writes scripts). Optional var BS_VOICES (JSON {id: elevenlabs voice id}). No secrets: the studio password is set on first use from the admin page
  * and stored hashed in the bucket (config/admin.json).
+ * Karaoke studio (ks_* actions, ?ks= binary routes): secrets MVSEP_API_TOKEN (stem separation), optional OPENAI_API_KEY (Whisper; otherwise Gemini transcribes).
  * Same API as the Apps Script version: POST JSON {action, ...}, actions rc_ping / rc_setup / rc_login / rc_* (studio) / rc_c_* (client link).
  *
  * A project = one order. The client link carries a random key (#k=...). The first two devices that open the link
@@ -21,6 +22,8 @@ const out = (o) => new Response(JSON.stringify(o), { headers: H });
 export default {
   async fetch(req, env) {
     if (req.method === 'OPTIONS') return new Response(null, { headers: H });
+    const u = new URL(req.url);
+    if (u.searchParams.get('ks')) { try { return await ksHttp(req, env, u); } catch (err) { return out({ ok: false, error: String((err && err.message) || err).slice(0, 200) }); } }
     if (req.method !== 'POST') return out({ ok: true, service: 'kolot-recorder' });
     const raw = await req.text();
     let d; try { d = JSON.parse(raw); } catch (e) { d = lenient(raw); if (!d) return out({ ok: false, error: 'bad request' }); }
@@ -60,6 +63,7 @@ async function handle(d, env, ip) {
   if (d.action === 'rc_c_draft') return draft(d, env, ip);
   if (d.action === 'kala_paid') return kalaPaid(d, env);
   if (/^bs_/.test(d.action)) return bsound(d, env, ip);
+  if (/^ks_/.test(d.action)) return ksAction(d, env, ip);
   if (d.action === 'rc_ping') { const c = await getJ(env, 'config/admin.json'); return { ok: true, service: 'kolot-recorder', admin: !!c }; }
   if (/^rc_c_/.test(d.action)) return client(d, env);
   const c = await getJ(env, 'config/admin.json');
@@ -737,4 +741,235 @@ async function bsPaid(d, env, pageId) {
   o.updated = Date.now(); await putJ(env, key, o);
   entry.matched = key; await putJ(env, 'config/kala_log.json', [entry].concat(log).slice(0, 100));
   return { ok: true, matched: true };
+}
+
+/* ===================== Karaoke studio (ks_*) =====================
+ * Anyone with a personal access link (#a=KEY, made by the studio) can upload songs up to the link's quota.
+ * A song: the original goes straight to MVSEP (never stored here); the vocal + playback stems come back into R2.
+ * Everything of a song is deleted after KS_DAYS. Takes stay in the singer's browser; a take sent for music
+ * removal (speaker recordings) comes back as a vocal-only stem.
+ * Storage: ks/a/<key>.json (access link), ks/s/<id>.json (song), ks/f/<id>/<name> (audio).
+ */
+const KS_DAYS = 30, KS_MAX_BYTES = 60e6, KS_MAX_CLEANS = 3, KS_SWEEP_MS = 6 * 3600e3;
+const KS_SEP = { sep_type: '40', add_opt1: '81', add_opt2: '2', output_format: '0' }; // BS Roformer 2025.07, mp3 320
+const KS_DAY = 86400000;
+async function ksStaffTok(c, day) { return sha(c.hash + ':ks:' + day); }
+async function ksWho(env, d) {
+  if (d.st) {
+    const c = await getJ(env, 'config/admin.json'); const day = Math.floor(Date.now() / KS_DAY);
+    if (c && (d.st === await ksStaffTok(c, day) || d.st === await ksStaffTok(c, day - 1))) return { staff: true, owner: 'staff', name: 'צוות קולות' };
+    throw new Error('הכניסה של הצוות פגה. נכנסים שוב');
+  }
+  const a = String(d.a || '').replace(/[^a-f0-9]/g, '');
+  if (!a) throw new Error('חסר קישור אישי');
+  const acc = await getJ(env, 'ks/a/' + a + '.json');
+  if (!acc || !acc.active) throw new Error('הקישור לא פעיל. פונים לאולפני קולות');
+  if (acc.expires && Date.now() > acc.expires) throw new Error('תוקף הקישור הסתיים. פונים לאולפני קולות');
+  return { staff: false, owner: a, acc, name: acc.name };
+}
+async function ksSong(env, who, id) {
+  id = String(id || '').replace(/[^a-f0-9]/g, '');
+  const s = id && await getJ(env, 'ks/s/' + id + '.json');
+  if (!s || (!who.staff && s.owner !== who.owner)) throw new Error('השיר לא נמצא');
+  if (Date.now() > s.expires) throw new Error('השיר נמחק (עברו ' + KS_DAYS + ' יום)');
+  return s;
+}
+const ksPut = (env, s) => env.BUCKET.put('ks/s/' + s.id + '.json', JSON.stringify(s), { httpMetadata: { contentType: 'application/json' }, customMetadata: { exp: String(s.expires), owner: s.owner } });
+const ksPub = (s) => ({ id: s.id, title: s.title, status: s.status, created: s.created, expires: s.expires, dur: s.dur || 0, hasLyrics: !!(s.lyrics && s.lyrics.length), err: s.err || '' });
+async function ksDeleteSong(env, id) {
+  let cursor;
+  do { const l = await env.BUCKET.list({ prefix: 'ks/f/' + id + '/', cursor }); const keys = l.objects.map(o => o.key); if (keys.length) await env.BUCKET.delete(keys); cursor = l.truncated ? l.cursor : null; } while (cursor);
+  await env.BUCKET.delete('ks/s/' + id + '.json');
+}
+async function ksSweep(env) {
+  const m = (await getJ(env, 'config/ks_sweep.json')) || {}; if (Date.now() - (m.at || 0) < KS_SWEEP_MS) return;
+  await putJ(env, 'config/ks_sweep.json', { at: Date.now() });
+  let cursor, n = 0;
+  do {
+    const l = await env.BUCKET.list({ prefix: 'ks/s/', cursor, include: ['customMetadata'] });
+    for (const o of l.objects) { const exp = +((o.customMetadata || {}).exp || 0); if (exp && Date.now() > exp) { await ksDeleteSong(env, o.key.slice(5, -5)); n++; } }
+    cursor = l.truncated ? l.cursor : null;
+  } while (cursor && n < 200);
+}
+async function mvsep(env, path, form) {
+  if (!env.MVSEP_API_TOKEN) throw new Error('ההפרדה עוד לא חוברה (חסר מפתח MVSEP)');
+  form.append('api_token', String(env.MVSEP_API_TOKEN).trim());
+  const r = await fetch('https://mvsep.com/api/separation/' + path, { method: 'POST', body: form });
+  const t = await r.text(); let j; try { j = JSON.parse(t); } catch (e) { throw new Error('MVSEP ' + r.status + ': ' + t.slice(0, 120)); }
+  if (!j.success) throw new Error('MVSEP: ' + String(((j.data || {}).message) || j.message || r.status).slice(0, 160));
+  return j.data || {};
+}
+async function ksStart(env, bytes, type, name) {
+  const f = new FormData();
+  f.append('audiofile', new Blob([bytes], { type: type || 'audio/mpeg' }), name || 'song.mp3');
+  for (const k in KS_SEP) f.append(k, KS_SEP[k]);
+  const d = await mvsep(env, 'create', f);
+  if (!d.hash) throw new Error('MVSEP לא החזיר מספר עבודה');
+  return d.hash;
+}
+// the result's file list: entries (array or object) with a link and a label; vocals vs. everything-but-vocals
+function ksFiles(data) {
+  let list = data.files || [];
+  if (!Array.isArray(list)) list = Object.keys(list).map(k => Object.assign({ _label: k }, typeof list[k] === 'string' ? { url: list[k] } : list[k]));
+  const out = {};
+  for (const f of list) {
+    const url = [f.url, f.link, f.download, f.href].find(x => /^https?:/.test(String(x || '')));
+    if (!url) continue;
+    const label = [f._label, f.type, f.name, f.stem, String(f.download || f.file || url).split(/[/?#]/).filter(Boolean).pop()].filter(x => typeof x === 'string').join(' ').toLowerCase();
+    if (/instrum|no[ _-]?vocal|other|accomp|karaoke/.test(label)) { if (!out.i) out.i = url; }
+    else if (/vocal|voice/.test(label)) { if (!out.v) out.v = url; }
+  }
+  return out;
+}
+async function ksFetchTo(env, url, key) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('הורדה מ-MVSEP נכשלה (' + r.status + ')');
+  const len = +(r.headers.get('content-length') || 0);
+  if (len) await env.BUCKET.put(key, r.body, { httpMetadata: { contentType: 'audio/mpeg' } });
+  else await env.BUCKET.put(key, await r.arrayBuffer(), { httpMetadata: { contentType: 'audio/mpeg' } });
+}
+// job = {hash, status}; want = ['v','i'] or ['v']; names = {v: file name, i: file name}
+async function ksPoll(env, s, job, want, names) {
+  if (job.status === 'done' || job.status === 'failed') return job;
+  if (job.fetching && Date.now() - job.fetching < 90000) return job;
+  const r = await fetch('https://mvsep.com/api/separation/get?hash=' + encodeURIComponent(job.hash));
+  const j = await r.json().catch(() => ({}));
+  const st = j.status || 'waiting', data = j.data || {};
+  if (st === 'failed' || st === 'not_found') { job.status = 'failed'; job.err = String(data.message || st).slice(0, 160); return job; }
+  if (st !== 'done') { job.status = st; job.queue = data.current_order != null ? +data.current_order : (data.queue_count != null ? +data.queue_count : null); if (data.all_chunks) job.chunks = [data.finished_chunks | 0, data.all_chunks | 0]; return job; }
+  const files = ksFiles(data);
+  if (want.some(w => !files[w])) { job.status = 'failed'; job.err = 'לא נמצאו הערוצים בתשובה'; job.dbg = JSON.stringify(data.files || data).slice(0, 600); return job; }
+  job.fetching = Date.now(); await ksPut(env, s);
+  for (const w of want) await ksFetchTo(env, files[w], 'ks/f/' + s.id + '/' + names[w]);
+  job.status = 'done'; job.fetching = 0;
+  try { const f = new FormData(); f.append('hash', job.hash); await mvsep(env, 'delete', f); } catch (e) {} // no copy left at MVSEP
+  return job;
+}
+async function ksTranscribe(env, d) {
+  const b64 = String(d.audio || ''); if (!b64) throw new Error('אין שמע');
+  const lang = /^(he|en|ar|ru|fr|es)$/.test(d.lang) ? d.lang : '';
+  if (env.OPENAI_API_KEY) {
+    const f = new FormData();
+    f.append('file', new Blob([b64ToBytes(b64)], { type: d.mime || 'audio/mpeg' }), 'vocals.' + (/wav/.test(d.mime) ? 'wav' : 'mp3'));
+    f.append('model', 'whisper-1'); f.append('response_format', 'verbose_json'); f.append('timestamp_granularities[]', 'word');
+    if (lang) f.append('language', lang);
+    if (d.prompt) f.append('prompt', String(d.prompt).slice(0, 900));
+    const r = await fetch('https://api.openai.com/v1/audio/transcriptions', { method: 'POST', headers: { Authorization: 'Bearer ' + String(env.OPENAI_API_KEY).trim() }, body: f });
+    if (!r.ok) throw new Error('Whisper ' + r.status + ': ' + (await r.text()).slice(0, 160));
+    const j = await r.json();
+    return { via: 'whisper', lang: j.language || lang, words: (j.words || []).map(w => [w.word, +w.start, +w.end]) };
+  }
+  if (!env.GEMINI_API_KEY) throw new Error('התמלול לא מחובר');
+  const key = String(env.GEMINI_API_KEY).trim(); const models = await bsModels(env, key); const errs = [];
+  const prompt = 'This is an isolated lead-vocal track of a song. Transcribe the sung lyrics exactly as sung' + (lang ? ' (language: ' + lang + ')' : ' in the original language') +
+    ', split into the natural sung lines (phrases of about 3-9 words). For every line give its start and end time in seconds from the start of the audio, as precisely as possible. Ignore non-lyric sounds. ' +
+    (d.prompt ? 'The lyrics may be close to: ' + String(d.prompt).slice(0, 1500) + '. ' : '') +
+    'Answer as JSON only: {"lines":[{"start":12.3,"end":15.8,"text":"..."}]}';
+  for (const model of models) {
+    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+      body: JSON.stringify({ contents: [{ role: 'user', parts: [{ inline_data: { mime_type: d.mime || 'audio/mpeg', data: b64 } }, { text: prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.1 } }) });
+    if (!r.ok) { errs.push(model + ' ' + r.status); continue; }
+    const j = await r.json(); const t = ((((j.candidates || [])[0] || {}).content || {}).parts || []).filter(x => !x.thought).map(x => x.text || '').join('').replace(/^```(?:json)?\s*|\s*```$/g, '');
+    try { const o = JSON.parse(t); return { via: 'gemini', lang, lines: (o.lines || []).map(l => ({ t: +l.start || 0, e: +l.end || 0, text: String(l.text || '').trim() })).filter(l => l.text) }; } catch (e) { errs.push(model + ' bad json'); }
+  }
+  throw new Error('התמלול נכשל: ' + errs.join(' | ').slice(0, 160));
+}
+async function ksAction(d, env, ip) {
+  if (d.action === 'ks_s_login') {
+    const c = await getJ(env, 'config/admin.json');
+    if (!c || (await sha(c.salt + String(d.pass || ''))) !== c.hash) return { ok: false, error: 'סיסמה שגויה' };
+    return { ok: true, st: await ksStaffTok(c, Math.floor(Date.now() / KS_DAY)) };
+  }
+  const who = await ksWho(env, d);
+  try { await ksSweep(env); } catch (e) {}
+  if (/^ks_s_/.test(d.action)) {
+    if (!who.staff) throw new Error('רק לצוות');
+    if (d.action === 'ks_s_links') {
+      const items = []; let cursor;
+      do { const l = await env.BUCKET.list({ prefix: 'ks/a/', cursor }); for (const o of l.objects) { const a = await getJ(env, o.key); if (a) items.push(Object.assign({ key: o.key.slice(5, -5) }, a, { songs: (a.songs || []).length })); } cursor = l.truncated ? l.cursor : null; } while (cursor);
+      items.sort((x, y) => y.created - x.created); return { ok: true, items };
+    }
+    if (d.action === 'ks_s_link_new') {
+      const name = String(d.name || '').trim().slice(0, 60); if (!name) return { ok: false, error: 'חסר שם' };
+      const key = tok(), days = Math.max(1, Math.min(730, d.days | 0 || 90));
+      await putJ(env, 'ks/a/' + key + '.json', { name, phone: String(d.phone || '').replace(/[^\d+]/g, '').slice(0, 15), quota: Math.max(1, Math.min(500, d.quota | 0 || 5)), used: 0, created: Date.now(), expires: Date.now() + days * KS_DAY, active: true, songs: [] });
+      return { ok: true, key };
+    }
+    if (d.action === 'ks_s_link_set') {
+      const k = 'ks/a/' + String(d.key || '').replace(/[^a-f0-9]/g, '') + '.json'; const a = await getJ(env, k); if (!a) return { ok: false, error: 'לא נמצא' };
+      if (d.active != null) a.active = !!d.active; if (d.quota != null) a.quota = Math.max(0, d.quota | 0); if (d.days) a.expires = Date.now() + Math.min(730, d.days | 0) * KS_DAY; if (d.name) a.name = String(d.name).slice(0, 60);
+      await putJ(env, k, a); return { ok: true };
+    }
+    return { ok: false, error: 'unknown action' };
+  }
+  if (d.action === 'ks_hello') {
+    let ids = [];
+    if (who.staff) { const l = await env.BUCKET.list({ prefix: 'ks/s/', include: ['customMetadata'] }); ids = l.objects.filter(o => (o.customMetadata || {}).owner === 'staff').map(o => o.key.slice(5, -5)); }
+    else ids = (who.acc.songs || []).slice(-60);
+    const songs = [];
+    for (const id of ids) { const s = await getJ(env, 'ks/s/' + id + '.json'); if (s && Date.now() < s.expires) songs.push(ksPub(s)); }
+    songs.sort((a, b) => b.created - a.created);
+    return { ok: true, name: who.name, staff: who.staff, left: who.staff ? null : Math.max(0, who.acc.quota - who.acc.used), quota: who.staff ? null : who.acc.quota, expires: who.staff ? null : who.acc.expires, songs, days: KS_DAYS, transcriber: env.OPENAI_API_KEY ? 'whisper' : (env.GEMINI_API_KEY ? 'gemini' : ''), separator: !!env.MVSEP_API_TOKEN };
+  }
+  const s = await ksSong(env, who, d.id);
+  if (d.action === 'ks_status') {
+    if (s.status !== 'done' && s.status !== 'failed') {
+      const job = await ksPoll(env, s, s.job, ['v', 'i'], { v: 'vocals.mp3', i: 'inst.mp3' });
+      s.status = job.status === 'done' ? 'done' : job.status === 'failed' ? 'failed' : 'working'; if (job.err) s.err = job.err; await ksPut(env, s);
+    }
+    return { ok: true, song: ksPub(s), stage: (s.job || {}).status || '', queue: (s.job || {}).queue, chunks: (s.job || {}).chunks || null, dbg: (s.job || {}).dbg || '' };
+  }
+  if (d.action === 'ks_song') return { ok: true, song: ksPub(s), lyrics: s.lyrics || null, words: s.words || null, lang: s.lang || '', cleans: (s.cleans || []).map((c, n) => ({ n, status: c.status, err: c.err || '', at: c.at })) };
+  if (d.action === 'ks_save') {
+    if (d.title != null) s.title = String(d.title).trim().slice(0, 80) || s.title;
+    if (Array.isArray(d.lyrics)) s.lyrics = d.lyrics.slice(0, 400).map(l => ({ text: String(l.text || '').slice(0, 160), t: +l.t || 0, e: +l.e || 0, w: Array.isArray(l.w) ? l.w.slice(0, 40).map(x => [+(+x[0]).toFixed(2), +(+x[1]).toFixed(2)]) : null }));
+    if (d.lang != null) s.lang = String(d.lang).slice(0, 5);
+    await ksPut(env, s); return { ok: true };
+  }
+  if (d.action === 'ks_tr') {
+    const r = await ksTranscribe(env, d);
+    if (r.words) s.words = r.words.slice(0, 4000); s.lang = r.lang || s.lang || ''; s.trAt = Date.now(); await ksPut(env, s);
+    return Object.assign({ ok: true }, r);
+  }
+  if (d.action === 'ks_clean_status') {
+    const c = (s.cleans || [])[d.n | 0]; if (!c) return { ok: false, error: 'לא נמצא' };
+    if (c.status !== 'done' && c.status !== 'failed') { await ksPoll(env, s, c, ['v'], { v: 'c' + (d.n | 0) + '.mp3' }); await ksPut(env, s); }
+    return { ok: true, status: c.status, err: c.err || '', queue: c.queue };
+  }
+  if (d.action === 'ks_del') { await ksDeleteSong(env, s.id); if (!who.staff) { const k = 'ks/a/' + who.owner + '.json'; const a = await getJ(env, k); if (a) { a.songs = (a.songs || []).filter(x => x !== s.id); await putJ(env, k, a); } } return { ok: true }; }
+  return { ok: false, error: 'unknown action' };
+}
+// binary routes: POST ?ks=up (new song) · POST ?ks=clean&id= (a take to remove music from) · GET ?ks=f&id=&f=v|i|c0..
+async function ksHttp(req, env, u) {
+  const q = Object.fromEntries(u.searchParams); const who = await ksWho(env, q);
+  if (q.ks === 'f' && req.method === 'GET') {
+    const s = await ksSong(env, who, q.id); const f = String(q.f || '');
+    const name = f === 'v' ? 'vocals.mp3' : f === 'i' ? 'inst.mp3' : /^c\d$/.test(f) ? f + '.mp3' : '';
+    const o = name && await env.BUCKET.get('ks/f/' + s.id + '/' + name);
+    if (!o) return new Response('not found', { status: 404, headers: { 'Access-Control-Allow-Origin': '*' } });
+    return new Response(o.body, { headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'audio/mpeg', 'Content-Length': String(o.size), 'Cache-Control': 'private, max-age=86400' } });
+  }
+  if (req.method !== 'POST') return out({ ok: false, error: 'bad request' });
+  const len = +(req.headers.get('content-length') || 0);
+  if (len > KS_MAX_BYTES) return out({ ok: false, error: 'הקובץ גדול מדי (עד 60MB)' });
+  const type = (req.headers.get('content-type') || 'audio/mpeg').split(';')[0];
+  if (q.ks === 'up') {
+    if (!who.staff && who.acc.used >= who.acc.quota) return out({ ok: false, error: 'נוצלו כל השירים בקישור הזה. אפשר לפנות לאולפני קולות להרחבה' });
+    const bytes = await req.arrayBuffer(); if (bytes.byteLength < 20000) return out({ ok: false, error: 'הקובץ קטן מדי' });
+    const hash = await ksStart(env, bytes, type, 'song.' + (/wav/.test(type) ? 'wav' : /mp4|m4a|aac/.test(type) ? 'm4a' : /ogg/.test(type) ? 'ogg' : /flac/.test(type) ? 'flac' : 'mp3')); // neutral name: the stems are told apart by their names
+    const id = tok(), now = Date.now();
+    const s = { id, owner: who.owner, title: String(q.title || 'שיר').slice(0, 80), created: now, expires: now + KS_DAYS * KS_DAY, status: 'working', dur: Math.round(+q.dur || 0), job: { hash, status: 'waiting', at: now }, terms: { at: now, v: String(q.tv || '1').slice(0, 8) } };
+    await ksPut(env, s);
+    if (!who.staff) { const k = 'ks/a/' + who.owner + '.json'; const a = await getJ(env, k); a.used = (a.used | 0) + 1; a.songs = (a.songs || []).concat([id]); await putJ(env, k, a); }
+    return out({ ok: true, id, song: ksPub(s) });
+  }
+  if (q.ks === 'clean') {
+    const s = await ksSong(env, who, q.id); s.cleans = s.cleans || [];
+    if (s.cleans.length >= KS_MAX_CLEANS) return out({ ok: false, error: 'אפשר לנקות עד ' + KS_MAX_CLEANS + ' הקלטות לשיר' });
+    const bytes = await req.arrayBuffer();
+    const hash = await ksStart(env, bytes, type, 'take.' + (/wav/.test(type) ? 'wav' : 'mp3'));
+    s.cleans.push({ hash, status: 'waiting', at: Date.now() }); await ksPut(env, s);
+    return out({ ok: true, n: s.cleans.length - 1 });
+  }
+  return out({ ok: false, error: 'bad request' });
 }

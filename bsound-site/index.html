@@ -15,6 +15,7 @@
 <meta property="og:url" content="https://www.b-sound.co.il/">
 <meta property="og:image" content="https://www.b-sound.co.il/assets/og.png">
 <meta name="theme-color" content="#0E1116">
+<script>document.documentElement.classList.add("js")</script>
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -32,19 +33,47 @@
 </div></header>
 <main id="main">
 <section class="hero"><div class="wrap hero-in">
-<div class="hero-txt">
-<p class="eyebrow">אולפן הקלטות לעסקים · חולון</p>
-<h1>צליל המתנה, נתב שיחות וג'ינגל לעסק</h1>
-<p class="lead">הקול של העסק שלכם מהשנייה הראשונה של השיחה. כותבים את שם העסק, המערכת כותבת נוסח לפי האתר שלכם, ואתם שומעים את התוצאה לפני שמשלמים.</p>
-<div class="acts"><a class="btn" href="order">לשמוע את צליל ההמתנה שלי · בחינם</a><a class="btn ghost" href="#voices">האזנה לקולות</a></div>
-<ul class="ticks"><li>מחירים כולל מע"מ</li><li>קריינות AI או קריין באולפן</li><li>קבצים לכל מרכזייה וחברת סלולר</li></ul>
+<div class="hero-txt rv">
+<p class="eyebrow">אולפן הקלטות לעסקים · חולון · יותר מ-20 שנה</p>
+<h1>הלקוחות שלכם ממתינים.<br><span class="grad">תנו להם לשמוע משהו טוב.</span></h1>
+<p class="lead">צליל המתנה, נתב שיחות וג'ינגל לעסק, עם נוסח שנכתב לפי האתר שלכם. כתבו את שם העסק ושמעו את התוצאה תוך דקה, לפני שאתם משלמים שקל.</p>
+<form class="startform" action="order" method="get" data-start>
+<input type="hidden" name="p" value="hold"><input type="hidden" name="go" value="1">
+<label><span>שם העסק</span><input name="biz" required maxlength="60" autocomplete="organization" placeholder="למשל: מאפיית הכיכר"></label>
+<label><span>אתר העסק <small>(לא חובה)</small></span><input name="site" maxlength="120" dir="ltr" inputmode="url" placeholder="www.example.co.il"></label>
+<button class="btn glow" type="submit">שמעו את זה עכשיו · בחינם</button>
+<p class="sf-note">בלי הרשמה ובלי כרטיס אשראי. נוסח מוכן תוך פחות מדקה, ומשלמים רק אם אהבתם.</p>
+</form>
+<ul class="ticks"><li>שומעים לפני שמשלמים</li><li>מחירים כולל מע"מ</li><li>קבצים לכל מרכזייה וסלולר</li></ul>
 </div>
-<div class="hero-card">
-<b>הזמנה אונליין ב-4 צעדים</b>
-<ol class="mini-steps"><li><span>1</span>שם העסק והאתר</li><li><span>2</span>נוסח מוכן לעריכה</li><li><span>3</span>בוחרים קול ומוזיקה</li><li><span>4</span>שומעים ומחליטים</li></ol>
-<p class="small">צליל המתנה עם קריינות AI מ-150 ₪. מוכן תוך דקות.</p>
+<div class="hero-vis rv" aria-hidden="true">
+<div class="phone"><div class="ph-notch"></div>
+<div class="ph-screen">
+<div class="ph-top"><span class="ph-dot"></span><span>בהמתנה</span><span class="ph-time">00:12</span></div>
+<div class="ph-name" data-phone-name>העסק שלכם</div>
+<div class="ph-eq"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+<p class="ph-cap">"שלום ותודה שהתקשרתם ל<b data-phone-name2>העסק שלכם</b>. אנחנו כבר איתכם…"</p>
+<div class="ph-keys"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span></div>
+</div></div>
+<div class="glow-orb"></div>
 </div>
 </div></section>
+
+<section class="wrap trust rv" aria-label="למה B-Sound"><ul>
+<li><b>60 שניות</b><span>מהשם של העסק ועד נוסח מוכן</span></li>
+<li><b>6 קולות</b><span>3 קרייניות ו-3 קריינים, ו-7 סגנונות הקראה</span></li>
+<li><b>20 מוזיקות</b><span>מורשות לשימוש מסחרי</span></li>
+<li><b>0 ₪</b><span>עד שאתם מחליטים שאהבתם</span></li>
+</ul></section>
+
+<section class="wrap how rv" aria-labelledby="how-h"><h2 id="how-h">איך זה עובד</h2>
+<ol class="how-steps">
+<li><span class="n">1</span><b>כותבים את שם העסק</b><p>המערכת קוראת את האתר שלכם, מוצאת את הסלוגן והשירותים, וכותבת שלושה נוסחים.</p></li>
+<li><span class="n">2</span><b>בוחרים קול ומוזיקה</b><p>מקשיבים לכל קול ולכל מוזיקה, ובוחרים סגנון הקראה: שמח, רגוע, רשמי.</p></li>
+<li><span class="n">3</span><b>שומעים ומחליטים</b><p>שומעים את התוצאה המלאה בחינם. אהבתם? מזמינים, ומורידים קבצים נקיים מיד.</p></li>
+</ol>
+<div class="acts center"><a class="btn glow" href="order?p=hold">להתחיל עכשיו · בחינם</a></div>
+</section>
 
 <section class="wrap" aria-labelledby="svc-h"><h2 id="svc-h">מה אנחנו עושים</h2>
 <div class="cards three">
@@ -76,14 +105,14 @@
 <section class="wrap" aria-labelledby="p-h"><h2 id="p-h">מחירים</h2>
 <p class="lead">כל המחירים כוללים מע"מ. בהזמנה אונליין המחיר מופיע רק בסוף, אחרי שכבר שמעתם את התוצאה.</p>
 <div class="table-wrap"><table class="prices">
-<thead><tr><th>מוצר</th><th>קריינות AI</th><th>קריין/ית באולפן</th></tr></thead>
+<thead><tr><th>מוצר</th><th>קריינות AI</th><th>קריין/ית באולפן</th><th></th></tr></thead>
 <tbody>
-<tr><th>צליל המתנה (עד 30 שניות)</th><td>150 ₪</td><td>350 ₪</td></tr>
-<tr><th>נתב שיחות בייסיק</th><td>349 ₪</td><td>490 ₪</td></tr>
-<tr><th>נתב שיחות סטנדרט</th><td>749 ₪</td><td>1,090 ₪</td></tr>
-<tr><th>נתב שיחות פרימיום</th><td>1,390 ₪</td><td>2,090 ₪</td></tr>
-<tr><th>ג'ינגל מושר (7–60 שניות)</th><td>800 ₪</td><td>3,000 ₪ (מלחין ומפיק)</td></tr>
-<tr><th>שפה נוספת</th><td>90 ₪</td><td>200 ₪</td></tr>
+<tr><th>צליל המתנה (עד 30 שניות)</th><td>150 ₪</td><td>350 ₪</td><td><a class="btn sm ghost" href="order?p=hold">לשמוע בחינם</a></td></tr>
+<tr><th>נתב שיחות בייסיק</th><td>349 ₪</td><td>490 ₪</td><td><a class="btn sm ghost" href="order?p=ivr">לשמוע בחינם</a></td></tr>
+<tr><th>נתב שיחות סטנדרט</th><td>749 ₪</td><td>1,090 ₪</td><td><a class="btn sm ghost" href="order?p=ivr">לשמוע בחינם</a></td></tr>
+<tr><th>נתב שיחות פרימיום</th><td>1,390 ₪</td><td>2,090 ₪</td><td><a class="btn sm ghost" href="order?p=ivr">לשמוע בחינם</a></td></tr>
+<tr><th>ג'ינגל מושר (7–60 שניות)</th><td>800 ₪</td><td>3,000 ₪ (מלחין ומפיק)</td><td><a class="btn sm ghost" href="order?p=jingle">לשמוע בחינם</a></td></tr>
+<tr><th>שפה נוספת</th><td>90 ₪</td><td>200 ₪</td><td></td></tr>
 </tbody></table></div>
 <p class="small">תיקון נוסח או הודעה נוספת: 90 ₪. בנתב סטנדרט ופרימיום התיקונים כלולים בחבילה.</p>
 </section>
@@ -102,6 +131,7 @@
 <div><b>עוד</b><a href="order">הזמנה אונליין</a><a href="blog">מאמרים</a><a href="audio-gain">הגברת הקלטה</a><a href="restoration">שחזור הקלטות</a><a href="sound-editing">עריכת סאונד</a><a href="send-us-your-files">שליחת קבצים</a></div>
 <div><b>יצירת קשר</b><a href="tel:+97236500031" dir="ltr">03-6500031</a><a href="https://wa.me/972555170280">וואטסאפ</a><span>תמנע 3, חולון</span><a href="contact">כל הפרטים</a></div>
 </div><div class="wrap legal">© 2026 B-Sound · אולפני קולות · כל המחירים באתר כוללים מע"מ</div></footer>
+<a class="sticky-cta" href="order">שמעו את צליל ההמתנה שלכם · בחינם</a>
 <a class="wa-float" href="https://wa.me/972555170280" aria-label="שליחת הודעת וואטסאפ"><svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6a2.7 2.7 0 0 0 1.8-1.2 2.2 2.2 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3Z"/></svg></a>
 <script src="assets/site.js" defer></script>
 </body>

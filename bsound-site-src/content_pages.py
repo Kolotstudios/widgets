@@ -18,19 +18,41 @@ VOICES = '''<div class="voices" data-voices>
 MUSIC = '''<div class="music" data-music></div>'''
 
 HOME = '''<section class="hero"><div class="wrap hero-in">
-<div class="hero-txt">
-<p class="eyebrow">אולפן הקלטות לעסקים · חולון</p>
-<h1>צליל המתנה, נתב שיחות וג'ינגל לעסק</h1>
-<p class="lead">הקול של העסק שלכם מהשנייה הראשונה של השיחה. כותבים את שם העסק, המערכת כותבת נוסח לפי האתר שלכם, ואתם שומעים את התוצאה לפני שמשלמים.</p>
-<div class="acts"><a class="btn" href="{{order}}">לשמוע את צליל ההמתנה שלי · בחינם</a><a class="btn ghost" href="#voices">האזנה לקולות</a></div>
-<ul class="ticks"><li>מחירים כולל מע"מ</li><li>קריינות AI או קריין באולפן</li><li>קבצים לכל מרכזייה וחברת סלולר</li></ul>
+<div class="hero-txt rv">
+<p class="eyebrow">אולפן הקלטות לעסקים · חולון · יותר מ-20 שנה</p>
+<h1>הלקוחות שלכם ממתינים.<br><span class="grad">תנו להם לשמוע משהו טוב.</span></h1>
+<p class="lead">צליל המתנה, נתב שיחות וג'ינגל לעסק, עם נוסח שנכתב לפי האתר שלכם. כתבו את שם העסק ושמעו את התוצאה תוך דקה, לפני שאתם משלמים שקל.</p>
+{{start:hold}}
+<ul class="ticks"><li>שומעים לפני שמשלמים</li><li>מחירים כולל מע"מ</li><li>קבצים לכל מרכזייה וסלולר</li></ul>
 </div>
-<div class="hero-card">
-<b>הזמנה אונליין ב-4 צעדים</b>
-<ol class="mini-steps"><li><span>1</span>שם העסק והאתר</li><li><span>2</span>נוסח מוכן לעריכה</li><li><span>3</span>בוחרים קול ומוזיקה</li><li><span>4</span>שומעים ומחליטים</li></ol>
-<p class="small">צליל המתנה עם קריינות AI מ-150 ₪. מוכן תוך דקות.</p>
+<div class="hero-vis rv" aria-hidden="true">
+<div class="phone"><div class="ph-notch"></div>
+<div class="ph-screen">
+<div class="ph-top"><span class="ph-dot"></span><span>בהמתנה</span><span class="ph-time">00:12</span></div>
+<div class="ph-name" data-phone-name>העסק שלכם</div>
+<div class="ph-eq"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+<p class="ph-cap">"שלום ותודה שהתקשרתם ל<b data-phone-name2>העסק שלכם</b>. אנחנו כבר איתכם…"</p>
+<div class="ph-keys"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span></div>
+</div></div>
+<div class="glow-orb"></div>
 </div>
 </div></section>
+
+<section class="wrap trust rv" aria-label="למה B-Sound"><ul>
+<li><b>60 שניות</b><span>מהשם של העסק ועד נוסח מוכן</span></li>
+<li><b>6 קולות</b><span>3 קרייניות ו-3 קריינים, ו-7 סגנונות הקראה</span></li>
+<li><b>20 מוזיקות</b><span>מורשות לשימוש מסחרי</span></li>
+<li><b>0 ₪</b><span>עד שאתם מחליטים שאהבתם</span></li>
+</ul></section>
+
+<section class="wrap how rv" aria-labelledby="how-h"><h2 id="how-h">איך זה עובד</h2>
+<ol class="how-steps">
+<li><span class="n">1</span><b>כותבים את שם העסק</b><p>המערכת קוראת את האתר שלכם, מוצאת את הסלוגן והשירותים, וכותבת שלושה נוסחים.</p></li>
+<li><span class="n">2</span><b>בוחרים קול ומוזיקה</b><p>מקשיבים לכל קול ולכל מוזיקה, ובוחרים סגנון הקראה: שמח, רגוע, רשמי.</p></li>
+<li><span class="n">3</span><b>שומעים ומחליטים</b><p>שומעים את התוצאה המלאה בחינם. אהבתם? מזמינים, ומורידים קבצים נקיים מיד.</p></li>
+</ol>
+<div class="acts center"><a class="btn glow" href="{{order}}?p=hold">להתחיל עכשיו · בחינם</a></div>
+</section>
 
 <section class="wrap" aria-labelledby="svc-h"><h2 id="svc-h">מה אנחנו עושים</h2>
 <div class="cards three">
@@ -55,14 +77,14 @@ HOME = '''<section class="hero"><div class="wrap hero-in">
 <section class="wrap" aria-labelledby="p-h"><h2 id="p-h">מחירים</h2>
 <p class="lead">כל המחירים כוללים מע"מ. בהזמנה אונליין המחיר מופיע רק בסוף, אחרי שכבר שמעתם את התוצאה.</p>
 <div class="table-wrap"><table class="prices">
-<thead><tr><th>מוצר</th><th>קריינות AI</th><th>קריין/ית באולפן</th></tr></thead>
+<thead><tr><th>מוצר</th><th>קריינות AI</th><th>קריין/ית באולפן</th><th></th></tr></thead>
 <tbody>
-<tr><th>צליל המתנה (עד 30 שניות)</th><td>150 ₪</td><td>350 ₪</td></tr>
-<tr><th>נתב שיחות בייסיק</th><td>349 ₪</td><td>490 ₪</td></tr>
-<tr><th>נתב שיחות סטנדרט</th><td>749 ₪</td><td>1,090 ₪</td></tr>
-<tr><th>נתב שיחות פרימיום</th><td>1,390 ₪</td><td>2,090 ₪</td></tr>
-<tr><th>ג'ינגל מושר (7–60 שניות)</th><td>800 ₪</td><td>3,000 ₪ (מלחין ומפיק)</td></tr>
-<tr><th>שפה נוספת</th><td>90 ₪</td><td>200 ₪</td></tr>
+<tr><th>צליל המתנה (עד 30 שניות)</th><td>150 ₪</td><td>350 ₪</td><td><a class="btn sm ghost" href="{{order}}?p=hold">לשמוע בחינם</a></td></tr>
+<tr><th>נתב שיחות בייסיק</th><td>349 ₪</td><td>490 ₪</td><td><a class="btn sm ghost" href="{{order}}?p=ivr">לשמוע בחינם</a></td></tr>
+<tr><th>נתב שיחות סטנדרט</th><td>749 ₪</td><td>1,090 ₪</td><td><a class="btn sm ghost" href="{{order}}?p=ivr">לשמוע בחינם</a></td></tr>
+<tr><th>נתב שיחות פרימיום</th><td>1,390 ₪</td><td>2,090 ₪</td><td><a class="btn sm ghost" href="{{order}}?p=ivr">לשמוע בחינם</a></td></tr>
+<tr><th>ג'ינגל מושר (7–60 שניות)</th><td>800 ₪</td><td>3,000 ₪ (מלחין ומפיק)</td><td><a class="btn sm ghost" href="{{order}}?p=jingle">לשמוע בחינם</a></td></tr>
+<tr><th>שפה נוספת</th><td>90 ₪</td><td>200 ₪</td><td></td></tr>
 </tbody></table></div>
 <p class="small">תיקון נוסח או הודעה נוספת: 90 ₪. בנתב סטנדרט ופרימיום התיקונים כלולים בחבילה.</p>
 </section>
@@ -78,12 +100,13 @@ MOH = '''<section class="wrap hero-s">
 <nav class="crumbs" aria-label="פירורי לחם"><a href="{{p:}}">דף הבית</a></nav>
 <h1>צליל המתנה לעסק</h1>
 <p class="lead">הודעה ממותגת עם קריינות ומוזיקה שהלקוחות שומעים בזמן שהם ממתינים לנציג. עד 30 שניות, נוסח שנכתב לפי העסק שלכם, וקבצים מוכנים לכל מרכזייה וחברת סלולר.</p>
-<div class="acts"><a class="btn" href="{{order}}">לשמוע את צליל ההמתנה שלי · בחינם</a><a class="btn ghost" href="#prices">מחירים</a></div>
+{{start:hold}}
+<p class="small"><a href="#prices">למחירים ↓</a></p>
 </section>
 
 <section class="wrap" id="prices"><h2>מחיר צליל המתנה</h2>
 <div class="cards two">
-<div class="card price"><small>קריינות AI</small><b class="num">150 ₪</b><span>כולל מע"מ · מוכן תוך דקות</span><ul><li>נוסח לפי האתר של העסק, לעריכה ולאישור</li><li>6 קולות לבחירה וסגנון הקראה (שמח, רגוע, רשמי)</li><li>מוזיקה מורשית ומיקס עם דאקינג עדין</li><li>MP3, WAV ו-WAV 8bit u-law למרכזייה</li></ul><a class="btn" href="{{order}}">להזמנה אונליין</a></div>
+<div class="card price"><small>קריינות AI</small><b class="num">150 ₪</b><span>כולל מע"מ · מוכן תוך דקות</span><ul><li>נוסח לפי האתר של העסק, לעריכה ולאישור</li><li>6 קולות לבחירה וסגנון הקראה (שמח, רגוע, רשמי)</li><li>מוזיקה מורשית ומיקס עם דאקינג עדין</li><li>MP3, WAV ו-WAV 8bit u-law למרכזייה</li></ul><a class="btn" href="{{order}}?p=hold">להזמנה אונליין</a></div>
 <div class="card price"><small>קריין/ית באולפן</small><b class="num">350 ₪</b><span>כולל מע"מ · מוכן תוך 48 שעות</span><ul><li>קריין או קריינית מקצועיים באולפן בחולון</li><li>הכוונה בהגייה של שמות ומונחים</li><li>אותה מוזיקה, אותו מיקס ואותם פורמטים</li><li>מתאים למיתוג יוקרתי ולשמות מורכבים</li></ul><a class="btn ghost" href="{{order}}">להזמנה אונליין</a></div>
 </div>
 <p class="small">תיקון אחרי ההזמנה או הודעה נוספת (חג, חופשה): 90 ₪. שפה נוספת: 90 ₪ ב-AI, 200 ₪ עם קריין.</p>
@@ -137,17 +160,18 @@ EXT = '''<section class="wrap hero-s">
 <nav class="crumbs" aria-label="פירורי לחם"><a href="{{p:}}">דף הבית</a></nav>
 <h1>קריינות לנתב שיחות ומרכזייה</h1>
 <p class="lead">תפריט ניתוב ברור ("למכירות הקישו 1"), צליל המתנה עם מוזיקה והודעת "העסק סגור", בחבילה אחת. נוסח שנכתב לפי העסק שלכם, וקבצים שמתאימים לכל מרכזייה בענן ולכל חברת תקשורת.</p>
-<div class="acts"><a class="btn" href="{{order}}">לבנות ולשמוע את הנתב שלי</a><a class="btn ghost" href="#plans">חבילות ומחירים</a></div>
+{{start:ivr}}
+<p class="small"><a href="#plans">לחבילות ומחירים ↓</a></p>
 </section>
 
 <section class="wrap" id="plans"><h2>חבילות נתב שיחות</h2>
 <p class="lead">כל החבילות כוללות תפריט ניתוב עד 9 שלוחות, צליל המתנה עם מוזיקה, הודעת "העסק סגור" ונוסח לפי האתר שלכם. המחירים כוללים מע"מ.</p>
 <div class="cards three">
-<div class="card price"><small>בייסיק</small><b class="num">349 ₪</b><span>AI · עם קריין באולפן 490 ₪</span><ul><li>תפריט ניתוב עד 9 שלוחות</li><li>צליל המתנה עם מוזיקה</li><li>הודעת "העסק סגור"</li><li>בלי תיקונים כלולים (תיקון 90 ₪)</li></ul></div>
-<div class="card price best"><small>סטנדרט · הכי משתלם</small><b class="num">749 ₪</b><span>AI · עם קריין באולפן 1,090 ₪</span><ul><li>כל מה שבבייסיק</li><li>תת־נתב למחלקה</li><li>2 תיקונים בשנה</li><li>מתאים לעסק שמחליף הודעות בחגים</li></ul></div>
-<div class="card price"><small>פרימיום</small><b class="num">1,390 ₪</b><span>AI · עם קריין באולפן 2,090 ₪</span><ul><li>כל מה שבסטנדרט</li><li>7 תיקונים בשנה</li><li>2 שפות נוספות לבחירה</li><li>לעסקים עם קהל רב-לשוני</li></ul></div>
+<div class="card price"><small>בייסיק</small><b class="num">349 ₪</b><span>AI · עם קריין באולפן 490 ₪</span><ul><li>תפריט ניתוב עד 9 שלוחות</li><li>צליל המתנה עם מוזיקה</li><li>הודעת "העסק סגור"</li><li>בלי תיקונים כלולים (תיקון 90 ₪)</li></ul><a class="btn sm" href="{{order}}?p=ivr">לשמוע בחינם</a></div>
+<div class="card price best"><small>סטנדרט</small><b class="num">749 ₪</b><span>AI · עם קריין באולפן 1,090 ₪</span><ul><li>כל מה שבבייסיק</li><li>תת־נתב למחלקה</li><li>2 תיקונים בשנה</li><li>מתאים לעסק שמחליף הודעות בחגים</li></ul><a class="btn sm" href="{{order}}?p=ivr">לשמוע בחינם</a></div>
+<div class="card price"><small>פרימיום</small><b class="num">1,390 ₪</b><span>AI · עם קריין באולפן 2,090 ₪</span><ul><li>כל מה שבסטנדרט</li><li>7 תיקונים בשנה</li><li>2 שפות נוספות לבחירה</li><li>לעסקים עם קהל רב-לשוני</li></ul><a class="btn sm" href="{{order}}?p=ivr">לשמוע בחינם</a></div>
 </div>
-<div class="acts center"><a class="btn" href="{{order}}">להזמנה אונליין</a></div>
+<div class="acts center"><a class="btn glow" href="{{order}}?p=ivr">לבנות ולשמוע את הנתב · בחינם</a></div>
 <p class="small">הודעה נוספת (חג, חופשה, תת־נתב נוסף): 90 ₪. שפה נוספת: 90 ₪ ב-AI, 200 ₪ עם קריין. מרכזייה עם יותר מ-20 שלוחות או כמה תתי־נתבים? <a href="{{wa}}">כתבו לנו</a> ונבנה הצעה.</p>
 </section>
 
@@ -197,12 +221,13 @@ JINGLE = '''<section class="wrap hero-s">
 <nav class="crumbs" aria-label="פירורי לחם"><a href="{{p:}}">דף הבית</a></nav>
 <h1>ג'ינגל מושר לעסק</h1>
 <p class="lead">לא הודעת המתנה מדוברת, אלא שיר אמיתי: מנגינה קליטה, שם העסק בפזמון, וזמר, זמרת, דואט או מקהלה. 7 עד 60 שניות, לפרסומות ברדיו וברשתות, לסרטונים ולצליל ההמתנה.</p>
-<div class="acts"><a class="btn" href="{{order}}">לכתוב את הג'ינגל שלי</a><a class="btn ghost" href="#jprices">מחירים</a></div>
+{{start:jingle}}
+<p class="small"><a href="#jprices">למחירים ↓</a></p>
 </section>
 
 <section class="wrap" id="jprices"><h2>מחיר ג'ינגל לעסק</h2>
 <div class="cards two">
-<div class="card price"><small>הפקת AI</small><b class="num">800 ₪</b><span>כולל מע"מ</span><ul><li>כתיבת מילים עם חריזה ופזמון, לאישור לפני ההפקה</li><li>עד 10 גרסאות לבחירה: 5 סבבים של 2</li><li>שינויים בין הסבבים: קצב, סגנון, קולות</li><li>שימוש מסחרי לעסק</li></ul><a class="btn" href="{{order}}">להתחיל</a></div>
+<div class="card price"><small>הפקת AI</small><b class="num">800 ₪</b><span>כולל מע"מ</span><ul><li>כתיבת מילים עם חריזה ופזמון, לאישור לפני ההפקה</li><li>עד 10 גרסאות לבחירה: 5 סבבים של 2</li><li>שינויים בין הסבבים: קצב, סגנון, קולות</li><li>שימוש מסחרי לעסק</li></ul><a class="btn" href="{{order}}?p=jingle">להתחיל</a></div>
 <div class="card price"><small>מלחין ומפיק</small><b class="num">3,000 ₪</b><span>כולל מע"מ</span><ul><li>שיחת אפיון עם אורן כהן</li><li>לחן ועיבוד מקוריים</li><li>זמרים אמיתיים באולפן, מיקס ומאסטר</li><li>סבב תיקונים</li></ul><a class="btn ghost" href="{{wa}}">לתיאום שיחת אפיון</a></div>
 </div>
 </section>

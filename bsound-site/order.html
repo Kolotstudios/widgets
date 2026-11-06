@@ -875,6 +875,16 @@ pills();mixUi("");
 if(S.ai||$("#fName").value){$("#found").hidden=false;$("#foundMsg").innerHTML='<span class="ok">✓</span> הפרטים שמורים.'}
 document.querySelectorAll("[data-back]").forEach(function(b){b.onclick=function(){var n=S.step-1;if(n===4&&S.product==="jingle") n=3;go(n)}});
 loadLib().then(side);
+/* entry from the website's "hear it now" form: ?biz=&site=&p=hold|ivr|jingle&go=1 */
+var QB=Q.get("biz"),QS=Q.get("site"),QP=Q.get("p");
+if((QB||QS||QP)&&!hk){
+  var fresh=(QB&&QB!==$("#biz").value)||(QS&&QS!==$("#site").value);
+  if(fresh){S.k=null;S.code="";S.ai=null;S.choice=null;S.deps=null;S.step=1;S.max=1;["fName","fSlogan","fServices","fHours","ivrIntro","ivrText","subTitle","subText","holdText","closedText","jText"].forEach(function(id){$("#"+id).value=""})}
+  if(QB) $("#biz").value=QB;if(QS) $("#site").value=QS;
+  if(QP&&/^(hold|ivr|jingle)$/.test(QP)){if(S.product!==QP){S.product=QP;S.choice=null}}
+  history.replaceState(null,"",location.pathname+(TEST?"?test=1":""));
+  if(Q.get("go")==="1"&&(QB||QS)&&fresh!==false) setTimeout(function(){$("#analyze").click()},400);
+}
 var start=S.step;if(start===5&&!S.k) start=4;if(start>=7&&!S.k) start=1;
 if(start>=7&&S.k){call({action:"bs_state",k:S.k}).then(function(r){if(r.ok&&r.paid){S.st=r;go(8)}else if(r.ok){if(!S.choice) S.choice={pkg:r.pkg,human:r.human};S.code=r.code;go(7)}else go(1)})}else go(start);
 })();

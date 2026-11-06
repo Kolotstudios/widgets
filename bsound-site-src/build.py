@@ -63,6 +63,7 @@ def head(p, depth):
 <meta property="og:url" content="{canon}">
 <meta property="og:image" content="{DOMAIN}/assets/og.png">
 <meta name="theme-color" content="#0E1116">
+<script>document.documentElement.classList.add("js")</script>
 <link rel="icon" href="{rel(depth, 'assets')}favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -90,6 +91,7 @@ def foot(depth):
 <div><b>עוד</b><a href="{rel(depth, 'order')}">הזמנה אונליין</a><a href="{rel(depth, 'blog')}">מאמרים</a><a href="{rel(depth, 'audio-gain')}">הגברת הקלטה</a><a href="{rel(depth, 'restoration')}">שחזור הקלטות</a><a href="{rel(depth, 'sound-editing')}">עריכת סאונד</a><a href="{rel(depth, 'send-us-your-files')}">שליחת קבצים</a></div>
 <div><b>יצירת קשר</b><a href="tel:{PHONE_INTL}" dir="ltr">{PHONE}</a><a href="{WA}">וואטסאפ</a><span>תמנע 3, חולון</span><a href="{rel(depth, 'contact')}">כל הפרטים</a></div>
 </div><div class="wrap legal">© {datetime.date.today().year} B-Sound · אולפני קולות · כל המחירים באתר כוללים מע"מ</div></footer>
+<a class="sticky-cta" href="{rel(depth, 'order')}">שמעו את צליל ההמתנה שלכם · בחינם</a>
 <a class="wa-float" href="{WA}" aria-label="שליחת הודעת וואטסאפ"><svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6a2.7 2.7 0 0 0 1.8-1.2 2.2 2.2 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3Z"/></svg></a>
 <script src="{rel(depth, 'assets')}site.js" defer></script>
 </body>
@@ -99,7 +101,17 @@ def foot(depth):
 def fill(s, depth):
     """placeholders inside content: {{order}} {{wa}} {{tel}} {{phone}} {{p:slug}} {{api}}"""
     s = s.replace('{{order}}', rel(depth, 'order')).replace('{{wa}}', WA).replace('{{tel}}', 'tel:' + PHONE_INTL).replace('{{phone}}', PHONE)
+    s = re.sub(r'\{\{start:([a-z]+)\}\}', lambda m: START.replace('{P}', m.group(1)).replace('{ORDER}', rel(depth, 'order')), s)
     return re.sub(r'\{\{p:([a-z0-9\-/]*)\}\}', lambda m: rel(depth, m.group(1)), s)
+
+# the funnel entry: business name (+ site) -> /order prefilled, analysis starts by itself
+START = '''<form class="startform" action="{ORDER}" method="get" data-start>
+<input type="hidden" name="p" value="{P}"><input type="hidden" name="go" value="1">
+<label><span>שם העסק</span><input name="biz" required maxlength="60" autocomplete="organization" placeholder="למשל: מאפיית הכיכר"></label>
+<label><span>אתר העסק <small>(לא חובה)</small></span><input name="site" maxlength="120" dir="ltr" inputmode="url" placeholder="www.example.co.il"></label>
+<button class="btn glow" type="submit">שמעו את זה עכשיו · בחינם</button>
+<p class="sf-note">בלי הרשמה ובלי כרטיס אשראי. נוסח מוכן תוך פחות מדקה, ומשלמים רק אם אהבתם.</p>
+</form>'''
 
 def faq_html(faq):
     if not faq: return ''

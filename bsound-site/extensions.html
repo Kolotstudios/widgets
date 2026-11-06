@@ -15,6 +15,7 @@
 <meta property="og:url" content="https://www.b-sound.co.il/extensions">
 <meta property="og:image" content="https://www.b-sound.co.il/assets/og.png">
 <meta name="theme-color" content="#0E1116">
+<script>document.documentElement.classList.add("js")</script>
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -35,17 +36,24 @@
 <nav class="crumbs" aria-label="פירורי לחם"><a href="./">דף הבית</a></nav>
 <h1>קריינות לנתב שיחות ומרכזייה</h1>
 <p class="lead">תפריט ניתוב ברור ("למכירות הקישו 1"), צליל המתנה עם מוזיקה והודעת "העסק סגור", בחבילה אחת. נוסח שנכתב לפי העסק שלכם, וקבצים שמתאימים לכל מרכזייה בענן ולכל חברת תקשורת.</p>
-<div class="acts"><a class="btn" href="order">לבנות ולשמוע את הנתב שלי</a><a class="btn ghost" href="#plans">חבילות ומחירים</a></div>
+<form class="startform" action="order" method="get" data-start>
+<input type="hidden" name="p" value="ivr"><input type="hidden" name="go" value="1">
+<label><span>שם העסק</span><input name="biz" required maxlength="60" autocomplete="organization" placeholder="למשל: מאפיית הכיכר"></label>
+<label><span>אתר העסק <small>(לא חובה)</small></span><input name="site" maxlength="120" dir="ltr" inputmode="url" placeholder="www.example.co.il"></label>
+<button class="btn glow" type="submit">שמעו את זה עכשיו · בחינם</button>
+<p class="sf-note">בלי הרשמה ובלי כרטיס אשראי. נוסח מוכן תוך פחות מדקה, ומשלמים רק אם אהבתם.</p>
+</form>
+<p class="small"><a href="#plans">לחבילות ומחירים ↓</a></p>
 </section>
 
 <section class="wrap" id="plans"><h2>חבילות נתב שיחות</h2>
 <p class="lead">כל החבילות כוללות תפריט ניתוב עד 9 שלוחות, צליל המתנה עם מוזיקה, הודעת "העסק סגור" ונוסח לפי האתר שלכם. המחירים כוללים מע"מ.</p>
 <div class="cards three">
-<div class="card price"><small>בייסיק</small><b class="num">349 ₪</b><span>AI · עם קריין באולפן 490 ₪</span><ul><li>תפריט ניתוב עד 9 שלוחות</li><li>צליל המתנה עם מוזיקה</li><li>הודעת "העסק סגור"</li><li>בלי תיקונים כלולים (תיקון 90 ₪)</li></ul></div>
-<div class="card price best"><small>סטנדרט · הכי משתלם</small><b class="num">749 ₪</b><span>AI · עם קריין באולפן 1,090 ₪</span><ul><li>כל מה שבבייסיק</li><li>תת־נתב למחלקה</li><li>2 תיקונים בשנה</li><li>מתאים לעסק שמחליף הודעות בחגים</li></ul></div>
-<div class="card price"><small>פרימיום</small><b class="num">1,390 ₪</b><span>AI · עם קריין באולפן 2,090 ₪</span><ul><li>כל מה שבסטנדרט</li><li>7 תיקונים בשנה</li><li>2 שפות נוספות לבחירה</li><li>לעסקים עם קהל רב-לשוני</li></ul></div>
+<div class="card price"><small>בייסיק</small><b class="num">349 ₪</b><span>AI · עם קריין באולפן 490 ₪</span><ul><li>תפריט ניתוב עד 9 שלוחות</li><li>צליל המתנה עם מוזיקה</li><li>הודעת "העסק סגור"</li><li>בלי תיקונים כלולים (תיקון 90 ₪)</li></ul><a class="btn sm" href="order?p=ivr">לשמוע בחינם</a></div>
+<div class="card price best"><small>סטנדרט</small><b class="num">749 ₪</b><span>AI · עם קריין באולפן 1,090 ₪</span><ul><li>כל מה שבבייסיק</li><li>תת־נתב למחלקה</li><li>2 תיקונים בשנה</li><li>מתאים לעסק שמחליף הודעות בחגים</li></ul><a class="btn sm" href="order?p=ivr">לשמוע בחינם</a></div>
+<div class="card price"><small>פרימיום</small><b class="num">1,390 ₪</b><span>AI · עם קריין באולפן 2,090 ₪</span><ul><li>כל מה שבסטנדרט</li><li>7 תיקונים בשנה</li><li>2 שפות נוספות לבחירה</li><li>לעסקים עם קהל רב-לשוני</li></ul><a class="btn sm" href="order?p=ivr">לשמוע בחינם</a></div>
 </div>
-<div class="acts center"><a class="btn" href="order">להזמנה אונליין</a></div>
+<div class="acts center"><a class="btn glow" href="order?p=ivr">לבנות ולשמוע את הנתב · בחינם</a></div>
 <p class="small">הודעה נוספת (חג, חופשה, תת־נתב נוסף): 90 ₪. שפה נוספת: 90 ₪ ב-AI, 200 ₪ עם קריין. מרכזייה עם יותר מ-20 שלוחות או כמה תתי־נתבים? <a href="https://wa.me/972555170280">כתבו לנו</a> ונבנה הצעה.</p>
 </section>
 
@@ -96,6 +104,7 @@
 <div><b>עוד</b><a href="order">הזמנה אונליין</a><a href="blog">מאמרים</a><a href="audio-gain">הגברת הקלטה</a><a href="restoration">שחזור הקלטות</a><a href="sound-editing">עריכת סאונד</a><a href="send-us-your-files">שליחת קבצים</a></div>
 <div><b>יצירת קשר</b><a href="tel:+97236500031" dir="ltr">03-6500031</a><a href="https://wa.me/972555170280">וואטסאפ</a><span>תמנע 3, חולון</span><a href="contact">כל הפרטים</a></div>
 </div><div class="wrap legal">© 2026 B-Sound · אולפני קולות · כל המחירים באתר כוללים מע"מ</div></footer>
+<a class="sticky-cta" href="order">שמעו את צליל ההמתנה שלכם · בחינם</a>
 <a class="wa-float" href="https://wa.me/972555170280" aria-label="שליחת הודעת וואטסאפ"><svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6a2.7 2.7 0 0 0 1.8-1.2 2.2 2.2 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3Z"/></svg></a>
 <script src="assets/site.js" defer></script>
 </body>

@@ -366,11 +366,11 @@ details.adv[open]>summary{margin-bottom:12px}
 <div class="dlg" id="dlg" hidden><div class="card" role="dialog" aria-modal="true"><p id="dlgMsg" style="margin:0"></p><div class="row"><button class="btn primary" id="dlgOk">אישור</button><button class="btn ghost" id="dlgNo">ביטול</button></div></div></div>
 <div class="toast" id="toast" hidden></div>
 
-<script src="ks-dsp.js?v=2026-11-07a"></script>
+<script src="ks-dsp.js?v=2026-11-07b"></script>
 <script>
 (function(){
 "use strict";
-var VER="2026-11-07a",TERMS_V="1";
+var VER="2026-11-07b",TERMS_V="1";
 var API="https://kolot-recorder.kolot-studios.workers.dev";
 var $=function(s){return document.getElementById(s)};
 var AC=window.AudioContext||window.webkitAudioContext,OAC=window.OfflineAudioContext||window.webkitOfflineAudioContext;
@@ -742,6 +742,10 @@ function checkLyrics(auto){
   return voiceB64().then(function(v){return api("ks_fix",{id:my,audio:v.d,mime:v.mime,lang:S.lang,lines:before})}).then(function(r){
     if(!S.song||S.song.id!==my)return;
     r.lines.forEach(function(t,i){var l=S.lines[i];if(!l||t===l.text)return;var same=tokens(t).length===tokens(l.text).length;l.text=t;l.fx=true;if(!same)wordTimes(l)});
+    // words that moved between lines: place the changed lines again against the recognised words
+    if(S.words&&S.words.length){var res=alignWords(S.lines.map(function(l){return l.text}),S.words,S.dur);
+      S.lines.forEach(function(l,i){var x=res[i];if(!l.fx||!x||x.cf<0.5)return;var p=S.lines[i-1],n=S.lines[i+1];if((p&&x.t<p.t+0.2)||(n&&x.t>n.t-0.2))return;l.t=x.t;l.e=x.e;wordTimes(l,x.wt)});
+      S.lines.forEach(function(l,i){var n=S.lines[i+1];if(n&&l.e>n.t-0.02){l.e=+Math.max(l.t+0.3,n.t-0.02).toFixed(2);wordTimes(l)}})}
     saveLyrics();renderLines();lastTxt="";drawStage(pos());
     $("lyrMsg").textContent=r.changed.length?"✓ המילים תומללו ונבדקו: "+r.changed.length+" שורות תוקנו (מסומנות בסגול). כדאי לעבור עליהן בהאזנה.":"✓ המילים תומללו ונבדקו, לא נמצאו טעויות.";
   }).catch(function(e){saveLyrics();$("lyrMsg").textContent="✓ המילים תומללו. הבדיקה הנוספת לא הצליחה ("+e.message+"). אפשר לנסות שוב ב\"בדיקת מילים\" או לתקן ידנית."})

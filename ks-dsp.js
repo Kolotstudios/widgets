@@ -173,117 +173,217 @@ var KSDSP = (function () {
     return y;
   }
 
-  /* ---------- pitch track (YIN, 10 ms hop) ---------- */
+  /* ---------- pitch track (YIN, 10 ms hop) + clean-up ---------- */
+  var midi = function (hz) { return 69 + 12 * Math.log2(hz / 440); };
   function f0(x, sr, onp) {
     var D = Math.max(1, Math.round(sr / 12000)), fs = sr / D, i;
     var lp = D > 1 ? filtfilt(filtfilt(x, coef("lp", fs * 0.42, 0.7071, 0, sr)), coef("lp", fs * 0.42, 0.7071, 0, sr)) : x;
     var n = Math.floor(lp.length / D), y = new Float32Array(n); for (i = 0; i < n; i++) y[i] = lp[i * D];
-    var hop = Math.round(fs * 0.01), tmin = Math.floor(fs / 950), tmax = Math.ceil(fs / 70), W = 2 * tmax;
-    var frames = Math.max(0, Math.floor((n - W - tmax) / hop) + 1), out = new Float32Array(frames), conf = new Float32Array(frames), lev = new Float32Array(frames);
+    var hop = fs * 0.01, tmin = Math.floor(fs / 950), tmax = Math.ceil(fs / 65), W = Math.round(fs * 0.025);
+    var frames = Math.max(0, Math.floor((n - W - tmax) / hop) + 1), out = new Float32Array(frames), lev = new Float32Array(frames);
     var d = new Float64Array(tmax + 1), cm = new Float64Array(tmax + 1);
-    // level gate: frames much quieter than the voice are unvoiced
-    var gpk = 0; for (var f = 0; f < frames; f++) { var s0 = f * hop, e = 0; for (i = 0; i < W; i += 2) e += y[s0 + i] * y[s0 + i]; lev[f] = Math.sqrt(e / (W / 2)); if (lev[f] > gpk) gpk = lev[f]; }
-    var gate = Math.max(gpk * 0.04, 1e-4);
+    // frames centred on t = f*10ms: the analysis window starts half a window earlier
+    var half = Math.round((W + tmax) / 2), st = function (f) { return Math.round(f * hop) - half; };
+    var gpk = 0, f;
+    for (f = 0; f < frames; f++) { var s0 = st(f), e = 0, c = 0; for (i = 0; i < W; i += 2) { var k = s0 + i; if (k >= 0 && k < n) { e += y[k] * y[k]; c++; } } lev[f] = c ? Math.sqrt(e / c) : 0; if (lev[f] > gpk) gpk = lev[f]; }
+    var gate = Math.max(gpk * 0.035, 1e-4);
     for (f = 0; f < frames; f++) {
       if (lev[f] < gate) continue;
-      var s = f * hop, tau;
+      var s = st(f), tau; if (s < 0 || s + W + tmax >= n) continue;
       for (tau = 1; tau <= tmax; tau++) { var acc = 0; for (i = 0; i < W; i++) { var v = y[s + i] - y[s + i + tau]; acc += v * v; } d[tau] = acc; }
       var run = 0; cm[0] = 1;
       for (tau = 1; tau <= tmax; tau++) { run += d[tau]; cm[tau] = run > 0 ? d[tau] * tau / run : 1; }
       var best = -1;
-      for (tau = tmin; tau < tmax; tau++) if (cm[tau] < 0.15) { while (tau + 1 < tmax && cm[tau + 1] < cm[tau]) tau++; best = tau; break; }
-      if (best < 0) { var mn = 1e9; for (tau = tmin; tau < tmax; tau++) if (cm[tau] < mn) { mn = cm[tau]; best = tau; } if (mn > 0.3) continue; }
+      for (tau = tmin; tau < tmax; tau++) if (cm[tau] < 0.12) { while (tau + 1 < tmax && cm[tau + 1] < cm[tau]) tau++; best = tau; break; }
+      if (best < 0) { var mn = 1e9; for (tau = tmin; tau < tmax; tau++) if (cm[tau] < mn) { mn = cm[tau]; best = tau; } if (mn > 0.25) continue; }
       var a = cm[best - 1], b = cm[best], c2 = cm[best + 1], den = a - 2 * b + c2, sh = den ? 0.5 * (a - c2) / den : 0;
-      out[f] = fs / (best + Math.max(-1, Math.min(1, sh))); conf[f] = 1 - b;
+      out[f] = fs / (best + Math.max(-1, Math.min(1, sh)));
       if (onp && (f & 1023) === 0) onp(f / frames);
     }
-    // drop single-frame octave blips and isolated voiced frames
-    for (f = 1; f < frames - 1; f++) {
-      if (out[f] && !out[f - 1] && !out[f + 1]) out[f] = 0;
-      else if (out[f] && out[f - 1] && out[f + 1]) { var m1 = 12 * Math.log2(out[f] / out[f - 1]), m2 = 12 * Math.log2(out[f] / out[f + 1]); if (Math.abs(m1) > 9 && Math.abs(m2) > 9) out[f] = (out[f - 1] + out[f + 1]) / 2; }
-    }
-    return { f0: out, conf: conf, hop: 0.01, off: tmax / fs * 0 + W / 2 / fs };
+    return { f0: clean(out), hop: 0.01 };
   }
-  var midi = function (hz) { return 69 + 12 * Math.log2(hz / 440); };
-
-  /* ---------- pitch correction plan ----------
-     user: f0 track of the take (Hz); ref: f0 track of the original vocal (Hz), shifted by `semi`.
-     lag: seconds the take starts after the reference track starts (song position of the take's first sample).
-     Every voiced frame is pulled toward the nearest note the original sings around that moment (+-0.25 s,
-     any octave); where the original is silent, toward the song's own scale. Returns cents per frame. */
-  function plan(user, ref, opts) {
-    var semi = opts.semi || 0, lag = opts.lag || 0, strength = Math.max(0, Math.min(1, opts.strength == null ? 0.7 : opts.strength));
-    var speed = opts.speed || 0.06, hop = user.hop, n = user.f0.length, rn = ref.f0.length, f, j;
-    var rm = new Float32Array(rn); for (j = 0; j < rn; j++) rm[j] = ref.f0[j] > 0 ? midi(ref.f0[j]) + semi : 0;
-    // scale: the 7 strongest pitch classes of the original
-    var pc = new Float64Array(12); for (j = 0; j < rn; j++) if (rm[j]) pc[((Math.round(rm[j]) % 12) + 12) % 12] += 1;
-    var order = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].sort(function (a, b) { return pc[b] - pc[a]; }), scale = order.slice(0, 7);
-    var win = Math.round(0.25 / ref.hop), want = new Float32Array(n);
+  // median smoothing, octave-jump repair, voiced runs of at least 50 ms
+  function clean(F) {
+    var n = F.length, m = new Float32Array(n), o = new Float32Array(n), f, j;
+    for (f = 0; f < n; f++) m[f] = F[f] ? midi(F[f]) : 0;
     for (f = 0; f < n; f++) {
-      if (!user.f0[f]) continue;
-      var u = midi(user.f0[f]), rc = Math.round((f * hop + lag) / ref.hop), bestD = 99, tgt = null;
-      for (j = Math.max(0, rc - win); j <= Math.min(rn - 1, rc + win); j++) {
-        if (!rm[j]) continue;
-        var note = Math.round(rm[j]), c = note + 12 * Math.round((u - note) / 12), dd = Math.abs(u - c);
-        // nearer frames win ties
-        dd += Math.abs(j - rc) / win * 0.15;
-        if (dd < bestD) { bestD = dd; tgt = c; }
-      }
-      if (tgt == null) { var base = Math.round(u); bestD = 99; for (var o = -2; o <= 2; o++) { var cand = base + o, p = ((cand % 12) + 12) % 12; if (scale.indexOf(p) >= 0 && Math.abs(u - cand) < bestD) { bestD = Math.abs(u - cand); tgt = cand; } } }
-      if (tgt == null) continue;
-      var dev = tgt - u, ad = Math.abs(dev);
-      // far off = probably another note on purpose (or a detection error): leave it
-      var k = ad <= 1 ? 1 : ad >= 2 ? 0 : 2 - ad;
-      want[f] = dev * 100 * strength * k;
+      if (!m[f]) continue; var win = [];
+      for (j = Math.max(0, f - 7); j <= Math.min(n - 1, f + 7); j++) if (m[j]) win.push(m[j]);
+      win.sort(function (a, b) { return a - b; }); var med = win[win.length >> 1], v = m[f];
+      while (v - med > 9) v -= 12; while (med - v > 9) v += 12; o[f] = v;
     }
-    // retune speed: smooth the correction, let it fall back to 0 in unvoiced parts
-    var a = Math.exp(-hop / speed), cents = new Float32Array(n), cur = 0;
-    for (f = 0; f < n; f++) { var t = user.f0[f] ? want[f] : 0; cur = a * cur + (1 - a) * t; cents[f] = user.f0[f] ? cur : 0; if (!user.f0[f]) cur *= 0.5; }
-    return cents;
+    var r = new Float32Array(n);
+    for (f = 0; f < n; f++) { if (!o[f]) continue; var w = []; for (j = f - 2; j <= f + 2; j++) if (j >= 0 && j < n && o[j]) w.push(o[j]); w.sort(function (a, b) { return a - b; }); r[f] = w[w.length >> 1]; }
+    for (f = 0; f < n;) { if (!r[f]) { f++; continue; } var e = f; while (e < n && r[e]) e++; if (e - f < 5) for (j = f; j < e; j++) r[j] = 0; f = e; }
+    var hz = new Float32Array(n); for (f = 0; f < n; f++) hz[f] = r[f] ? 440 * Math.pow(2, (r[f] - 69) / 12) : 0;
+    return hz;
   }
-
-  /* ---------- TD-PSOLA: shift the pitch of x by cents[f] (10 ms frames), voiced frames only ---------- */
+  /* ---------- note map (the "MIDI" of a vocal): stable pitch regions ---------- */
+  function notes(track, fine) {
+    var JUMP = fine ? 0.5 : 0.75, STAY = fine ? 4 : 6, F = track.f0, n = F.length, m = new Float32Array(n), out = [], f, j;
+    for (f = 0; f < n; f++) m[f] = F[f] ? midi(F[f]) : 0;
+    for (f = 0; f < n;) {
+      if (!m[f]) { f++; continue; }
+      var e = f; while (e < n && m[e]) e++;
+      // split a voiced run where the (smoothed) pitch moves to a new level and stays there for 60 ms
+      var start = f, k = f + 1;
+      var lvl = function (a, b) { var w = []; for (var q = a; q < b; q++) w.push(m[q]); w.sort(function (x, y) { return x - y; }); return w[w.length >> 1]; };
+      while (k < e) {
+        var cur = lvl(Math.max(start, k - STAY), k);
+        if (Math.abs(m[k] - cur) > JUMP) {
+          var stay = true, q; for (q = k; q < Math.min(e, k + STAY); q++) if (Math.abs(m[q] - cur) <= JUMP * 0.8) { stay = false; break; }
+          if (stay && k + STAY <= e && k - start >= STAY) { out.push(mk(start, k)); start = k; }
+        }
+        k++;
+      }
+      out.push(mk(start, e)); f = e;
+    }
+    function mk(a, b) { var len = b - a, a2 = a + Math.floor(len * 0.2), b2 = Math.max(a2 + 1, b - Math.floor(len * 0.2)), w = []; for (var q = a2; q < b2; q++) w.push(m[q]); w.sort(function (x, y) { return x - y; }); return { s: a, e: b, m: w[w.length >> 1] }; }
+    return out;
+  }
+  /* ---------- correction plan ----------
+     every note the singer sings gets one target: the note the original singer sings at that moment
+     (any octave, the song's own tuning), or the nearest note of the song's scale. The whole note moves
+     to the target, so vibrato and expression stay; `flat` also straightens the pitch inside the note
+     (the "autotune" sound). Returns cents per 10 ms frame, smoothed without delay. */
+  function plan(user, ref, opts) {
+    var semi = opts.semi || 0, lag = opts.lag || 0, cen = opts.center == null ? 1 : opts.center, flat = opts.flat || 0, ramp = opts.ramp || 0.04;
+    var hop = user.hop, n = user.f0.length, rn = notes(ref, true), un = notes(user, true), f, i;
+    rn.forEach(function (r) { r.m += semi; r.ts = r.s * ref.hop; r.te = r.e * ref.hop; });
+    // the song's tuning offset (A=440 or not) and scale, from the original singer's notes
+    var offs = [], pc = new Float64Array(12);
+    rn.forEach(function (r) { var d = r.e - r.s; if (d < 8) return; offs.push(r.m - Math.round(r.m)); pc[((Math.round(r.m) % 12) + 12) % 12] += d; });
+    offs.sort(function (a, b) { return a - b; }); var tun = offs.length ? offs[offs.length >> 1] : 0;
+    var scale = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].sort(function (a, b) { return pc[b] - pc[a]; }).slice(0, 7);
+    var snap = function (v) { return Math.round(v - tun) + tun; };
+    var want = new Float32Array(n), um = new Float32Array(n), stats = { notes: un.length, matched: 0, moved: 0 };
+    for (f = 0; f < n; f++) um[f] = user.f0[f] ? midi(user.f0[f]) : 0;
+    var rM = new Float32Array(ref.f0.length); for (f = 0; f < rM.length; f++) rM[f] = ref.f0[f] ? midi(ref.f0[f]) + semi : 0;
+    un.forEach(function (u) {
+      var us = u.s * hop + lag, ue = u.e * hop + lag, best = null, bs = -1e9;
+      for (i = 0; i < rn.length; i++) {
+        var r = rn[i]; if (r.te < us - 0.25 || r.ts > ue + 0.25) continue;
+        var ov = Math.min(ue, r.te + 0.12) - Math.max(us, r.ts - 0.12); if (ov <= 0) continue;
+        var tgt = opts.grid ? snap(r.m) : r.m; tgt += 12 * Math.round((u.m - tgt) / 12); var dist = Math.abs(u.m - tgt);
+        var sc = ov / Math.max(0.05, ue - us) - 0.45 * dist; if (dist <= 2 && sc > bs) { bs = sc; best = tgt; }
+      }
+      // "curve": the original's own pitch at the same moments (median of the differences over the note)
+      if (opts.mode !== "notes") {
+        // singers are never exactly in time: try offsets of +-150 ms and keep the one where the
+        // difference between the two pitch curves is steadiest (the singer follows the same shape)
+        var bestScore = 1e9, bestDm = null;
+        for (var dl = -15; dl <= 15; dl++) {
+          var diffs = [];
+          for (f = u.s; f < u.e; f++) {
+            if (!um[f]) continue; var rf = Math.round((f * hop + lag) / ref.hop) + dl; if (rf < 0 || rf >= rM.length || !rM[rf]) continue;
+            var dd = rM[rf] - um[f]; dd -= 12 * Math.round(dd / 12); diffs.push(dd);
+          }
+          if (diffs.length < Math.max(3, (u.e - u.s) * 0.6)) continue;
+          diffs.sort(function (p, q) { return p - q; }); var md = diffs[diffs.length >> 1], mad = 0;
+          for (var q = 0; q < diffs.length; q++) mad += Math.abs(diffs[q] - md); mad /= diffs.length;
+          var score = mad + 0.08 * Math.abs(dl) / 15 + 0.05 * Math.abs(md);
+          if (score < bestScore) { bestScore = score; bestDm = md; }
+        }
+        if (bestDm != null && bestScore < 0.6 && Math.abs(bestDm) <= 1.6) best = u.m + bestDm;
+      }
+      if (best == null) { var bb = 99; for (var o = -2; o <= 2; o++) { var cand = Math.round(u.m - tun) + o, p = ((cand % 12) + 12) % 12; if (scale.indexOf(p) >= 0 && Math.abs(u.m - (cand + tun)) < bb) { bb = Math.abs(u.m - (cand + tun)); best = cand + tun; } } }
+      else stats.matched++;
+      if (best == null) return;
+      var dev = best - u.m; if (Math.abs(dev) > 1.6) return; // far off: another note on purpose
+      if (Math.abs(dev) > 0.08) stats.moved++;
+      for (f = u.s; f < u.e; f++) { if (!um[f]) continue; want[f] = (dev * cen + (u.m - um[f]) * flat) * 100; }
+    });
+    // ramps between notes: centred moving average (no timing shift); short notes keep their full correction
+    var W = Math.max(0, Math.round(ramp / hop / 2)), y = new Float32Array(n);
+    for (f = 0; f < n; f++) { if (!um[f]) continue; var acc = 0, c = 0; for (var j = f - W; j <= f + W; j++) if (j >= 0 && j < n && um[j]) { acc += want[j]; c++; } y[f] = c ? acc / c : 0; }
+    stats.tuning = Math.round(tun * 100);
+    return { cents: y, stats: stats };
+  }
+  /* ---------- TD-PSOLA, only where a correction is needed ---------- */
   function psola(x, sr, track, cents) {
-    var n = x.length, hop = track.hop, F = track.f0, nf = F.length;
-    var f0At = function (s) { var f = Math.min(nf - 1, Math.max(0, Math.round(s / sr / hop))); return F[f]; };
-    var cAt = function (s) { var f = Math.min(nf - 1, Math.max(0, Math.round(s / sr / hop))); return cents[f] || 0; };
-    // analysis marks: one per period in voiced parts (near the waveform peak), every 5 ms elsewhere
-    var lp = filt(x, coef("lp", 900, 0.7071, 0, sr)), marks = [], per = [], pos = 0, prevV = false, uv = Math.round(sr * 0.005);
-    while (pos < n) {
-      var hz = f0At(pos), P = hz ? Math.round(sr / hz) : uv;
-      if (hz) {
-        var c = pos, r = Math.round(P * (prevV ? 0.15 : 0.5)), best = c, bv = -1e9;
-        for (var s = Math.max(0, c - r); s <= Math.min(n - 1, c + r); s++) if (lp[s] > bv) { bv = lp[s]; best = s; }
-        if (marks.length && best <= marks[marks.length - 1] + P * 0.5) best = marks[marks.length - 1] + P;
-        pos = best;
+    var n = x.length, hop = track.hop, F = track.f0, nf = F.length, out = new Float32Array(x), regions = [], f;
+    var at = function (arr, s) { var i = Math.round(s / sr / hop); return i < 0 || i >= nf ? 0 : arr[i]; };
+    // regions: frames whose correction is over 1 cent (gaps under 40 ms merged), padded 25 ms
+    for (f = 0; f < nf;) { if (Math.abs(cents[f]) <= 1 || !F[f]) { f++; continue; } var e = f; while (e < nf && ((Math.abs(cents[e]) > 1 && F[e]) || (e + 4 < nf && Math.abs(cents[e + 4]) > 1 && F[e + 4]))) e++; regions.push([f, e]); f = e; }
+    regions.forEach(function (g) {
+      var pad = Math.round(sr * 0.025), a0 = Math.max(0, Math.round(g[0] * hop * sr) - pad), a1 = Math.min(n, Math.round(g[1] * hop * sr) + pad);
+      if (a1 - a0 < sr * 0.03) return;
+      // the fundamental only, for steady pitch marks
+      var fm = []; for (f = g[0]; f < g[1]; f++) if (F[f]) fm.push(F[f]); fm.sort(function (p, q) { return p - q; });
+      var f0m = fm[fm.length >> 1] || 150, seg = x.subarray(a0, a1);
+      var lp = filtfilt(filtfilt(seg, coef("lp", Math.min(1100, f0m * 1.5), 0.7071, 0, sr)), coef("lp", Math.min(1100, f0m * 1.5), 0.7071, 0, sr));
+      var len = a1 - a0, marks = [], per = [], pos = 0, P, i, bv, best;
+      var P0 = function (s) { var h = at(F, a0 + s); return Math.round(sr / (h || f0m)); };
+      P = P0(0); best = 0; bv = -1e9; for (i = 0; i < Math.min(len, P); i++) if (lp[i] > bv) { bv = lp[i]; best = i; }
+      pos = best;
+      // marks one period apart, each snapped to the nearby waveform peak; grains use the real spacing
+      while (pos < len) {
+        P = P0(pos); marks.push(pos); per.push(P);
+        var nom = pos + P, r = Math.max(1, Math.round(P * 0.12)); best = nom; bv = -1e9;
+        for (i = nom - r; i <= nom + r; i++) if (i >= 0 && i < len && lp[i] > bv) { bv = lp[i]; best = i; }
+        pos = Math.max(pos + Math.round(P * 0.6), best);
       }
-      if (pos >= n) break;
-      marks.push(pos); per.push(P); prevV = !!hz; pos += P;
-    }
-    var y = new Float32Array(n), ws = new Float32Array(n), ts = marks.length ? marks[0] : 0, mi = 0;
-    while (ts < n && marks.length) {
-      while (mi < marks.length - 1 && Math.abs(marks[mi + 1] - ts) < Math.abs(marks[mi] - ts)) mi++;
-      var m = marks[mi], Pa = per[mi], ratio = f0At(m) ? Math.pow(2, cAt(m) / 1200) : 1, L = Pa;
-      for (var i = -L; i < L; i++) {
-        var src = m + i, dst = ts + i; if (src < 0 || src >= n || dst < 0 || dst >= n) continue;
-        var w = 0.5 + 0.5 * Math.cos(Math.PI * i / L);
-        y[dst] += x[src] * w; ws[dst] += w;
+      for (i = 0; i < marks.length - 1; i++) { var dd = marks[i + 1] - marks[i]; if (dd > per[i] * 0.7 && dd < per[i] * 1.3) per[i] = dd; }
+      if (marks.length < 3) return;
+      var y = new Float32Array(len), ws = new Float32Array(len), ts = marks[0], mi = 0;
+      while (ts < len) {
+        while (mi < marks.length - 1 && Math.abs(marks[mi + 1] - ts) <= Math.abs(marks[mi] - ts)) mi++;
+        var m = marks[mi], Pa = per[mi], ratio = Math.pow(2, at(cents, a0 + m) / 1200);
+        for (i = -Pa; i < Pa; i++) { var src = m + i, dst = ts + i; if (src < 0 || src >= len || dst < 0 || dst >= len) continue; var w = 0.5 + 0.5 * Math.cos(Math.PI * i / Pa); y[dst] += seg[src] * w; ws[dst] += w; }
+        ts += Math.max(4, Math.round(Pa / ratio));
       }
-      ts += Math.max(8, Math.round(Pa / ratio));
-    }
-    for (var k = 0; k < n; k++) y[k] = ws[k] > 0.05 ? y[k] / ws[k] : y[k];
-    return y;
+      for (i = 0; i < len; i++) y[i] = ws[i] > 0.15 ? y[i] / ws[i] : seg[i];
+      // blend in and out over the padding
+      for (i = 0; i < len; i++) { var k2 = Math.min(1, i / pad, (len - 1 - i) / pad), c = 0.5 - 0.5 * Math.cos(Math.PI * Math.max(0, k2)); out[a0 + i] = seg[i] * (1 - c) + y[i] * c; }
+    });
+    return out;
   }
   function tune(x, sr, ref, opts, onp) {
     var tr = f0(x, sr, onp && function (p) { onp(p * 0.6); });
-    var cents = plan(tr, ref, opts);
-    if (onp) onp(0.7);
-    var y = psola(x, sr, tr, cents);
-    if (onp) onp(1);
-    var tot = 0, cnt = 0; for (var f = 0; f < cents.length; f++) if (tr.f0[f]) { tot += Math.abs(cents[f]); cnt++; }
-    return { y: y, avgCents: cnt ? tot / cnt : 0, voiced: cnt };
+    var pl = plan(tr, ref, opts); if (onp) onp(0.7);
+    var y = psola(x, sr, tr, pl.cents); if (onp) onp(1);
+    return { y: y, stats: pl.stats };
   }
-  return { shift: shift, stretch: stretch, resample: resample, f0: f0, plan: plan, psola: psola, tune: tune, deess: deess, coef: coef, filt: filt, filtfilt: filtfilt, highpass: highpass, removeDC: removeDC, follower: follower, fft: fft, tables: tables, midi: midi };
+  /* ---------- noise reduction: spectral, decision-directed (keeps the voice natural, no "underwater") ---------- */
+  function denoise(x, sr, amount) {
+    if (!amount) return x;
+    var N = sr > 32000 ? 2048 : 1024, H = N / 4, T = tables(N), w = T.win, K = N / 2 + 1, n = x.length, i, k, f;
+    var frames = Math.ceil(n / H) + 3, re = new Float64Array(N), im = new Float64Array(N);
+    // noise profile: per-bin average of the quietest 12% of frames
+    var en = new Float64Array(frames), specs = [];
+    for (f = 0; f < frames; f++) {
+      var s0 = f * H - N; for (i = 0; i < N; i++) { var q = s0 + i; re[i] = q >= 0 && q < n ? x[q] * w[i] : 0; im[i] = 0; }
+      fft(re, im, T, false); var p = new Float32Array(K), e = 0; for (k = 0; k < K; k++) { p[k] = re[k] * re[k] + im[k] * im[k]; e += p[k]; } specs.push(p); en[f] = e;
+    }
+    var ord = Array.from(en.keys()).filter(function (f) { return en[f] > 0; }).sort(function (a, b) { return en[a] - en[b]; }), cnt = Math.max(3, Math.floor(ord.length * 0.12));
+    var noise = new Float64Array(K); for (i = 0; i < cnt && i < ord.length; i++) for (k = 0; k < K; k++) noise[k] += specs[ord[i]][k] / cnt;
+    for (k = 0; k < K; k++) noise[k] = Math.max(noise[k] * 1.4, 1e-12);
+    var floor = Math.pow(10, -(6 + amount * 16) / 20), alpha = 0.97, prevG = new Float64Array(K).fill(1), prevPost = new Float64Array(K).fill(1);
+    var y = new Float32Array(n + 2 * N), ws = new Float32Array(n + 2 * N), G = new Float64Array(K);
+    for (f = 0; f < frames; f++) {
+      var s1 = f * H - N; for (i = 0; i < N; i++) { var q2 = s1 + i; re[i] = q2 >= 0 && q2 < n ? x[q2] * w[i] : 0; im[i] = 0; }
+      fft(re, im, T, false);
+      for (k = 0; k < K; k++) {
+        var post = specs[f][k] / noise[k], prio = alpha * prevG[k] * prevG[k] * prevPost[k] + (1 - alpha) * Math.max(post - 1, 0);
+        var g = prio / (1 + prio); G[k] = Math.max(floor, g); prevG[k] = g; prevPost[k] = post;
+      }
+      for (k = 1; k < K - 1; k++) G[k] = Math.max(floor, 0.25 * G[k - 1] + 0.5 * G[k] + 0.25 * G[k + 1]);
+      for (k = 0; k < K; k++) { re[k] *= G[k]; im[k] *= G[k]; if (k > 0 && k < N / 2) { re[N - k] = re[k]; im[N - k] = -im[k]; } }
+      fft(re, im, T, true);
+      for (i = 0; i < N; i++) { var o = s1 + i + N; if (o < 0 || o >= y.length) continue; y[o] += re[i] * w[i]; ws[o] += w[i] * w[i]; }
+    }
+    var out = new Float32Array(n); for (i = 0; i < n; i++) { var g2 = ws[i + N]; out[i] = g2 > 1e-3 ? y[i + N] / g2 : 0; }
+    return out;
+  }
+  /* the whole offline voice chain for a take */
+  function voice(x, sr, o, onp) {
+    var y = highpass(removeDC(x), 75, sr), st = null;
+    if (o.nr) y = denoise(y, sr, o.nr); if (onp) onp(0.25);
+    if (o.tune && o.ref) { var r = tune(y, sr, o.ref, o.tune, onp && function (p) { onp(0.25 + p * 0.6); }); y = r.y; st = r.stats; }
+    if (o.deess) y = deess(y, sr, o.deess); if (onp) onp(1);
+    return { y: y, stats: st };
+  }
+  return { shift: shift, stretch: stretch, resample: resample, f0: f0, notes: notes, plan: plan, psola: psola, tune: tune, denoise: denoise, voice: voice, deess: deess, coef: coef, filt: filt, filtfilt: filtfilt, highpass: highpass, removeDC: removeDC, follower: follower, fft: fft, tables: tables, midi: midi };
 })();
 
 /* ---------- worker protocol: {id, op, ...} -> {id, ok, ...} ---------- */
@@ -298,7 +398,10 @@ if (typeof window === "undefined" && typeof self !== "undefined" && typeof self.
         var t = KSDSP.f0(m.x, m.sr, prog); self.postMessage({ id: m.id, ok: true, f0: t.f0, hop: t.hop });
       } else if (m.op === "tune") {
         var r = KSDSP.tune(m.x, m.sr, { f0: m.ref, hop: m.refHop }, m.opts, prog);
-        self.postMessage({ id: m.id, ok: true, y: r.y, avgCents: r.avgCents, voiced: r.voiced }, [r.y.buffer]);
+        self.postMessage({ id: m.id, ok: true, y: r.y, stats: r.stats }, [r.y.buffer]);
+      } else if (m.op === "voice") {
+        var v = KSDSP.voice(m.x, m.sr, { nr: m.nr, deess: m.deess, tune: m.tune, ref: m.ref ? { f0: m.ref, hop: m.refHop } : null }, prog);
+        self.postMessage({ id: m.id, ok: true, y: v.y, stats: v.stats }, [v.y.buffer]);
       } else if (m.op === "deess") {
         var d = KSDSP.deess(m.x, m.sr, m.amount); self.postMessage({ id: m.id, ok: true, y: d }, [d.buffer]);
       } else self.postMessage({ id: m.id, ok: false, error: "unknown op" });

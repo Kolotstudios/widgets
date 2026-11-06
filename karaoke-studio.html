@@ -363,11 +363,11 @@ details.adv[open]>summary{margin-bottom:12px}
 <div class="dlg" id="dlg" hidden><div class="card" role="dialog" aria-modal="true"><p id="dlgMsg" style="margin:0"></p><div class="row"><button class="btn primary" id="dlgOk">אישור</button><button class="btn ghost" id="dlgNo">ביטול</button></div></div></div>
 <div class="toast" id="toast" hidden></div>
 
-<script src="ks-dsp.js?v=2026-11-06a"></script>
+<script src="ks-dsp.js?v=2026-11-06b"></script>
 <script>
 (function(){
 "use strict";
-var VER="2026-11-06a",TERMS_V="1";
+var VER="2026-11-06b",TERMS_V="1";
 var API="https://kolot-recorder.kolot-studios.workers.dev";
 var $=function(s){return document.getElementById(s)};
 var AC=window.AudioContext||window.webkitAudioContext,OAC=window.OfflineAudioContext||window.webkitOfflineAudioContext;
@@ -481,7 +481,7 @@ $("file").onchange=function(){var f=this.files[0];if(!f)return;pickFile(f)};
 function pickFile(f){
   if(f.size>60e6){toast("הקובץ גדול מדי (עד 60MB)");return}
   UPF={file:f,dur:0};$("fileName").hidden=false;$("fileName").textContent=f.name;
-  if(!$("title").value)$("title").value=f.name.replace(/\.[^.]+$/,"").replace(/[_]+/g," ").slice(0,80);
+  if(!$("title").value)$("title").value=f.name.replace(/\.[^.]+$/,"").replace(/[_]+/g," ").replace(/^\s*\d{1,3}[\s.\-–]+/,"").replace(/\s+/g," ").trim().slice(0,80);
   f.arrayBuffer().then(function(ab){return ax().decodeAudioData(ab)}).then(function(b){UPF.dur=b.duration;
     if(b.duration>600){toast("השיר ארוך מ-10 דקות");UPF=null;$("fileName").hidden=true}else $("fileName").textContent=f.name+" · "+fmt(b.duration);updUp()})
    .catch(function(){toast("לא הצלחנו לקרוא את הקובץ. כדאי MP3 או WAV");UPF=null;$("fileName").hidden=true;updUp()});
@@ -680,14 +680,25 @@ function wordTimes(l,wt){
   var tot=tk.reduce(function(a,w){return a+w.length+1},0),t=l.t,span=Math.max(0.2,l.e-l.t);
   l.w=tk.map(function(w){var d=span*(w.length+1)/tot,o=[+t.toFixed(2),+(t+d).toFixed(2)];t+=d;return o});
 }
+// lines: phrases split at the singer's pauses; a long phrase is cut where the pause is biggest and the halves are even
 function linesFromWords(W){
-  var out=[],cur=[];
-  var flush=function(){if(!cur.length)return;var l={text:cur.map(function(w){return w[0]}).join(" "),t:cur[0][1],e:cur[cur.length-1][2]};l.w=cur.map(function(w){return [w[1],w[2]]});out.push(l);cur=[]};
-  W.forEach(function(w,i){var txt=String(w[0]).trim();if(!txt)return;var p=cur[cur.length-1],gap=p?w[1]-p[2]:0,chars=cur.reduce(function(a,x){return a+x[0].length+1},0);
-    if(cur.length&&(gap>0.65||cur.length>=8||(chars>=30&&gap>0.18)||chars>=42))flush();cur.push([txt,+w[1],+w[2]])});
-  flush();
+  var ws=W.map(function(w){return [String(w[0]).trim(),+w[1],+w[2]]}).filter(function(w){return w[0]}),phr=[],cur=[];
+  ws.forEach(function(w){var p=cur[cur.length-1];if(p&&w[1]-p[2]>0.5){phr.push(cur);cur=[]}cur.push(w)});if(cur.length)phr.push(cur);
+  var len=function(a){return a.reduce(function(n,w){return n+w[0].length+1},0)-1},out=[];
+  (function split(list){list.forEach(function(ph){
+    if(ph.length<4||(len(ph)<=38&&ph.length<=8)){out.push(ph);return}
+    var best=-1e9,bi=0,tot=len(ph);for(var i=2;i<=ph.length-2;i++){var l=len(ph.slice(0,i)),g=ph[i][1]-ph[i-1][2],sc=Math.min(g,0.6)*4-Math.abs(tot-2*l)/12;if(sc>best){best=sc;bi=i}}
+    split([ph.slice(0,bi),ph.slice(bi)]);
+  })})(phr);
+  out=out.map(function(c){return {text:c.map(function(w){return w[0]}).join(" "),t:c[0][1],e:c[c.length-1][2],w:c.map(function(w){return [w[1],w[2]]})}});
   out.forEach(function(l,k){var nx=out[k+1];if(l.e-l.t>12)l.e=l.t+12;if(nx&&l.e>nx.t-0.02)l.e=Math.max(l.t+0.3,nx.t-0.02)});
   return out;
+}
+// drop words placed where the vocal channel is silent (the recogniser invents "thank you" etc. there)
+function dropSilent(W,buf){
+  if(!buf||!W.length)return W;var sr=buf.sampleRate,d=buf.getChannelData(0),rms=function(a,b){var s=0,n=0;for(var i=Math.max(0,Math.floor(a*sr));i<Math.min(d.length,b*sr);i+=8){s+=d[i]*d[i];n++}return n?Math.sqrt(s/n):0};
+  var lv=W.map(function(w){return rms(+w[1],Math.max(+w[2],+w[1]+0.15))}),srt=lv.slice().sort(function(a,b){return a-b}),med=srt[Math.floor(srt.length/2)]||0;
+  return W.filter(function(w,i){return lv[i]>=med*0.12});
 }
 function voiceMp3(buf){
   // 16 kHz mono, the voice band only: small upload, clear for the recogniser
@@ -704,7 +715,7 @@ function transcribe(user){
   voiceMp3(S.stems.v).then(function(blob){return b64(blob).then(function(d){return api("ks_tr",{id:my,audio:d,mime:blob.type,lang:S.lang,prompt:S.lines.length?S.lines.map(function(l){return l.text}).join("\n").slice(0,900):""})})})
    .then(function(r){
      if(!S.song||S.song.id!==my)return;
-     if(r.words&&r.words.length){S.words=r.words;S.lines=linesFromWords(r.words)}
+     if(r.words&&r.words.length){S.words=dropSilent(r.words,S.stems.v);S.lines=linesFromWords(S.words)}
      else if(r.lines&&r.lines.length){S.lines=r.lines.map(function(l){var o={text:l.text,t:l.t,e:Math.max(l.e,l.t+0.5)};wordTimes(o);return o});
        S.words=[];S.lines.forEach(function(l){tokens(l.text).forEach(function(w,k){S.words.push([w,l.w[k][0],l.w[k][1]])})})}
      else throw new Error("לא זוהתה שירה בשיר");

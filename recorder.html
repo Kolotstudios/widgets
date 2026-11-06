@@ -1780,7 +1780,9 @@ $("#payGo").onclick=function(){
     $("#payGo").disabled=false;
     if(!r.ok){if(w) w.close();$("#payStatus").textContent=r.error||"לא הצלחנו לשמור את הפרטים.";return}
     try{localStorage.setItem("kolot_rec_contact",JSON.stringify({name:name,phone:phone}))}catch(e){}
+    if(r.code) CLOUD.code=r.code;
     var url=payLink();if(w) w.location.href=url;else window.open(url,"_blank","noopener");
+    var copied=false;try{if(navigator.clipboard&&CLOUD.code){navigator.clipboard.writeText(CLOUD.code).then(function(){copied=true;$("#payStatus").textContent=$("#payStatus").textContent.replace("את קוד ההקלטה "+CLOUD.code+".","את קוד ההקלטה "+CLOUD.code+" (הקוד כבר הועתק, אפשר פשוט להדביק).")}).catch(function(){})}}catch(e){}
     $("#payStatus").textContent="עמוד התשלום נפתח בלשונית חדשה, עם ההזמנה שלך כבר בעגלה. כדאי לכתוב בשדה \"הערות\" את קוד ההקלטה "+(CLOUD.code||"")+". אחרי התשלום ההקלטה נפתחת כאן לבד, בדרך כלל תוך דקה או שתיים. אפשר להשאיר את הדף פתוח או לחזור אליו מהקישור.";
     startPayPoll();
   }).catch(function(){if(w) w.close();$("#payGo").disabled=false;$("#payStatus").textContent="אין חיבור לאינטרנט. מנסים שוב."});
@@ -1975,7 +1977,7 @@ setInterval(function(){
 },1000);
 
 /* ---------- visible errors (prototype) ---------- */
-var VERSION="2026-11-05a";
+var VERSION="2026-11-07a";
 function reportErr(msg){
   var el=document.getElementById("errBox");
   if(!el){el=document.createElement("p");el.id="errBox";el.className="note warn";el.style.cssText="position:fixed;inset:auto 8px calc(8px + env(safe-area-inset-bottom,0px)) 8px;z-index:99;background:var(--paper);border:1px solid var(--warn);border-radius:10px;padding:8px 10px;margin:0";document.body.appendChild(el)}

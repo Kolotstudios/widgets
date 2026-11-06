@@ -21,6 +21,14 @@ var CSS="#kolot-upsell{margin:14px 0 6px}\n#kolot-upsell .ku-h{font-weight:700;f
   var box=document.createElement("div");box.id="kolot-upsell";cart.parentNode.insertBefore(box,cart.nextSibling);
   var inCartTitles=[].map.call(cart.querySelectorAll(".cart-prod-title"),function(e){return e.textContent.trim()});
   var inCartIds=[].map.call(cart.querySelectorAll("[data-page_id]"),function(e){return +e.getAttribute("data-page_id")});
+  // phone recordings: remind the customer to paste the 6-digit recording code in "הערות" (the recording opens by that code or by phone)
+  (function(){var PH=[76252,76253,76254,76255,76256,76257,76258,76261];
+    var isPhone=inCartIds.some(function(id){return PH.indexOf(id)>=0})||inCartTitles.some(function(t){return /מהטלפון/.test(t)});
+    var ta=document.querySelector('textarea[name="comments"]');if(!isPhone||!ta||document.getElementById("kolot-rec-code")) return;
+    ta.placeholder="קוד ההקלטה (6 ספרות) מהמקליט";
+    var n=document.createElement("div");n.id="kolot-rec-code";n.style.cssText="margin:6px 0;padding:8px 12px;border-radius:8px;background:#f6f2fa;border:1px solid #e6dff0;font-size:14px;line-height:1.5";
+    n.textContent="הקלטה מהטלפון: כתבו בשדה \"הערות\" את קוד ההקלטה בן 6 הספרות שקיבלתם במקליט. אחרי התשלום ההקלטה נפתחת לבד, בדרך כלל תוך דקה או שתיים.";
+    ta.parentNode.insertBefore(n,ta);})();
   if(!inCartTitles.length&&!inCartIds.length) return;
   fetch("/"+encodeURIComponent("רכישה"),{credentials:"same-origin"}).then(function(r){return r.text()}).then(function(html){
     var doc=new DOMParser().parseFromString(html,"text/html"),P={},byTitle={};

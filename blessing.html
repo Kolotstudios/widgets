@@ -378,6 +378,7 @@ html.embedded .wrap{padding-block:12px 16px}
         <div class="seg" data-hide="kala">
           <input type="radio" name="tone" id="tn-warm" value="warm" checked><label for="tn-warm">מרגש</label>
           <input type="radio" name="tone" id="tn-fun" value="fun"><label for="tn-fun">מרגש עם חיוך</label>
+          <input type="radio" name="tone" id="tn-humor" value="humor"><label for="tn-humor">הומוריסטי</label>
         </div>
         <div class="seg">
           <input type="radio" name="len" id="ln-20" value="20"><label for="ln-20">20 שניות</label>
@@ -605,7 +606,7 @@ function evName(c){return {bat:'בת מצווה',bar:'בר מצווה',bd:'יו�
 const PL={'בראשית':'גם אני מתחיל[s:ה|] היום פרק חדש, ואני רוצה שיהיה טוב, כמו ״וירא אלוקים כי טוב״.','נח':'גם אני רוצה לשמור על המשפחה שלי ועל מי שחשוב לי, כמו שנח שמר על כולם.','לך לך':'גם אני יוצא[s:ת|] היום לדרך חדשה, ואני מקווה להיות ברכה לכל מי שסביבי.','וירא':'גם אני רוצה שהלב והבית שלי יהיו תמיד פתוחים לאחרים, כמו האוהל של אברהם.','חיי שרה':'מרבקה אני לומד[s:ת|] שחסד וטוב לב שווים יותר מכל דבר אחר.','תולדות':'אני רוצה לשמור על כל מה שקיבלתי מהבית, ולמצוא גם את הדרך שלי.','ויצא':'מותר לחלום בגדול, עד השמיים.','וישלח':'גם כשיש קשיים, אפשר להתמודד ולצאת מהם [s:חזקה|חזק] יותר.','וישב':'אסור להפסיק לחלום ולהאמין, גם כשקשה.','מקץ':'חלומות יכולים להתגשם, אם מאמינים ועובדים בשבילם.','ויגש':'אין דבר חשוב יותר ממשפחה מאוחדת, ואני מודה על המשפחה שלי.','ויחי':'לכל אחד יש ברכה משלו, ואני מרגיש[s:ה|] [s:בת|בר] מזל על המשפחה שמברכת אותי.','שמות':'גם אני רוצה לדעת לומר ״הנני״, ולהיות שם בשביל מי שצריך.','וארא':'כל אחד יכול לצמוח ולהשתחרר מפחדים, צעד אחרי צעד.','בא':'גם אני רוצה להביא אור לכל מקום שאני מגיע[s:ה|] אליו.','בשלח':'אחרי כל קושי מגיעות שירה ושמחה.','יתרו':'מהיום גם אני מקבל[s:ת|] על עצמי את התורה והמצוות, באהבה.','משפטים':'לפעמים צריך קודם לעשות, ולהבין תוך כדי: ״נעשה ונשמע״.','תרומה':'כל אחד יכול לתרום משהו מהלב, וגם אני רוצה לתת.','תצווה':'גם אני רוצה שהאור שלי ידלק תמיד, כמו הנר התמיד.','כי תשא':'יש ערכים שחרוטים בלב, ואת שלי קיבלתי מהבית.','ויקהל':'כשכולם עושים יחד, אפשר לבנות דברים גדולים.','פקודי':'כל מה שבונים באהבה מתמלא בברכה.','ויקרא':'צריך להקשיב לקול הפנימי שקורא לנו.','צו':'האש והשמחה שבתוכנו לא צריכות לכבות לעולם.','שמיני':'כל התחלה חדשה צריכה להיות מתוך שמחה.','תזריע':'כל אחד יכול להביא חיים ושמחה לכל מקום.','מצורע':'למילים יש כוח גדול, ואני רוצה שהמילים שלי יהיו תמיד טובות.','אחרי מות':'המצוות נועדו כדי שנחיה חיים טובים ושמחים.','קדשים':'״ואהבת לרעך כמוך״ הוא הכלל הכי חשוב, ואני רוצה לחיות לפיו.','אמור':'יש בחיים זמנים מיוחדים, והיום הוא אחד מהם.','בהר':'צריך לדעת לעצור, להודות ולשמוח במה שיש.','בחוקותי':'כשהולכים בדרך הנכונה, הברכה מגיעה.','במדבר':'כל אחד ואחת חשובים, ולכל אחד יש מקום משלו.','נשא':'הברכה הכי גדולה היא ברכה של שלום.','בהעלותך':'כל אחד יכול להדליק את האור שבתוכו ולהאיר לאחרים.','שלח לך':'חשוב לראות את הטוב, ולא לפחד.','קורח':'כל אחד יכול לפרוח, אם רק נותנים לו זמן.','חוקת':'תמיד יש מקור של כוח ושמחה, רק צריך לדעת לחפש.','בלק':'אפשר להפוך כל דבר לברכה.','פינחס':'צריך לעמוד על מה שחשוב, באומץ ובכבוד.','מטות':'המילה שלנו חשובה, וצריך לעמוד בהבטחות.','מסעי':'החיים הם מסע, וכל תחנה בו חשובה.','דברים':'הכי חשוב לדבר מהלב.','ואתחנן':'אהבה ואמונה הן הבסיס של הכל.','עקב':'צריך לדעת להודות על כל מה שיש לנו.','ראה':'בכל יום אפשר לבחור בברכה.','שופטים':'צריך ללכת תמיד בדרך הישר.','כי תצא':'צריך לראות את מי שצריך עזרה, ולתת יד.','כי תבוא':'צריך לשמוח בכל הטוב שיש לנו.','נצבים':'תמיד אפשר לבחור, וכדאי לבחור בחיים ובטוב.','וילך':'צריך להיות חזקים ואמיצים, במיוחד כשמשהו חדש מתחיל.','האזינו':'החיים יכולים להיות שיר יפה, אם יודעים להקשיב.','וזאת הברכה':'לכל אחד יש ברכה משלו, ואני מודה על שלי.'};
 function buildSelf(c){
  const S=[];const add=(order,pri,...v)=>{v=v.filter(Boolean);if(!v.length)return;const alts=v.map(x=>G(x,c));S.push({order,pri,alts,i:Math.floor(rnd()*alts.length)})};
- const f=c.cg==='f',g=(a,b)=>f?a:b,REL=c.style==='rel',TRAD=c.style==='trad',SF=c.fl==='sf',fun=c.tone==='fun',short=c.secs<=40;
+ const f=c.cg==='f',g=(a,b)=>f?a:b,REL=c.style==='rel',TRAD=c.style==='trad',SF=c.fl==='sf',fun=(c.tone==='fun'||c.tone==='humor'),humor=c.tone==='humor',short=c.secs<=40;
  const mitz=c.ev==='bar'||c.ev==='bat',ev=evName(c),sd=c.selfData||{par:['אמא','אבא'],pn:['',''],sibs:[]};
  const [l1,l2]=sd.par||['אמא','אבא'];
  // opening
@@ -759,7 +760,7 @@ function build(c){
  if(REL)S.push({order:-1,pri:0,alts:SF?['בס״ד','ב״ה']:['בס״ד'],i:SF?Math.floor(rnd()*2):0});
  if(SF&&!short)add(0.5,0,`בסימן טוב ובמזל טוב!`,REL?`ברוך השם, איזה יום של שמחה!`:`איזה יום של שמחה!`);
  if(c.open)add(0,0,c.rel==='spouse'?`${n}, ${c.open},`:`${c.open} [c:יקרה ואהובה|יקר ואהוב|],`,c.rel==='spouse'?`${c.open}, ${n},`:`${c.open} [c:היקרה|היקר|] ${my},`,c.rel==='spouse'?`${n} [c:שלי|שלי|], ${c.open},`:`${c.open} [c:אהובה|אהוב|] ${my},`,c.rel==='spouse'?null:`${c.open}, [c:האחת והיחידה|האחד והיחיד|],`);
- else add(0,0,`${n} [c:היקרה|היקר|היקרים] ${my},`,`${n} [c:אהובה|אהוב|אהובים] ${my},`,`${n}, [c:היקרה|היקר|היקרים] מכל,`,`${n} [c:האהובה|האהוב|האהובים],`,`ל${n} [c:היקרה|היקר|היקרים] ${my},`,`${n} ${my},`,c.tone==='fun'?`${n}, [c:כוכבת|כוכב|כוכבים] ${my},`:null,TRAD&&child?`${n} [c:המתוקה|המתוק|] ${my},`:null,TRAD?`${n} [c:היקרה והאהובה|היקר והאהוב|היקרים והאהובים],`:null,SF?`${n}, [c:הנשמה|הנשמה|הנשמות] ${my},`:null,SF?`${n}, כפרה [c:עלייך|עליך|עליכם],`:null);
+ else add(0,0,`${n} [c:היקרה|היקר|היקרים] ${my},`,`${n} [c:אהובה|אהוב|אהובים] ${my},`,`${n}, [c:היקרה|היקר|היקרים] מכל,`,`${n} [c:האהובה|האהוב|האהובים],`,`ל${n} [c:היקרה|היקר|היקרים] ${my},`,`${n} ${my},`,(c.tone==='fun'||c.tone==='humor')?`${n}, [c:כוכבת|כוכב|כוכבים] ${my},`:null,TRAD&&child?`${n} [c:המתוקה|המתוק|] ${my},`:null,TRAD?`${n} [c:היקרה והאהובה|היקר והאהוב|היקרים והאהובים],`:null,SF?`${n}, [c:הנשמה|הנשמה|הנשמות] ${my},`:null,SF?`${n}, כפרה [c:עלייך|עליך|עליכם],`:null);
  // ----- the moment -----
  const relMoment=()=>{if(!REL||['sib','sibs'].includes(c.rel)||c.from==='friends')return false;
   if(hina){add(1,0,`בשעה טובה ומוצלחת, הערב אנחנו חוגגים את החינה שלכם, ובעזרת ה׳ בקרוב תעמדו יחד מתחת לחופה.`,`ברוך ה׳, [s:זכיתי|זכיתי|זכינו] להגיע לערב החינה שלכם.`,`[s:אני מודה|אני מודה|אנחנו מודים] לקב״ה [s:שזכיתי|שזכיתי|שזכינו] לשמוח איתכם הערב, ערב החינה, רגע לפני החופה.`);return true}
@@ -795,7 +796,7 @@ function build(c){
   else if(c.rel==='grandkids')add(1,0,`${c.age} שנים, ו[c:את הסבתא הכי טובה|אתה הסבא הכי טוב|] בעולם.`,`היום [c:את חוגגת|אתה חוגג|] ${c.age}, ואנחנו, הנכדים, רוצים להגיד [c:לך|לך|] כמה [c:את חשובה|אתה חשוב|] לנו.`,
    `[c:סבתא|סבא|] [c:חוגגת|חוגג|] ${c.age}, ואנחנו, הנכדים, הכי גאים בעולם.`);
   else add(1,0,`היום [c:את חוגגת|אתה חוגג|] ${c.age}, ו[s:אני רוצה|אני רוצה|אנחנו רוצים] להגיד לך כמה [c:את חשובה|אתה חשוב|] ${toMe}.`,`${c.age} שנים של חיוך ושל אהבה, ו[s:אני מרגישה|אני מרגיש|אנחנו מרגישים] [s:בת מזל|בר מזל|ברי מזל] ללכת לצדך.`,
-   `היום [c:את חוגגת|אתה חוגג|] ${c.age}, וזו הזדמנות מצוינת להגיד [c:לך|לך|] את כל מה שלא תמיד אומרים.`,c.tone==='fun'?`${c.age}? ממש לא רואים [c:עלייך|עליך|].`:null)}
+   `היום [c:את חוגגת|אתה חוגג|] ${c.age}, וזו הזדמנות מצוינת להגיד [c:לך|לך|] את כל מה שלא תמיד אומרים.`,(c.tone==='fun'||c.tone==='humor')?`${c.age}? ממש לא רואים [c:עלייך|עליך|].`:null)}
  else if(c.rel==='sib'||c.rel==='sibs')add(1,0,c.spk&&c.spk.rel==='older'?`רק אתמול [c:היית הקטנה שרצה|היית הקטן שרץ|] [s:אחריי|אחריי|אחרינו] בכל הבית, והיום [c:את חוגגת|אתה חוגג|] ${ev}.`:null,
    c.spk&&c.spk.rel==='older'?`[s:אני זוכרת|אני זוכר|] [c:אותך|אותך|] [c:תינוקת קטנה|תינוק קטן|], ופתאום [c:את חוגגת|אתה חוגג|] ${ev}.`:null,
    `היום [c:את חוגגת|אתה חוגג|] ${ev}, ו[s:אני כל כך מתרגשת|אני כל כך מתרגש|אנחנו כל כך מתרגשים] [c:בשבילך|בשבילך|].`,
@@ -844,13 +845,13 @@ function build(c){
    c.tog.length>1?`${tg}: אלה הרגעים הקטנים שלנו, והם הכל [s:בשבילי|בשבילי|בשבילנו].`:null,c.tog.length>1?`הזמנים הכי יפים ${my} הם ${withY}: ${tg}.`:null,
    `[s:אני לא צריכה|אני לא צריך|אנחנו לא צריכים] הרבה כדי להיות [s:מאושרת|מאושר|מאושרים], רק ${acc} ואת הרגעים שלנו: ${tg}.`)}
  if(c.memory){const mm=c.memory.replace(/[.!]+$/,'');
-  add(mid[2],3,`יש רגע אחד ש[s:אני תמיד חוזרת|אני תמיד חוזר|אנחנו תמיד חוזרים] אליו: ${mm}. כבר אז היה ברור שיש ${inY} משהו מיוחד.`,`${mm}. ${c.tone==='fun'?`וזה עדיין מצחיק ${me} כל פעם מחדש.`:`הרגע הזה נשאר ${withMe} עד היום.`}`,
+  add(mid[2],3,`יש רגע אחד ש[s:אני תמיד חוזרת|אני תמיד חוזר|אנחנו תמיד חוזרים] אליו: ${mm}. כבר אז היה ברור שיש ${inY} משהו מיוחד.`,`${mm}. ${(c.tone==='fun'||c.tone==='humor')?`וזה עדיין מצחיק ${me} כל פעם מחדש.`:`הרגע הזה נשאר ${withMe} עד היום.`}`,
    `[s:אני לא אשכח|אני לא אשכח|אנחנו לא נשכח] אף פעם: ${mm}.`,`מכל הזיכרונות, יש אחד שתמיד עולה ${toMe}: ${mm}.`)}
  if(c.hob.length){const hb=joinHe(c.hob.slice(0,3));
   add(mid[3],4,`[c:וכשאת עסוקה|וכשאתה עסוק|וכשאתם עסוקים] במה ש[c:את אוהבת|אתה אוהב|אתם אוהבים], ${hb}, רואים כמה אור יש ${inY}.`,`[c:את אוהבת|אתה אוהב|אתם אוהבים] ${hb}, [c:ותמשיכי|ותמשיך|ותמשיכו] לעשות את מה שמשמח ${acc}.`,
    `[c:את אוהבת|אתה אוהב|אתם אוהבים] ${hb}, ו[s:אני אוהבת|אני אוהב|אנחנו אוהבים] לראות ${acc} [c:זורחת|זורח|זורחים] בכל פעם מחדש.`,
    c.hob.length>1?`${hb}: [c:את עושה|אתה עושה|אתם עושים] הכל עם המון לב, וזה רואים.`:null)}
- if(c.tone==='fun')add(7,5,child?`ותודה על כל הפעמים [c:שהרמת|שהרמת|] את הבית, גם כשביקשנו קצת שקט.`:null,`ואם [s:הייתי צריכה|הייתי צריך|היינו צריכים] לסכם ${acc} במילה אחת, היא הייתה "אנרגיה".`,
+ if((c.tone==='fun'||c.tone==='humor'))add(7,5,child?`ותודה על כל הפעמים [c:שהרמת|שהרמת|] את הבית, גם כשביקשנו קצת שקט.`:null,`ואם [s:הייתי צריכה|הייתי צריך|היינו צריכים] לסכם ${acc} במילה אחת, היא הייתה "אנרגיה".`,
    `ו${you} עדיין [c:חייבת|חייב|חייבים] ${toMe} ריקוד אחד הערב!`,child?`ואם יש מישהו שיודע להפוך כל יום רגיל לחגיגה, [c:זו את|זה אתה|].`:null,
    child&&elder?`אגב, [s:אני עדיין מחכה|אני עדיין מחכה|אנחנו עדיין מחכים] [c:שתסדרי|שתסדר|] את החדר.`:null);
  // ----- family mentions -----
@@ -863,6 +864,22 @@ function build(c){
   add(10,3,`ו[s:אני זוכרת|אני זוכר|אנחנו זוכרים] היום גם את ${L}, ${g('ששומרים','ששומרת','ששומר')} עלינו מלמעלה.`,`ו${L} ${g('מביטים','מביטה','מביט')} בנו עכשיו מלמעלה, ${g('מאושרים','מאושרת','מאושר')} יחד איתנו.`,
    `[s:ואני בטוחה|ואני בטוח|ואנחנו בטוחים] ש${L} ${g('רואים','רואה','רואה')} ${acc} מלמעלה ו${g('גאים','גאה','גאה')} ${inY}.`,
    `${L} ${g('חסרים','חסרה','חסר')} ${toMe} היום מאוד, אבל [s:אני יודעת|אני יודע|אנחנו יודעים] ש${g('הם','היא','הוא')} כאן איתנו, בלב.`)}
+ // ----- humorous tone: playful lines (no jokes at anyone's expense) -----
+ if(c.tone==='humor'){
+  if(c.from==='friends'){
+   add(3.6,1,`אנחנו מכירים [c:אותך|אותך|אתכם] מספיק טוב כדי לדעת את כל הסודות, ומספיק [c:אוהבים אותך|אוהבים אותך|אוהבים אתכם] כדי לא לספר אותם כאן. כמעט.`,`תודה שתמיד [c:את מגיעה|אתה מגיע|אתם מגיעים], עם איחור קטן אבל עם חיוך ענק.`);
+   add(6.6,2,`ואם פעם [c:תצטרכי|תצטרך|תצטרכו] מישהו שיצחק מהבדיחות [c:שלך|שלך|שלכם] גם בפעם העשירית, [c:את יודעת|אתה יודע|אתם יודעים] איפה למצוא אותנו.`,`ומבטיחים להמשיך להציק [c:לך|לך|לכם] באהבה, כמו שרק חברים אמיתיים יודעים.`)}
+  else if(c.m==='wed'){
+   add(10.4,1,`מעכשיו יש לכם מישהו שתמיד יזכור איפה שמתם את המפתחות, ומישהו שתמיד יגיד שהשני הזיז אותם.`,`שתמיד תסכימו על הדברים החשובים באמת: איזו סדרה רואים הערב, ומי מוציא את הזבל.`,`ושהשלט של המזגן לעולם לא יהיה סיבה לוויכוח.`);
+   add(10.45,2,`ועצה קטנה מניסיון: אל תלכו לישון כועסים. לכו לישון, ובבוקר כבר לא תזכרו על מה זה היה.`,`והכי חשוב: לצחוק יחד הרבה, במיוחד מעצמכם.`)}
+  else if(c.m==='adult'){
+   add(3.2,1,`אומרים שהגיל הוא רק מספר. במקרה [c:שלך|שלך|], זה מספר די מרשים.`,`[c:את|אתה|] עדיין [c:צעירה|צעיר|] בלב. רק הברכיים קצת פחות מסכימות.`,`ניסינו לשים על העוגה את כל הנרות, אבל אז נזכרנו שאין לנו מטף בבית.`);
+   add(11.5,2,`${wish} ${toY} עוד הרבה שנים של בריאות ושמחה, ומשקפי קריאה שתמיד נמצאים איפה ששמת אותם.`,`${wish} ${toY} שהשנה הזאת תהיה מלאה בהפתעות טובות, ובפחות הודעות בקבוצת הוואטסאפ של המשפחה.`)}
+  else if(child){
+   add(3.2,1,`יש ${toY} כישרון מיוחד: להיעלם בדיוק כשצריך לפנות את השולחן, ולהופיע בדיוק כשמגיעה הפיצה.`,`הטלפון תמיד [c:בידיים שלך|בידיים שלך|], אבל איכשהו [c:את אף פעם לא שומעת|אתה אף פעם לא שומע|] אותו כשמתקשרים מהבית.`,`החדר [c:שלך|שלך|] הוא מקום קסום: יש בו הכל, ואף אחד, כולל [c:אותך|אותך|], לא יודע איפה.`);
+   if(mitz)add(3.3,2,`אומרים שבגיל מצוות מקבלים אחריות. [s:אני מחכה|אני מחכה|אנחנו מחכים] בעיקר לראות אותה מגיעה לחדר [c:שלך|שלך|].`,`מהיום [c:את|אתה|] [c:חייבת|חייב|] במצוות. נתחיל מהמצווה הכי חשובה: לסדר את החדר.`);
+   add(11.5,2,`${wish} ${toY} סוללה תמיד מלאה, וויפיי תמיד חזק, והרבה סבלנות למורים [c:שלך|שלך|].`,`${wish} ${toY} שכל החלומות יתגשמו, ושלפחות חצי מהם יכללו גם שיעורי בית מוכנים בזמן.`)}
+  add(14.5,1,`ועכשיו, אחרי כל המילים היפות, אפשר סוף סוף לתקוף את הקינוחים.`,`ועכשיו, מזל טוב! וכולם לרחבה.`)}
  // ----- extra paragraphs for longer blessings (only when there is room) -----
  if(!short){const kidsV=['kids','kid','grandkids'].includes(c.rel);
   if(c.from==='friends'){add(3.5,6,`מאז שהכרנו, ${you} חלק מכל רגע טוב שלנו: בצחוקים, בסודות ובשטויות הכי גדולות.`,`[c:את החברה|אתה החבר|אתם החברים] שתמיד אפשר לסמוך [c:עלייך|עליך|עליכם], ביום שמח וגם ביום פחות.`);
@@ -1047,9 +1064,29 @@ function recHref(){const t=fullText();if(!t.trim())return '#';const self=$('from
 // coming from a recording (?k=…&slot=…): the button sends this blessing back into that recording as one more blesser
 const RET=(()=>{let q=location.search;try{if(!/[?&]k=/.test(q))q=window.parent.location.search}catch(e){}const p=new URLSearchParams(q);const k=p.get('k');return k&&/^[a-f0-9]{20,40}$/.test(k)?{k,slot:+p.get('slot')||0}:null})();
 function retHref(){const t=fullText();if(!t.trim())return '#';const nm=($('sign').value||'').trim();return REC_URL+'#k='+RET.k+'&slot='+RET.slot+'&n='+encodeURIComponent(nm)+'&t='+encodeURIComponent(t)}
-if(RET){$('recBox').hidden=false;const l=$('recLink');l.textContent='להוספת הברכה להקלטה ←';l.target='_top';$('recBox').querySelector('b').textContent='הברכה מוכנה? מוסיפים אותה להקלטה';$('recBox').querySelector('p').textContent='הברכה תיכנס להקלטה שלכם כמברך נוסף. אפשר לחזור לכאן ולכתוב ברכה לכל מברך.';
+if(RET){$('recBox').hidden=false;const l=$('recLink');l.textContent='להוספת הברכה להקלטה ←';l.target='_self';$('recBox').querySelector('b').textContent='הברכה מוכנה? מוסיפים אותה להקלטה';$('recBox').querySelector('p').textContent='הברכה תיכנס להקלטה שלכם כמברך נוסף. אפשר לחזור לכאן ולכתוב ברכה לכל מברך.';
  l.addEventListener('click',e=>{const h=retHref();if(h==='#'){e.preventDefault();return}e.currentTarget.href=h;track('blessing_add_to_recording',{blessing_event:val('ev')})})}
-else if(recEnabled){$('recBox').hidden=false;$('recLink').addEventListener('click',e=>{const h=recHref();if(h==='#'){e.preventDefault();return}e.currentTarget.href=h;track('blessing_record_self',{blessing_event:val('ev')})})}
+else if(recEnabled){$('recBox').hidden=false;$('recLink').addEventListener('click',e=>{const h=recHref();if(h==='#'){e.preventDefault();return}e.currentTarget.href=h;track('blessing_record_self',{blessing_event:val('ev')});if(openRecLayer(h))e.preventDefault()})}
+// the recorder opens on top of the same page (full screen), so people never leave the site
+function openRecLayer(url){
+ let W=window;try{if(window.parent!==window&&window.parent.document.body)W=window.parent}catch(e){W=window}
+ const D=W.document;if(D.getElementById('kolotRecLayer'))return true;
+ try{
+  const box=D.createElement('div');box.id='kolotRecLayer';box.setAttribute('role','dialog');box.setAttribute('aria-label','הקלטת הברכה');
+  box.style.cssText='position:fixed;inset:0;z-index:2147483000;background:#120d1c;display:flex;flex-direction:column;direction:rtl';
+  const bar=D.createElement('div');bar.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;background:#1d1530;color:#fff;font:600 16px/1.3 Heebo,Arial,sans-serif;flex:none';
+  const t=D.createElement('span');t.textContent=val('ev')==='kala'?'הקלטת ברכת הכלה':'הקלטת הברכה';
+  const x=D.createElement('button');x.type='button';x.textContent='✕ סגירה';x.style.cssText='font:600 15px Heebo,Arial,sans-serif;color:#fff;background:transparent;border:1px solid rgba(255,255,255,.45);border-radius:8px;padding:7px 14px;cursor:pointer';
+  const f=D.createElement('iframe');f.src=url;f.title='מקליט הברכות של קולות';f.setAttribute('allow','microphone; autoplay; clipboard-write');f.style.cssText='flex:1;width:100%;border:0;background:#120d1c';
+  bar.appendChild(t);bar.appendChild(x);box.appendChild(bar);box.appendChild(f);D.body.appendChild(box);
+  const prev=D.body.style.overflow;D.body.style.overflow='hidden';
+  const close=()=>{box.remove();D.body.style.overflow=prev;W.removeEventListener('popstate',onPop)};
+  const onPop=()=>close();
+  try{W.history.pushState({kolotRec:1},'');W.addEventListener('popstate',onPop)}catch(e){}
+  x.onclick=()=>{try{if(W.history.state&&W.history.state.kolotRec)W.history.back();else close()}catch(e){close()}};
+  return true;
+ }catch(e){return false}
+}
 $('leadWa').addEventListener('click',()=>track('blessing_lead_whatsapp',{blessing_event:val('ev')}));
 $('again').addEventListener('click',()=>track('blessing_regenerate'));
 

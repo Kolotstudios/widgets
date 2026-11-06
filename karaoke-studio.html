@@ -132,6 +132,7 @@ details.adv[open]>summary{margin-bottom:12px}
 .lrow input{padding:7px 10px}
 .lrow .nd{display:flex;gap:3px}
 .lrow .nd button{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:8px;width:32px;height:32px;cursor:pointer;font:600 14px var(--f)}
+.lrow.fx input{border-color:var(--accent);background:var(--soft)}
 .lrow.low .tm{background:transparent;border:1px dashed var(--warn);color:var(--warn)}
 /* takes */
 .takes{display:grid;gap:8px}
@@ -260,6 +261,7 @@ details.adv[open]>summary{margin-bottom:12px}
             <div class="seg" id="guideSeg"><button data-g="1" aria-pressed="false">100%</button><button data-g="0.5" aria-pressed="true">50%</button><button data-g="0" aria-pressed="false">בלי (פלייבק)</button></div></div>
           <div class="field"><h3>סולם</h3>
             <div class="keybox"><button id="keyDown" aria-label="להוריד חצי טון">−</button><output id="keyOut">מקורי</output><button id="keyUp" aria-label="להעלות חצי טון">+</button></div>
+            <div class="row" id="keyAsk" hidden><button class="btn primary small" id="keyOk">אישור סולם</button><button class="btn ghost small" id="keyCancel">ביטול</button></div>
             <p class="status" id="keyMsg"></p></div>
         </div>
         <details class="adv"><summary>עוצמות</summary>
@@ -283,6 +285,7 @@ details.adv[open]>summary{margin-bottom:12px}
           <div class="row">
             <button class="btn" id="pasteBtn">הדבקת המילים הנכונות</button>
             <button class="btn" id="tapBtn">סנכרון ידני</button>
+            <button class="btn" id="fixBtn">בדיקת מילים (AI)</button>
             <button class="btn ghost small" id="reTrBtn">תמלול מחדש</button>
           </div>
           <div id="pasteBox" class="field" hidden>
@@ -363,11 +366,11 @@ details.adv[open]>summary{margin-bottom:12px}
 <div class="dlg" id="dlg" hidden><div class="card" role="dialog" aria-modal="true"><p id="dlgMsg" style="margin:0"></p><div class="row"><button class="btn primary" id="dlgOk">אישור</button><button class="btn ghost" id="dlgNo">ביטול</button></div></div></div>
 <div class="toast" id="toast" hidden></div>
 
-<script src="ks-dsp.js?v=2026-11-06b"></script>
+<script src="ks-dsp.js?v=2026-11-07a"></script>
 <script>
 (function(){
 "use strict";
-var VER="2026-11-06b",TERMS_V="1";
+var VER="2026-11-07a",TERMS_V="1";
 var API="https://kolot-recorder.kolot-studios.workers.dev";
 var $=function(s){return document.getElementById(s)};
 var AC=window.AudioContext||window.webkitAudioContext,OAC=window.OfflineAudioContext||window.webkitOfflineAudioContext;
@@ -539,7 +542,7 @@ function openSong(id){
 }
 function showSong(){
   view("vSong");$("stTitle").textContent=S.song.title;$("tDur").textContent=fmt(S.dur);
-  setGuide(S.guide,true);updKey();renderLines();renderTakes();tab("tLyrics");PL.off=0;drawStage(0);
+  PEND=S.semi;setGuide(S.guide,true);updKey();renderLines();renderTakes();tab("tLyrics");PL.off=0;drawStage(0);
   $("lyrMsg").textContent=S.lines.length?"":"מתמללים את המילים מתוך הקול של הזמר…";
 }
 
@@ -620,7 +623,10 @@ outs();
 
 /* ---------- key change ---------- */
 var keyTok=0;
-function updKey(){$("keyOut").textContent=S.semi?(S.semi>0?"+":"")+S.semi+" חצאי טון":"מקורי";$("keyDown").disabled=S.semi<=-6;$("keyUp").disabled=S.semi>=6}
+var PEND=0;
+function keyName(n){return n?(n>0?"+":"")+n+" חצאי טון":"מקורי"}
+function updKey(){var pend=PEND!==S.semi;$("keyOut").textContent=keyName(PEND)+(pend?" · לא אושר":"");$("keyDown").disabled=PEND<=-6;$("keyUp").disabled=PEND>=6;$("keyAsk").hidden=!pend;
+  if(pend)$("keyMsg").textContent=S.keyed[PEND]?"הסולם הזה כבר מוכן. לוחצים אישור.":"בוחרים כמה לשנות ולוחצים \"אישור סולם\". עכשיו מתנגן: "+keyName(S.semi)+".";}
 function keyedFor(semi,onp){
   if(S.keyed[semi])return Promise.resolve(S.keyed[semi]);
   var I=S.stems.i,V=S.stems.v,sr=I.sampleRate,pi=0,pv=0,rep=function(){if(onp)onp((pi+pv)/2)};
@@ -635,14 +641,17 @@ function keyedFor(semi,onp){
     var ks=Object.keys(S.keyed).filter(function(x){return +x!==0});if(ks.length>=3)delete S.keyed[ks[0]];
     S.keyed[semi]=k;return k});
 }
-function changeKey(d){
-  if(REC.on)return;var want=Math.max(-6,Math.min(6,S.semi+d));if(want===S.semi)return;var my=++keyTok;
-  $("keyMsg").textContent=S.keyed[want]?"":"מכינים את הסולם החדש… 0%";$("keyDown").disabled=$("keyUp").disabled=true;
-  keyedFor(want,function(p){if(my===keyTok)$("keyMsg").textContent="מכינים את הסולם החדש… "+Math.round(p*100)+"%"}).then(function(){
-    if(my!==keyTok)return;S.semi=want;$("keyMsg").textContent=Math.abs(want)>4&&S.guide>0?"בהפרש גדול הקול של הזמר נשמע פחות טבעי. כדאי לשיר עם פלייבק.":"";updKey();
+function changeKey(d){if(REC.on||keyBusy)return;PEND=Math.max(-6,Math.min(6,PEND+d));if(PEND===S.semi)$("keyMsg").textContent="";updKey()}
+var keyBusy=false;
+function applyKey(){
+  if(REC.on||keyBusy)return;var want=PEND;if(want===S.semi)return updKey();var my=++keyTok;keyBusy=true;
+  $("keyAsk").hidden=true;$("keyDown").disabled=$("keyUp").disabled=true;$("keyMsg").textContent=S.keyed[want]?"":"מכינים את הסולם… 0%";
+  keyedFor(want,function(p){if(my===keyTok)$("keyMsg").textContent="מכינים את הסולם… "+Math.round(p*100)+"%"}).then(function(){
+    if(my!==keyTok)return;S.semi=want;keyBusy=false;updKey();$("keyMsg").textContent=Math.abs(want)>4&&S.guide>0?"בהפרש גדול הקול של הזמר נשמע פחות טבעי. כדאי לשיר עם פלייבק.":(want?"✓ הסולם הוחלף":"");
     S.takes.forEach(function(t){t.prepKey=""});if(PL.playing)play(pos());
-  }).catch(function(e){$("keyMsg").textContent="✗ "+e.message;updKey()});
+  }).catch(function(e){keyBusy=false;PEND=S.semi;$("keyMsg").textContent="✗ "+e.message;updKey()});
 }
+$("keyOk").onclick=applyKey;$("keyCancel").onclick=function(){PEND=S.semi;$("keyMsg").textContent="";updKey()};
 $("keyDown").onclick=function(){changeKey(-1)};$("keyUp").onclick=function(){changeKey(1)};
 
 /* ---------- lyrics: transcription, placement, editing ---------- */
@@ -709,21 +718,36 @@ function voiceMp3(buf){
     return encMp3([x],sr,48).then(function(m){return m||wav([x],sr)})});
 }
 var trBusy=false;
+function voiceB64(){var id=S.song.id;if(S.vb&&S.vb.id===id)return Promise.resolve(S.vb);
+  return voiceMp3(S.stems.v).then(function(blob){return b64(blob).then(function(d){S.vb={id:id,d:d,mime:blob.type};return S.vb})})}
 function transcribe(user){
-  if(trBusy)return;trBusy=true;$("reTrBtn").disabled=true;$("lyrMsg").textContent="מתמללים את המילים מתוך הקול של הזמר… (חצי דקה עד דקה)";
+  if(trBusy)return;trBusy=true;$("reTrBtn").disabled=$("fixBtn").disabled=true;$("lyrMsg").textContent="מתמללים את המילים מתוך הקול של הזמר… (חצי דקה עד דקה)";
   var my=S.song.id;
-  voiceMp3(S.stems.v).then(function(blob){return b64(blob).then(function(d){return api("ks_tr",{id:my,audio:d,mime:blob.type,lang:S.lang,prompt:S.lines.length?S.lines.map(function(l){return l.text}).join("\n").slice(0,900):""})})})
+  voiceB64().then(function(v){return api("ks_tr",{id:my,audio:v.d,mime:v.mime,lang:S.lang})})
    .then(function(r){
      if(!S.song||S.song.id!==my)return;
      if(r.words&&r.words.length){S.words=dropSilent(r.words,S.stems.v);S.lines=linesFromWords(S.words)}
      else if(r.lines&&r.lines.length){S.lines=r.lines.map(function(l){var o={text:l.text,t:l.t,e:Math.max(l.e,l.t+0.5)};wordTimes(o);return o});
        S.words=[];S.lines.forEach(function(l){tokens(l.text).forEach(function(w,k){S.words.push([w,l.w[k][0],l.w[k][1]])})})}
      else throw new Error("לא זוהתה שירה בשיר");
-     saveLyrics();renderLines();drawStage(pos());
-     $("lyrMsg").textContent="✓ המילים תומללו אוטומטית. כדאי לעבור עליהן: אפשר לתקן מילים בשורות, או להדביק את המילים הנכונות והמערכת תמקם אותן לפי השירה.";
+     renderLines();drawStage(pos());trBusy=false;return checkLyrics(true);
    }).catch(function(e){$("lyrMsg").textContent="✗ התמלול נכשל: "+e.message+". אפשר להדביק את המילים ולסנכרן ידנית."})
-   .then(function(){trBusy=false;$("reTrBtn").disabled=false});
+   .then(function(){trBusy=false;$("reTrBtn").disabled=$("fixBtn").disabled=false});
 }
+// second pass: Gemini listens to the vocal and fixes misheard / garbled words; each line keeps its place in the song
+function checkLyrics(auto){
+  if(!S.lines.length)return Promise.resolve();var my=S.song.id;$("fixBtn").disabled=true;
+  $("lyrMsg").textContent=(auto?"✓ תומלל. ":"")+"עכשיו בודקים את המילים מול השירה ומתקנים מילים שהשתבשו… (עד דקה)";
+  var before=S.lines.map(function(l){return l.text});
+  return voiceB64().then(function(v){return api("ks_fix",{id:my,audio:v.d,mime:v.mime,lang:S.lang,lines:before})}).then(function(r){
+    if(!S.song||S.song.id!==my)return;
+    r.lines.forEach(function(t,i){var l=S.lines[i];if(!l||t===l.text)return;var same=tokens(t).length===tokens(l.text).length;l.text=t;l.fx=true;if(!same)wordTimes(l)});
+    saveLyrics();renderLines();lastTxt="";drawStage(pos());
+    $("lyrMsg").textContent=r.changed.length?"✓ המילים תומללו ונבדקו: "+r.changed.length+" שורות תוקנו (מסומנות בסגול). כדאי לעבור עליהן בהאזנה.":"✓ המילים תומללו ונבדקו, לא נמצאו טעויות.";
+  }).catch(function(e){saveLyrics();$("lyrMsg").textContent="✓ המילים תומללו. הבדיקה הנוספת לא הצליחה ("+e.message+"). אפשר לנסות שוב ב\"בדיקת מילים\" או לתקן ידנית."})
+   .then(function(){$("fixBtn").disabled=false});
+}
+$("fixBtn").onclick=function(){if(trBusy)return;checkLyrics(false)};
 $("reTrBtn").onclick=function(){ask("התמלול יחליף את השורות הקיימות. להמשיך?","תמלול").then(function(y){if(y)transcribe(true)})};
 var saveT=0;
 function saveLyrics(){S.dirty=true;clearTimeout(saveT);saveT=setTimeout(function(){if(!S.song)return;var id=S.song.id;
@@ -747,11 +771,11 @@ var curLine=-1;
 function renderLines(){
   var box=$("lines");box.innerHTML="";
   S.lines.forEach(function(l,k){
-    var r=document.createElement("div");r.className="lrow"+(l.cf!=null&&l.cf<0.5?" low":"");r.dataset.i=k;
+    var r=document.createElement("div");r.className="lrow"+(l.cf!=null&&l.cf<0.5?" low":"")+(l.fx?" fx":"");r.dataset.i=k;
     r.innerHTML='<button class="tm num" type="button"></button><input type="text" dir="auto"><div class="nd"><button type="button" data-d="-0.1" aria-label="מוקדם יותר">−</button><button type="button" data-d="0.1" aria-label="מאוחר יותר">+</button><button type="button" data-x aria-label="מחיקת השורה">✕</button></div>';
     r.querySelector(".tm").textContent=fmt1(l.t);r.querySelector("input").value=l.text;
     r.querySelector(".tm").onclick=function(){play(Math.max(0,l.t-1.5))};
-    r.querySelector("input").onchange=function(){var t=this.value.replace(/\s+/g," ").trim();if(!t)return;var same=tokens(t).length===tokens(l.text).length;l.text=t;if(!same)wordTimes(l);saveLyrics();drawStage(pos())};
+    r.querySelector("input").onchange=function(){var t=this.value.replace(/\s+/g," ").trim();if(!t)return;var same=tokens(t).length===tokens(l.text).length;l.text=t;l.fx=false;r.classList.remove("fx");if(!same)wordTimes(l);saveLyrics();drawStage(pos())};
     r.querySelectorAll("[data-d]").forEach(function(b){b.onclick=function(){nudge(k,+b.dataset.d)}});
     r.querySelector("[data-x]").onclick=function(){S.lines.splice(k,1);saveLyrics();renderLines();drawStage(pos())};
     box.appendChild(r);

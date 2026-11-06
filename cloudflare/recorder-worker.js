@@ -880,6 +880,50 @@ async function ksTranscribe(env, d) {
   }
   throw new Error('התמלול נכשל: ' + errs.join(' | ').slice(0, 160));
 }
+// the strongest Gemini that listens: newest "pro" first, then the flash list used elsewhere
+async function ksModels(env, key) {
+  const c = await getJ(env, 'config/ks_models.json');
+  if (c && Date.now() - c.at < 86400000 && c.models.length) return c.models;
+  let pro = [];
+  try {
+    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', { headers: { 'x-goog-api-key': key } });
+    if (r.ok) {
+      const ver = (n) => { const m = n.match(/gemini-(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : 0; };
+      pro = ((await r.json()).models || []).filter(m => (m.supportedGenerationMethods || []).includes('generateContent')).map(m => m.name.replace(/^models\//, ''))
+        .filter(n => /^gemini-[\d.]+-pro/.test(n) && !/(image|tts|audio|live|vision|embedding|exp|computer)/.test(n) && !/^gemini-[12]\./.test(n))
+        .sort((a, b) => ver(b) - ver(a) || (/preview/.test(a) ? 1 : 0) - (/preview/.test(b) ? 1 : 0)).slice(0, 2);
+    }
+  } catch (e) {}
+  const models = pro.concat(['gemini-pro-latest'].filter(x => !pro.includes(x)), (await bsModels(env, key)).slice(0, 2));
+  await putJ(env, 'config/ks_models.json', { at: Date.now(), models });
+  return models;
+}
+// a second pass over the recognised lyrics: listen to the vocal and fix wrong / garbled / missing words, line by line
+async function ksFix(env, d) {
+  const key = String(env.GEMINI_API_KEY || '').trim(); if (!key) throw new Error('הבדיקה לא מחוברת');
+  const lines = (Array.isArray(d.lines) ? d.lines : []).map(x => String(x || '').slice(0, 200)).slice(0, 300); if (!lines.length) throw new Error('אין שורות');
+  const lang = d.lang === 'en' ? 'English' : d.lang === 'he' || !d.lang ? 'Hebrew' : d.lang;
+  const prompt = 'You get the isolated lead-vocal track of a song (' + lang + ') and an automatic speech-recognition transcript of it, one sung line per row (numbered).\n' +
+    'Listen to the whole track and correct the transcript so it is exactly what is sung: fix misheard words, garbled or misspelled words, words that make no sense in context, wrongly joined or split words, and add words that were sung but missed. ' +
+    'Use correct standard spelling' + (lang === 'Hebrew' ? ' (Hebrew ktiv male, no nikud, no punctuation)' : ', no punctuation') + '. ' +
+    'Keep exactly the same number of rows in the same order - each row must stay the line sung at that point; a word may move to the neighbouring row only if it clearly belongs there. Do not rewrite style, do not translate, do not invent lyrics; if a row is unclear keep it as it is. ' +
+    'If you recognise the song, you may use your knowledge of its real lyrics, but only where it matches what is sung.\n\n' +
+    lines.map((l, i) => (i + 1) + '. ' + l).join('\n') +
+    '\n\nAnswer as JSON only: {"lines":["...", ...], "changed":[row numbers you changed]}';
+  const models = await ksModels(env, key), errs = [];
+  for (const model of models) {
+    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+      body: JSON.stringify({ contents: [{ role: 'user', parts: [{ inline_data: { mime_type: d.mime || 'audio/mpeg', data: String(d.audio || '') } }, { text: prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.1 } }) });
+    if (!r.ok) { errs.push(model + ' ' + r.status); continue; }
+    const j = await r.json(); const t = ((((j.candidates || [])[0] || {}).content || {}).parts || []).filter(x => !x.thought).map(x => x.text || '').join('').replace(/^```(?:json)?\s*|\s*```$/g, '');
+    try {
+      const o = JSON.parse(t); const out = (o.lines || []).map(x => String(x || '').replace(/\s+/g, ' ').trim());
+      if (out.length !== lines.length || out.some(x => !x)) { errs.push(model + ' rows ' + out.length); continue; }
+      return { lines: out, changed: out.map((x, i) => x !== lines[i] ? i : -1).filter(i => i >= 0), model };
+    } catch (e) { errs.push(model + ' bad json'); }
+  }
+  throw new Error('הבדיקה נכשלה: ' + errs.join(' | ').slice(0, 160));
+}
 async function ksAction(d, env, ip) {
   if (d.action === 'ks_s_login') {
     const c = await getJ(env, 'config/admin.json');
@@ -937,6 +981,7 @@ async function ksAction(d, env, ip) {
     if (r.words) s.words = r.words.slice(0, 4000); s.lang = r.lang || s.lang || ''; s.trAt = Date.now(); await ksPut(env, s);
     return Object.assign({ ok: true }, r);
   }
+  if (d.action === 'ks_fix') { const r = await ksFix(env, d); s.fixAt = Date.now(); await ksPut(env, s); return Object.assign({ ok: true }, r); }
   if (d.action === 'ks_clean_status') {
     const c = (s.cleans || [])[d.n | 0]; if (!c) return { ok: false, error: 'לא נמצא' };
     if (c.status !== 'done' && c.status !== 'failed') { await ksPoll(env, s, c, ['v'], { v: 'c' + (d.n | 0) + '.mp3' }); await ksPut(env, s); }

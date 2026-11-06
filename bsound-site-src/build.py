@@ -7,7 +7,7 @@ from content_articles import ARTICLES
 
 ROOT = os.path.join(os.path.dirname(__file__), '..', 'bsound-site')
 DOMAIN = 'https://www.b-sound.co.il'
-PREVIEW = True          # True = noindex (preview on GitHub Pages). Set False when the domain points here.
+PREVIEW = False         # True = noindex (preview on GitHub Pages). Set False when the domain points here.
 ORDER = 'order'   # relative: works on the preview and on the domain
 PHONE, PHONE_INTL = '03-6500031', '+97236500031'
 WA = 'https://wa.me/972555170280'

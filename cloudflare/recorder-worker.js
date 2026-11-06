@@ -753,6 +753,11 @@ async function bsPaid(d, env, pageId) {
 const KS_DAYS = 30, KS_MAX_BYTES = 60e6, KS_MAX_CLEANS = 3, KS_SWEEP_MS = 6 * 3600e3;
 const KS_SEP = { sep_type: '40', add_opt1: '81', add_opt2: '2', output_format: '0' }; // BS Roformer 2025.07, mp3 320
 const KS_DAY = 86400000;
+// keys may be saved under other names: OpenAI keys start with sk-, anything else is the MVSEP token
+function ksKeys(env) {
+  const vals = [env.MVSEP_API_TOKEN, env.OPENAI_API_KEY, env.MVSEP, env.KARAOKE4ALL, env.MVSEP_TOKEN].map(v => String(v || '').trim()).filter(Boolean);
+  return { mvsep: vals.find(v => !/^sk-/.test(v)) || '', openai: vals.find(v => /^sk-/.test(v)) || '' };
+}
 async function ksStaffTok(c, day) { return sha(c.hash + ':ks:' + day); }
 async function ksWho(env, d) {
   if (d.st) {
@@ -792,8 +797,8 @@ async function ksSweep(env) {
   } while (cursor && n < 200);
 }
 async function mvsep(env, path, form) {
-  if (!env.MVSEP_API_TOKEN) throw new Error('ההפרדה עוד לא חוברה (חסר מפתח MVSEP)');
-  form.append('api_token', String(env.MVSEP_API_TOKEN).trim());
+  const tokn = ksKeys(env).mvsep; if (!tokn) throw new Error('ההפרדה עוד לא חוברה (חסר מפתח MVSEP)');
+  form.append('api_token', tokn);
   const r = await fetch('https://mvsep.com/api/separation/' + path, { method: 'POST', body: form });
   const t = await r.text(); let j; try { j = JSON.parse(t); } catch (e) { throw new Error('MVSEP ' + r.status + ': ' + t.slice(0, 120)); }
   if (!j.success) throw new Error('MVSEP: ' + String(((j.data || {}).message) || j.message || r.status).slice(0, 160));
@@ -848,13 +853,14 @@ async function ksPoll(env, s, job, want, names) {
 async function ksTranscribe(env, d) {
   const b64 = String(d.audio || ''); if (!b64) throw new Error('אין שמע');
   const lang = /^(he|en|ar|ru|fr|es)$/.test(d.lang) ? d.lang : '';
-  if (env.OPENAI_API_KEY) {
+  const oai = ksKeys(env).openai;
+  if (oai) {
     const f = new FormData();
     f.append('file', new Blob([b64ToBytes(b64)], { type: d.mime || 'audio/mpeg' }), 'vocals.' + (/wav/.test(d.mime) ? 'wav' : 'mp3'));
     f.append('model', 'whisper-1'); f.append('response_format', 'verbose_json'); f.append('timestamp_granularities[]', 'word');
     if (lang) f.append('language', lang);
     if (d.prompt) f.append('prompt', String(d.prompt).slice(0, 900));
-    const r = await fetch('https://api.openai.com/v1/audio/transcriptions', { method: 'POST', headers: { Authorization: 'Bearer ' + String(env.OPENAI_API_KEY).trim() }, body: f });
+    const r = await fetch('https://api.openai.com/v1/audio/transcriptions', { method: 'POST', headers: { Authorization: 'Bearer ' + oai }, body: f });
     if (!r.ok) throw new Error('Whisper ' + r.status + ': ' + (await r.text()).slice(0, 160));
     const j = await r.json();
     return { via: 'whisper', lang: j.language || lang, words: (j.words || []).map(w => [w.word, +w.start, +w.end]) };
@@ -909,7 +915,7 @@ async function ksAction(d, env, ip) {
     const songs = [];
     for (const id of ids) { const s = await getJ(env, 'ks/s/' + id + '.json'); if (s && Date.now() < s.expires) songs.push(ksPub(s)); }
     songs.sort((a, b) => b.created - a.created);
-    return { ok: true, name: who.name, staff: who.staff, left: who.staff ? null : Math.max(0, who.acc.quota - who.acc.used), quota: who.staff ? null : who.acc.quota, expires: who.staff ? null : who.acc.expires, songs, days: KS_DAYS, transcriber: env.OPENAI_API_KEY ? 'whisper' : (env.GEMINI_API_KEY ? 'gemini' : ''), separator: !!env.MVSEP_API_TOKEN };
+    return { ok: true, name: who.name, staff: who.staff, left: who.staff ? null : Math.max(0, who.acc.quota - who.acc.used), quota: who.staff ? null : who.acc.quota, expires: who.staff ? null : who.acc.expires, songs, days: KS_DAYS, transcriber: ksKeys(env).openai ? 'whisper' : (env.GEMINI_API_KEY ? 'gemini' : ''), separator: !!ksKeys(env).mvsep };
   }
   const s = await ksSong(env, who, d.id);
   if (d.action === 'ks_status') {

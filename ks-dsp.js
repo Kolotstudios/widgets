@@ -259,6 +259,7 @@ var KSDSP = (function () {
     var want = new Float32Array(n), um = new Float32Array(n), stats = { notes: un.length, matched: 0, moved: 0 };
     for (f = 0; f < n; f++) um[f] = user.f0[f] ? midi(user.f0[f]) : 0;
     var rM = new Float32Array(ref.f0.length); for (f = 0; f < rM.length; f++) rM[f] = ref.f0[f] ? midi(ref.f0[f]) + semi : 0;
+    var noteAt = new Int32Array(ref.f0.length).fill(-1); rn.forEach(function (r, ix) { for (var q = r.s; q < r.e; q++) noteAt[q] = ix; });
     un.forEach(function (u) {
       var us = u.s * hop + lag, ue = u.e * hop + lag, best = null, bs = -1e9;
       for (i = 0; i < rn.length; i++) {
@@ -271,7 +272,7 @@ var KSDSP = (function () {
       if (opts.mode !== "notes") {
         // singers are never exactly in time: try offsets of +-150 ms and keep the one where the
         // difference between the two pitch curves is steadiest (the singer follows the same shape)
-        var bestScore = 1e9, bestDm = null;
+        var bestScore = 1e9, bestDm = null, bestDl = 0;
         for (var dl = -15; dl <= 15; dl++) {
           var diffs = [];
           for (f = u.s; f < u.e; f++) {
@@ -282,16 +283,24 @@ var KSDSP = (function () {
           diffs.sort(function (p, q) { return p - q; }); var md = diffs[diffs.length >> 1], mad = 0;
           for (var q = 0; q < diffs.length; q++) mad += Math.abs(diffs[q] - md); mad /= diffs.length;
           var score = mad + 0.08 * Math.abs(dl) / 15 + 0.05 * Math.abs(md);
-          if (score < bestScore) { bestScore = score; bestDm = md; }
+          if (score < bestScore) { bestScore = score; bestDm = md; bestDl = dl; }
         }
-        if (bestDm != null && bestScore < 0.6 && Math.abs(bestDm) <= 1.6) best = u.m + bestDm;
+        if (bestDm != null && bestScore < 0.6 && Math.abs(bestDm) <= 1.6) { best = u.m + bestDm; u.dl = bestDl; }
       }
       if (best == null) { var bb = 99; for (var o = -2; o <= 2; o++) { var cand = Math.round(u.m - tun) + o, p = ((cand % 12) + 12) % 12; if (scale.indexOf(p) >= 0 && Math.abs(u.m - (cand + tun)) < bb) { bb = Math.abs(u.m - (cand + tun)); best = cand + tun; } } }
       else stats.matched++;
       if (best == null) return;
       var dev = best - u.m; if (Math.abs(dev) > 1.6) return; // far off: another note on purpose
       if (Math.abs(dev) > 0.08) stats.moved++;
-      for (f = u.s; f < u.e; f++) { if (!um[f]) continue; want[f] = (dev * cen + (u.m - um[f]) * flat) * 100; }
+      for (f = u.s; f < u.e; f++) {
+        if (!um[f]) continue;
+        var lock = best; // strong: lock each moment to the original singer's note at that moment (keeps the melody steps)
+        if (flat > 0) {
+          var rf2 = Math.round((f * hop + lag) / ref.hop) + (u.dl || 0), ni = rf2 >= 0 && rf2 < noteAt.length ? noteAt[rf2] : -1;
+          if (ni >= 0) { var tg = rn[ni].m; tg += 12 * Math.round((um[f] - tg) / 12); if (Math.abs(tg - um[f]) <= 2) lock = tg; }
+        }
+        want[f] = ((1 - flat) * dev * cen + flat * (lock - um[f])) * 100;
+      }
     });
     // ramps between notes: centred moving average (no timing shift); short notes keep their full correction
     var W = Math.max(0, Math.round(ramp / hop / 2)), y = new Float32Array(n);
@@ -348,26 +357,30 @@ var KSDSP = (function () {
   function denoise(x, sr, amount) {
     if (!amount) return x;
     var N = sr > 32000 ? 2048 : 1024, H = N / 4, T = tables(N), w = T.win, K = N / 2 + 1, n = x.length, i, k, f;
-    var frames = Math.ceil(n / H) + 3, re = new Float64Array(N), im = new Float64Array(N);
-    // noise profile: per-bin average of the quietest 12% of frames
-    var en = new Float64Array(frames), specs = [];
+    var frames = Math.ceil(n / H) + 3, re = new Float64Array(N), im = new Float64Array(N), specs = [], en = new Float64Array(frames);
     for (f = 0; f < frames; f++) {
       var s0 = f * H - N; for (i = 0; i < N; i++) { var q = s0 + i; re[i] = q >= 0 && q < n ? x[q] * w[i] : 0; im[i] = 0; }
       fft(re, im, T, false); var p = new Float32Array(K), e = 0; for (k = 0; k < K; k++) { p[k] = re[k] * re[k] + im[k] * im[k]; e += p[k]; } specs.push(p); en[f] = e;
     }
-    var ord = Array.from(en.keys()).filter(function (f) { return en[f] > 0; }).sort(function (a, b) { return en[a] - en[b]; }), cnt = Math.max(3, Math.floor(ord.length * 0.12));
-    var noise = new Float64Array(K); for (i = 0; i < cnt && i < ord.length; i++) for (k = 0; k < K; k++) noise[k] += specs[ord[i]][k] / cnt;
-    for (k = 0; k < K; k++) noise[k] = Math.max(noise[k] * 1.4, 1e-12);
-    var floor = Math.pow(10, -(6 + amount * 16) / 20), alpha = 0.97, prevG = new Float64Array(K).fill(1), prevPost = new Float64Array(K).fill(1);
-    var y = new Float32Array(n + 2 * N), ws = new Float32Array(n + 2 * N), G = new Float64Array(K);
+    // noise per frequency: a low percentile of that bin over the whole take (works even with little silence)
+    var live = []; for (f = 0; f < frames; f++) if (en[f] > 0) live.push(f);
+    var noise = new Float64Array(K), col = new Float32Array(live.length), pc = Math.floor(live.length * 0.1);
+    for (k = 0; k < K; k++) { for (i = 0; i < live.length; i++) col[i] = specs[live[i]][k]; col.sort(); noise[k] = Math.max(col[pc] * 2.0, 1e-12); }
+    var nE = 0; for (k = 0; k < K; k++) nE += noise[k];
+    var floor = Math.pow(10, -(4 + amount * 10) / 20), alpha = 0.96, prevG = new Float64Array(K).fill(1), prevPost = new Float64Array(K).fill(1), held = new Float64Array(K).fill(1);
+    var rel = Math.exp(-H / sr / 0.08), y = new Float32Array(n + 2 * N), ws = new Float32Array(n + 2 * N), G = new Float64Array(K);
     for (f = 0; f < frames; f++) {
       var s1 = f * H - N; for (i = 0; i < N; i++) { var q2 = s1 + i; re[i] = q2 >= 0 && q2 < n ? x[q2] * w[i] : 0; im[i] = 0; }
       fft(re, im, T, false);
+      // while someone sings (frame well above the noise) never take more than 6 dB away: the voice masks the noise anyway
+      var snrF = en[f] / nE, fl = snrF > 6 ? Math.max(floor, 0.5) : snrF > 2 ? Math.max(floor, 0.3) : floor;
       for (k = 0; k < K; k++) {
         var post = specs[f][k] / noise[k], prio = alpha * prevG[k] * prevG[k] * prevPost[k] + (1 - alpha) * Math.max(post - 1, 0);
-        var g = prio / (1 + prio); G[k] = Math.max(floor, g); prevG[k] = g; prevPost[k] = post;
+        var g = prio / (1 + prio); prevG[k] = g; prevPost[k] = post;
+        held[k] = Math.max(g, held[k] * rel); // gains open fast and close slowly: no chopping
+        G[k] = Math.max(fl, held[k]);
       }
-      for (k = 1; k < K - 1; k++) G[k] = Math.max(floor, 0.25 * G[k - 1] + 0.5 * G[k] + 0.25 * G[k + 1]);
+      for (k = 1; k < K - 1; k++) G[k] = 0.25 * G[k - 1] + 0.5 * G[k] + 0.25 * G[k + 1];
       for (k = 0; k < K; k++) { re[k] *= G[k]; im[k] *= G[k]; if (k > 0 && k < N / 2) { re[N - k] = re[k]; im[N - k] = -im[k]; } }
       fft(re, im, T, true);
       for (i = 0; i < N; i++) { var o = s1 + i + N; if (o < 0 || o >= y.length) continue; y[o] += re[i] * w[i]; ws[o] += w[i] * w[i]; }

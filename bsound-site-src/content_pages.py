@@ -228,12 +228,12 @@ JINGLE = '''<section class="wrap hero-s">
 <section class="wrap" id="jex"><h2>שמעו דוגמאות</h2>
 <p class="lead small">שישה ג'ינגלים לעסקים בדויים, כולם הופקו במערכת שלנו. שימו לב איך שם העסק חוזר ונתקע בראש.</p>
 <div class="jex" data-audio>
-<button type="button" class="vbtn jx" data-src="{{p:assets/jingles/pizza.mp3}}" aria-pressed="false"><span class="pi">▶</span><b>פיצה בומבה</b><small>ים תיכוני · דואט · 11 שניות</small></button>
-<button type="button" class="vbtn jx" data-src="{{p:assets/jingles/garage.mp3}}" aria-pressed="false"><span class="pi">▶</span><b>מוסך הגלגל</b><small>רוק · זמר · 12 שניות</small></button>
-<button type="button" class="vbtn jx" data-src="{{p:assets/jingles/studio.mp3}}" aria-pressed="false"><span class="pi">▶</span><b>סטודיו נשימה</b><small>אקוסטי · זמרת · 10 שניות</small></button>
-<button type="button" class="vbtn jx" data-src="{{p:assets/jingles/shawarma.mp3}}" aria-pressed="false"><span class="pi">▶</span><b>שווארמה המלך</b><small>היפ הופ · ראפר · 18 שניות</small></button>
-<button type="button" class="vbtn jx" data-src="{{p:assets/jingles/kinder.mp3}}" aria-pressed="false"><span class="pi">▶</span><b>גן הפרפרים</b><small>שמח ומקפיץ · קולות ילדים · 17 שניות</small></button>
-<button type="button" class="vbtn jx" data-src="{{p:assets/jingles/bakery.mp3}}" aria-pressed="false"><span class="pi">▶</span><b>מאפיית השכונה</b><small>סווינג · זמרת · 15 שניות</small></button>
+<button type="button" class="vbtn jx" data-src="{{p:assets/jingles/pizza.mp3}}?v=2" aria-pressed="false"><span class="pi">▶</span><b>פיצה בומבה</b><small>ים תיכוני · דואט · 11 שניות</small></button>
+<button type="button" class="vbtn jx" data-src="{{p:assets/jingles/garage.mp3}}?v=2" aria-pressed="false"><span class="pi">▶</span><b>מוסך הגלגל</b><small>רוק · זמר · 11 שניות</small></button>
+<button type="button" class="vbtn jx" data-src="{{p:assets/jingles/studio.mp3}}?v=2" aria-pressed="false"><span class="pi">▶</span><b>סטודיו נשימה</b><small>אקוסטי · זמרת · 11 שניות</small></button>
+<button type="button" class="vbtn jx" data-src="{{p:assets/jingles/shawarma.mp3}}?v=2" aria-pressed="false"><span class="pi">▶</span><b>שווארמה המלך</b><small>היפ הופ · ראפר · 12 שניות</small></button>
+<button type="button" class="vbtn jx" data-src="{{p:assets/jingles/kinder.mp3}}?v=2" aria-pressed="false"><span class="pi">▶</span><b>גן הפרפרים</b><small>שמח ומקפיץ · קולות ילדים · 11 שניות</small></button>
+<button type="button" class="vbtn jx" data-src="{{p:assets/jingles/bakery.mp3}}?v=2" aria-pressed="false"><span class="pi">▶</span><b>מאפיית השכונה</b><small>סווינג · זמרת · 18 שניות</small></button>
 </div>
 <p style="margin-top:18px"><a class="btn glow" href="{{order}}?p=jingle">צרו ג'ינגל לעסק שלכם · לשמוע בחינם</a></p>
 </section>

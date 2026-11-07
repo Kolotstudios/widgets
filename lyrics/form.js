@@ -396,7 +396,7 @@
       if (r.state === 'sent') { root.appendChild(h('div', { 'class': 'k-done', html: '<div class="k-ico">✍️</div><h2>המנגינה כבר אצלנו</h2><p>השאלון כבר עבר לכתיבה. כשהמילים יהיו מוכנות נשלח אותן אליכם.</p>' })); return; }
       var c = h('div', { 'class': 'k-done', html: '<div class="k-ico">🎵</div><h2>היי' + (r.name ? ' ' + esc(r.name) : '') + ', על איזו מנגינה נכתוב?</h2><p>בחרו שיר מוכר, ועל המנגינה שלו נכתוב את המילים החדשות' + (r.honoree ? ' ל' + esc(r.honoree) : '') + '.</p>' });
       c.appendChild(songBox(id, function (x) { root.innerHTML = ''; root.appendChild(h('div', { 'class': 'k-done', html: '<div class="k-ico">✍️</div><h2>תודה! קיבלנו את המנגינה</h2><p>' + (x && x.state === 'await_pay' ? 'נשאר רק להסדיר את התשלום בלינק ששלחנו לכם, ומתחילים לכתוב.' : 'השאלון עבר לכותבת שלנו. כשהמילים והגייד יהיו מוכנים נשלח אותם אליכם.') + '</p>' })); top(); }));
-      root.appendChild(c);
+      root.appendChild(c); setTimeout(function () { top(c); }, 300);   // מגיעים מוואטסאפ – ישר לתיבת המנגינה
     }).catch(function () { root.innerHTML = '<div class="k-card"><div class="k-msg">לא הצלחנו לטעון. רעננו את הדף.</div></div>'; });
   }
 

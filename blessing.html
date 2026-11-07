@@ -1057,7 +1057,7 @@ $('f').addEventListener('submit',()=>{if($('name').value.trim())track('blessing_
 $('copy').addEventListener('click',()=>track('blessing_copy'));
 $('wa').addEventListener('click',()=>track('blessing_share_whatsapp'));
 // self-recording link: hidden until the studio turns it on (REC_ON), testable with ?rec=1 on the page
-const REC_ON=false,REC_URL='https://kolotstudios.github.io/widgets/recorder.html';
+const REC_ON=true,REC_URL='https://kolotstudios.github.io/widgets/recorder.html';
 const recEnabled=(()=>{if(REC_ON)return true;let q=location.search;try{q+=window.parent.location.search}catch(e){}return /[?&]rec=1\b/.test(q)})();
 function recHref(){const t=fullText();if(!t.trim())return '#';const self=$('from').value==='self',kala=val('ev')==='kala';
  const p=new URLSearchParams(kala?{mode:'kala',name:$('name').value.trim(),text:t,src:'gen'}:{mode:self?'drasha':'blessing',name:self?$('name').value.trim():($('sign').value||'').trim(),for:$('name').value.trim(),text:t,src:'gen'});return REC_URL+'?'+p.toString()}

@@ -199,6 +199,7 @@ body.docked{padding-bottom:120px}
         <p class="sub">מעלים קובץ של השיר עם הזמר המקורי. המערכת מפרידה את הקול מהמוזיקה, מתמללת את המילים ומכינה מסך קריוקי. אפשר לשיר עם הזמר, עם חצי קול או בלעדיו, לשנות סולם ולהקליט.</p>
         <label class="drop" id="drop"><input type="file" id="file" accept="audio/*,.mp3,.wav,.m4a,.flac,.ogg,.aac,video/mp4" hidden>
           <b>בחירת קובץ שיר</b><span class="note">MP3 · WAV · M4A · FLAC, עד 10 דקות</span><span id="fileName" class="pill" hidden></span></label>
+        <div class="field"><label for="songUrl">או קישור לקובץ: גוגל דרייב, דרופבוקס, MEGA או קישור ישיר</label><input type="text" id="songUrl" dir="ltr" inputmode="url" placeholder="https://drive.google.com/…"><p class="note" id="urlNote">בגוגל דרייב ובדרופבוקס צריך שהקובץ יהיה משותף "לכל מי שיש לו את הקישור".</p></div>
         <div class="fields">
           <div class="field"><label for="title">שם השיר</label><input type="text" id="title" maxlength="80" placeholder="למשל: הללויה"></div>
           <div class="field"><label for="lang">שפת השיר</label><select id="lang"><option value="he">עברית</option><option value="en">אנגלית</option><option value="">אחרת (זיהוי אוטומטי)</option></select></div>
@@ -377,11 +378,11 @@ body.docked{padding-bottom:120px}
 <div class="dlg" id="dlg" hidden><div class="card" role="dialog" aria-modal="true"><p id="dlgMsg" style="margin:0"></p><div class="row"><button class="btn primary" id="dlgOk">אישור</button><button class="btn ghost" id="dlgNo">ביטול</button></div></div></div>
 <div class="toast" id="toast" hidden></div>
 
-<script src="ks-dsp.js?v=2026-11-07g"></script>
+<script src="ks-dsp.js?v=2026-11-07h"></script>
 <script>
 (function(){
 "use strict";
-var VER="2026-11-07g",TERMS_V="1";
+var VER="2026-11-07h",TERMS_V="1";
 var API="https://kolot-recorder.kolot-studios.workers.dev";
 var $=function(s){return document.getElementById(s)};
 var AC=window.AudioContext||window.webkitAudioContext,OAC=window.OfflineAudioContext||window.webkitOfflineAudioContext;
@@ -503,9 +504,16 @@ function pickFile(f){
 }
 $("agree").checked=ls("ks_terms_"+TERMS_V)==="1";
 $("agree").onchange=function(){ls("ks_terms_"+TERMS_V,this.checked?"1":null);updUp()};
-function updUp(){$("upBtn").disabled=!(UPF&&UPF.dur&&$("agree").checked&&(S.left==null||S.left>0))}
+function urlOk(){var v=$("songUrl").value.trim();return /^https?:\/\/\S+\.\S+/.test(v)&&!/youtu\.?be/i.test(v)}
+function updUp(){var yt=/youtu\.?be/i.test($("songUrl").value);$("urlNote").textContent=yt?"קישורי יוטיוב לא נתמכים. אפשר להעלות קובץ, או קישור מגוגל דרייב, דרופבוקס או MEGA.":"בגוגל דרייב ובדרופבוקס צריך שהקובץ יהיה משותף \"לכל מי שיש לו את הקישור\".";
+  $("upBtn").disabled=!(((UPF&&UPF.dur)||urlOk())&&$("agree").checked&&(S.left==null||S.left>0))}
+$("songUrl").oninput=updUp;
 $("upBtn").onclick=function(){
-  if(!UPF)return;var title=$("title").value.trim()||"שיר",lang=$("lang").value;
+  var title=$("title").value.trim()||"שיר",lang=$("lang").value;
+  if(!UPF&&urlOk()){$("upBtn").disabled=true;$("upProg").hidden=false;$("upMsg").textContent="שולחים את הקישור להפרדה…";$("upBar").style.width="10%";
+    api("ks_up_url",{url:$("songUrl").value.trim(),title:title,tv:TERMS_V}).then(function(r){ls("ks_lang_"+r.id,lang);$("songUrl").value="";$("title").value="";$("upProg").hidden=true;waitSong(r.id,title)})
+     .catch(function(e){$("upMsg").textContent="✗ "+e.message;updUp()});return}
+  if(!UPF)return;
   $("upBtn").disabled=true;$("upProg").hidden=false;$("upMsg").textContent="מעלים…";$("upBar").style.width="0";
   postBin({ks:"up",title:title,dur:Math.round(UPF.dur),tv:TERMS_V},UPF.file,UPF.file.type||"audio/mpeg",function(p){$("upBar").style.width=Math.round(p*90)+"%";$("upMsg").textContent="מעלים… "+Math.round(p*100)+"%"})
    .then(function(r){ls("ks_lang_"+r.id,lang);UPF=null;$("file").value="";$("fileName").hidden=true;$("title").value="";$("upProg").hidden=true;waitSong(r.id,title)})

@@ -1278,6 +1278,22 @@ async function ksAction(d, env, ip) {
     }
     return { ok: false, error: 'unknown action' };
   }
+  // a song from a link: MVSEP downloads it itself (Google Drive, Dropbox, MEGA or a direct file link)
+  if (d.action === 'ks_up_url') {
+    let u; try { u = new URL(String(d.url || '').trim()); } catch (e) { return { ok: false, error: 'הקישור לא תקין' }; }
+    if (!/^https?:$/.test(u.protocol)) return { ok: false, error: 'הקישור לא תקין' };
+    const h = u.hostname.toLowerCase();
+    if (/(^|\.)(youtube\.com|youtu\.be|music\.youtube\.com)$/.test(h)) return { ok: false, error: 'קישורי יוטיוב לא נתמכים. אפשר להעלות קובץ, או קישור מגוגל דרייב, דרופבוקס או MEGA' };
+    if (!who.staff && who.acc.used >= who.acc.quota) return { ok: false, error: 'נוצלו כל השירים בקישור הזה. אפשר לפנות לאולפני קולות להרחבה' };
+    const type = /(^|\.)drive\.google\.com$|(^|\.)docs\.google\.com$/.test(h) ? 'drive' : /(^|\.)dropbox\.com$|dropboxusercontent\.com$/.test(h) ? 'dropbox' : /(^|\.)mega\.(nz|io)$/.test(h) ? 'mega' : 'direct';
+    const f = new FormData(); f.append('url', u.href); f.append('remote_type', type); for (const k in KS_SEP) f.append(k, KS_SEP[k]);
+    const r = await mvsep(env, 'create', f); if (!r.hash) throw new Error('MVSEP לא החזיר מספר עבודה');
+    const id = tok(), now = Date.now();
+    const s = { id, owner: who.owner, title: String(d.title || 'שיר').slice(0, 80), created: now, expires: now + KS_DAYS * KS_DAY, status: 'working', dur: 0, src: type, job: { hash: r.hash, status: 'waiting', at: now }, terms: { at: now, v: String(d.tv || '1').slice(0, 8) } };
+    await ksPut(env, s);
+    if (!who.staff) { const k = 'ks/a/' + who.owner + '.json'; const a = await getJ(env, k); a.used = (a.used | 0) + 1; a.songs = (a.songs || []).concat([id]); await putJ(env, k, a); }
+    return { ok: true, id, song: ksPub(s) };
+  }
   if (d.action === 'ks_hello') {
     let ids = [];
     if (who.staff) { const l = await env.BUCKET.list({ prefix: 'ks/s/', include: ['customMetadata'] }); ids = l.objects.filter(o => (o.customMetadata || {}).owner === 'staff').map(o => o.key.slice(5, -5)); }

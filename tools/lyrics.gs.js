@@ -33,7 +33,7 @@ function lyrInstall() {
 function lyrTestStatus() { Logger.log(JSON.stringify(lyrStatus_('547689850'))); }
 
 const LYR = {
-  LIVE: false,                                   // לפתוח ללקוחות אמיתיים רק באישור אורן
+  LIVE: true,                                    // נפתח ללקוחות 07/11/2026 באישור אורן
   TEST_PHONES: ['547689850'],                    // הטלפון של אורן
   WRITER_TO: 'liorip.music@gmail.com',           // ליאור פרץ
   STUDIO: 'kolot.studios@gmail.com',

@@ -24,10 +24,7 @@ export default {
     if (req.method === 'OPTIONS') return new Response(null, { headers: H });
     const u = new URL(req.url);
     const bsj = u.searchParams.get('bsj');
-    if (bsj && /^[0-9a-f]{24}-[01]$/.test(bsj)) {
-      const o = await env.BUCKET.get('bs/j/' + bsj + '.mp3'); if (!o) return new Response('not found', { status: 404, headers: H });
-      return new Response(o.body, { headers: Object.assign({}, H, { 'Content-Type': 'audio/mpeg', 'Cache-Control': 'public, max-age=31536000' }) });
-    }
+    if (bsj && /^[0-9a-f]{24}-[01]$/.test(bsj)) { try { return await bsJingleFile(u, env); } catch (err) { return new Response('error: ' + String((err && err.message) || err).slice(0, 100), { status: 500, headers: H }); } }
     if (u.searchParams.get('ks')) { try { return await ksHttp(req, env, u); } catch (err) { return out({ ok: false, error: String((err && err.message) || err).slice(0, 200) }); } }
     if (req.method !== 'POST') return out({ ok: true, service: 'kolot-recorder' });
     const raw = await req.text();
@@ -580,7 +577,7 @@ ${avoid ? 'אל תחזור על הגרסאות האלה, כתוב רעיונות
 }
 // Sung jingle audio (ElevenLabs Music). BS_JINGLE_FREE = true while testing: anyone can generate and download.
 // Set it to false to bring back payment (then only a paid jingle order gets audio).
-const BS_JINGLE_FREE = true;
+const BS_JINGLE_FREE = false; // ElevenLabs fallback only
 const BS_JSTYLE = {
   'מתאים לתחום': ['modern Israeli pop', 'bright', 'catchy'], 'פופ': ['modern pop', 'catchy hook', 'bright synths'],
   'ים תיכוני': ['Mediterranean Israeli pop', 'darbuka', 'oud', 'festive'], 'רוק': ['pop rock', 'electric guitars', 'live drums', 'energetic'],
@@ -668,36 +665,54 @@ ${text}
   await putJ(env, key, { t: best, at: Date.now() });
   return best;
 }
+// Trial: one sample per business and per device (IP), with the B-Sound voice tag inserted 2-3 times.
+// A paid AI jingle order: up to BS_J_MAX clean versions, only with the business name approved before payment.
+const BS_J_MAX = 10;
+const bsNorm = (t) => String(t || '').replace(BS_NQ, '').replace(/[^א-תa-zA-Z0-9]+/g, '').toLowerCase();
+const bsHasBiz = (lyrics, biz) => { const n = bsNorm(biz); return !!n && bsNorm(lyrics).includes(n); };
 async function bsJingleAudio(d, env, ip) {
-  if (!env.KINOVI_API_KEY) return bsJingleEleven(d, env, ip);
-  if (!BS_JINGLE_FREE) {
-    const o = d.k ? await getJ(env, 'bs/o/' + String(d.k).replace(/[^\w-]/g, '') + '.json') : null;
-    if (!o || !o.paid || o.pkg !== 'jingle') return { ok: false, error: "הפקת הג'ינגל זמינה אחרי ההזמנה" };
-  }
+  if (!env.KINOVI_API_KEY) return { ok: false, error: "הפקת הג'ינגל לא זמינה כרגע" };
   const P = await bsJParams(d);
   if (P.lyrics.length < 4) return { ok: false, error: "כתבו קודם את מילות הג'ינגל" };
-  const jk = 'bs/j/' + P.h + '.json', ex = await getJ(env, jk);
-  if (ex && (ex.tracks || Date.now() - ex.at < 10 * 60e3)) return ex.tracks ? { ok: true, done: true, free: BS_JINGLE_FREE, tracks: ex.tracks } : { ok: true, job: P.h };
-  if (!(await bsIpOk(env, ip, 'jg', 15))) return { ok: false, error: 'הגעתם למספר ההפקות היומי. נסו מחר' };
+  const k = String(d.k || '').replace(/[^\w-]/g, ''), o = k ? await getJ(env, 'bs/o/' + k + '.json') : null;
+  const paid = !!(o && o.paid && o.pkg === 'jingle' && !o.human);
+  const biz = paid ? o.biz : String(d.biz || '').trim().slice(0, 80);
+  if (!biz) return { ok: false, error: 'כתבו קודם את שם העסק' };
+  if (!bsHasBiz(P.lyrics, biz)) return { ok: false, error: 'שם העסק "' + biz + '" חייב להופיע במילים' };
+  const h = await bsHash([paid ? 'paid:' + k : 'trial', P.lyrics, P.len, P.style, P.vocal, P.take].join('|'));
+  const jk = 'bs/j/' + h + '.json', ex = await getJ(env, jk);
+  if (ex && (ex.tracks || Date.now() - ex.at < 10 * 60e3)) return ex.tracks ? { ok: true, done: true, job: h, tracks: ex.tracks, wm: !paid } : { ok: true, job: h };
+  const dev = env.BS_DEV_KEY && d.dev && String(d.dev) === String(env.BS_DEV_KEY);
+  let bk = '', ipk = '';
+  if (paid) {
+    if ((o.jgen | 0) + 2 > BS_J_MAX) return { ok: false, error: 'ניצלתם את כל ' + BS_J_MAX + ' הגרסאות. לגרסאות נוספות פנו אלינו' };
+  } else if (!dev) {
+    bk = 'bs/jt/b/' + (await bsHash(bsNorm(biz))) + '.json'; ipk = 'bs/jt/ip/' + (await bsHash('ip|' + ip)) + '.json';
+    const used = (await getJ(env, bk)) || (await getJ(env, ipk));
+    if (used) return { ok: false, used: true, job: used.h, error: "כבר הפקתם ג'ינגל לדוגמה. כדי להפיק עוד גרסאות, ובלי החותמת, המשיכו להזמנה" };
+  }
   if (!(await bsIpOk(env, 'all', 'jg-all', 300))) return { ok: false, error: 'השירות עמוס היום. נסו מחר' };
-  const rap = BS_RAP.test(P.style);
-  const tags = ['catchy commercial jingle', 'short ' + P.len + ' second radio ad', 'Hebrew vocals', 'clear vocals', 'memorable hook']
-    .concat(BS_JSTYLE[P.style] || BS_JSTYLE['מתאים לתחום'], [BS_JVOCAL[P.vocal] || 'female lead vocal'], rap ? ['rap'] : []).join(', ');
   let sung;
   try { sung = await bsNiqqud(env, P.lyrics); } catch (e) { return { ok: false, error: 'הניקוד נכשל כרגע. נסו שוב בעוד רגע', detail: String((e && e.message) || e).slice(0, 200) }; }
+  const rap = BS_RAP.test(P.style);
+  const tags = ['catchy commercial jingle', 'short ' + P.len + ' second radio ad', 'Hebrew vocals', 'clear vocals', 'memorable hook', 'clean ending']
+    .concat(BS_JSTYLE[P.style] || BS_JSTYLE['מתאים לתחום'], [BS_JVOCAL[P.vocal] || 'female lead vocal'], rap ? ['rap'] : []).join(', ');
   const parts = sung.split(/\n\s*\n/).map(x => x.trim()).filter(Boolean);
-  const song = parts.map((t, i) => '[' + (parts.length > 1 && i < parts.length - 1 ? 'Verse' : 'Chorus') + ']\n' + t).join('\n\n') + '\n\n[End]';
-  const r = await kin(env, 'createTask', { model: 'suno-music', inputs: { custom: true, instrumental: false, mv: 'chirp-v5-5', prompt: song, tags, title: P.lyrics.split('\n')[0].slice(0, 60) } });
+  const song = parts.map((t, i) => '[' + (parts.length > 1 && i < parts.length - 1 ? 'Verse' : 'Chorus') + ']\n' + t).join('\n\n') + '\n\n[Outro]\n[End]';
+  const r = await kin(env, 'createTask', { model: 'suno-music', inputs: { custom: true, instrumental: false, mv: 'chirp-v5-5', prompt: song, tags, title: biz.slice(0, 60) } });
   const tx = await r.text(); let j = {}; try { j = JSON.parse(tx); } catch (e) {}
   const taskId = j.taskId || (j.data && j.data.taskId);
   if (!r.ok || !taskId) return { ok: false, error: "הפקת הג'ינגל נכשלה. נסו שוב בעוד רגע", detail: ('kinovi ' + r.status + ': ' + tx).slice(0, 300) };
-  await putJ(env, jk, { taskId, at: Date.now(), sung });
-  return { ok: true, job: P.h, sung };
+  await putJ(env, jk, { taskId, at: Date.now(), sung, mode: paid ? 'paid' : 'trial', k: paid ? k : '', biz });
+  if (paid) { o.jgen = (o.jgen | 0) + 2; o.jobs = (o.jobs || []).concat(h).slice(-40); await bsSave(env, k, o); }
+  else if (!dev) { const m = { at: Date.now(), h, biz }; await putJ(env, bk, m); await putJ(env, ipk, m); }
+  return { ok: true, job: h, sung };
 }
 async function bsJinglePoll(d, env) {
   const h = String(d.job || '').replace(/[^0-9a-f]/g, '').slice(0, 24), jk = 'bs/j/' + h + '.json', ex = h && await getJ(env, jk);
   if (!ex) return { ok: false, error: 'ההפקה לא נמצאה. נסו שוב' };
-  if (ex.tracks) return { ok: true, done: true, free: BS_JINGLE_FREE, tracks: ex.tracks };
+  const wm = ex.mode !== 'paid';
+  if (ex.tracks) return { ok: true, done: true, job: h, tracks: ex.tracks, wm };
   const r = await kin(env, 'recordInfo?taskId=' + encodeURIComponent(ex.taskId)); const tx = await r.text(); let j = {}; try { j = JSON.parse(tx); } catch (e) {}
   const rec = j.data && j.data.status ? j.data : j, st = String(rec.status || '').toLowerCase();
   if (st === 'success') {
@@ -705,15 +720,90 @@ async function bsJinglePoll(d, env) {
     const tracks = [];
     for (let i = 0; i < outs.length; i++) {
       const a = await fetch(outs[i]); if (!a.ok) continue;
-      await env.BUCKET.put('bs/j/' + h + '-' + i + '.mp3', a.body, { httpMetadata: { contentType: 'audio/mpeg' } });
+      const b = new Uint8Array(await a.arrayBuffer()); if (b.length < 20000) continue;
+      await env.BUCKET.put('bs/j/' + h + '-' + i + '.mp3', b, { httpMetadata: { contentType: 'audio/mpeg' } });
       tracks.push('?bsj=' + h + '-' + i);
     }
     if (!tracks.length) return { ok: false, error: 'ההפקה הסתיימה אבל הקובץ לא נמצא. נסו שוב' };
-    await putJ(env, jk, { taskId: ex.taskId, at: ex.at, tracks });
-    return { ok: true, done: true, free: BS_JINGLE_FREE, tracks };
+    await putJ(env, jk, Object.assign(ex, { tracks, raw: JSON.stringify(rec.output || '').slice(0, 1500) }));
+    return { ok: true, done: true, job: h, tracks, wm };
   }
-  if (st === 'fail' || st === 'failed' || Date.now() - ex.at > 10 * 60e3) { await env.BUCKET.delete(jk); return { ok: false, error: "הפקת הג'ינגל נכשלה. נסו שוב", detail: String(rec.error || tx).slice(0, 300) }; }
+  if (st === 'fail' || st === 'failed' || Date.now() - ex.at > 10 * 60e3) {
+    await env.BUCKET.delete(jk);
+    if (ex.mode === 'paid' && ex.k) { const o = await getJ(env, 'bs/o/' + ex.k + '.json'); if (o) { o.jgen = Math.max(0, (o.jgen | 0) - 2); o.jobs = (o.jobs || []).filter(x => x !== h); await bsSave(env, ex.k, o); } }
+    else if (ex.mode === 'trial') { await env.BUCKET.delete('bs/jt/b/' + (await bsHash(bsNorm(ex.biz))) + '.json'); }
+    return { ok: false, error: "הפקת הג'ינגל נכשלה. נסו שוב", detail: String(rec.error || tx).slice(0, 300) };
+  }
   return { ok: true, pending: true, status: st || 'waiting' };
+}
+/* ---- voice tag on sample jingles: MP3 frames of "B-Sound" are inserted between the song's frames ---- */
+const BS_WM_URL = 'https://www.b-sound.co.il/assets/wm/';
+let BS_TAG = {};
+function mp3Frames(u) {
+  let p = 0;
+  if (u[0] === 0x49 && u[1] === 0x44 && u[2] === 0x33) p = 10 + ((u[6] & 127) << 21 | (u[7] & 127) << 14 | (u[8] & 127) << 7 | (u[9] & 127)) + (u[5] & 16 ? 10 : 0);
+  const BR1 = [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320], BR2 = [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160];
+  const SR = { 3: [44100, 48000, 32000], 2: [22050, 24000, 16000], 0: [11025, 12000, 8000] };
+  const fr = []; let xing = null;
+  while (p + 4 <= u.length) {
+    if (u[p] !== 0xFF || (u[p + 1] & 0xE0) !== 0xE0) { if (fr.length) break; p++; continue; }
+    const ver = (u[p + 1] >> 3) & 3, lay = (u[p + 1] >> 1) & 3, bi = u[p + 2] >> 4, si = (u[p + 2] >> 2) & 3, pad = (u[p + 2] >> 1) & 1, ch = (u[p + 3] >> 6) === 3 ? 1 : 2;
+    if (ver === 1 || lay !== 1 || bi === 0 || bi === 15 || si === 3) { if (fr.length) break; p++; continue; }
+    const sr = SR[ver][si], br = (ver === 3 ? BR1 : BR2)[bi] * 1000, len = Math.floor((ver === 3 ? 144 : 72) * br / sr) + pad;
+    if (len < 24 || p + len > u.length) break;
+    const side = ver === 3 ? (ch === 1 ? 17 : 32) : (ch === 1 ? 9 : 17), tag = String.fromCharCode(u[p + 4 + side], u[p + 5 + side], u[p + 6 + side], u[p + 7 + side]);
+    if (!fr.length && !xing && (tag === 'Xing' || tag === 'Info')) xing = { off: p, len, x: p + 4 + side, sr, ch };
+    else fr.push({ off: p, len, sr, ch });
+    p += len;
+  }
+  return { fr, xing };
+}
+async function bsWmFrames(sr) {
+  if (BS_TAG[sr]) return BS_TAG[sr];
+  const r = await fetch(BS_WM_URL + 'tag' + (sr === 44100 ? '44' : '48') + '.mp3', { cf: { cacheTtl: 3600 } });
+  if (!r.ok) throw new Error('voice tag missing');
+  const u = new Uint8Array(await r.arrayBuffer()), m = mp3Frames(u);
+  if (!m.fr.length) throw new Error('voice tag bad');
+  return (BS_TAG[sr] = { u, fr: m.fr });
+}
+async function bsTagSong(clean) {
+  const m = mp3Frames(clean); if (m.fr.length < 50) throw new Error('song too short');
+  const sr = m.fr[0].sr, ch = m.fr[0].ch, W = await bsWmFrames(sr);
+  if (W.fr[0].ch !== ch) throw new Error('voice tag channels');
+  const n = m.fr.length, secs = n * 1152 / sr, at = (secs > 22 ? [0.22, 0.52, 0.82] : secs > 8 ? [0.3, 0.72] : [0.5]).map(x => Math.round(n * x));
+  const wmBytes = W.fr.reduce((a, f) => a + f.len, 0), parts = [];
+  let size = 0; const push = (b) => { parts.push(b); size += b.length; };
+  const xing = m.xing ? clean.slice(m.xing.off, m.xing.off + m.xing.len) : null;
+  if (xing) push(xing);
+  for (let i = 0; i < n; i++) {
+    if (at.includes(i)) for (const f of W.fr) push(W.u.subarray(f.off, f.off + f.len));
+    push(clean.subarray(m.fr[i].off, m.fr[i].off + m.fr[i].len));
+  }
+  const out = new Uint8Array(size); let o = 0; for (const b of parts) { out.set(b, o); o += b.length; }
+  if (xing) { // keep the VBR header honest: new frame count and byte size
+    const x = m.xing.x - m.xing.off, dv = new DataView(out.buffer), flags = dv.getUint32(x + 4); let q = x + 8;
+    if (flags & 1) { dv.setUint32(q, n + at.length * W.fr.length); q += 4; }
+    if (flags & 2) dv.setUint32(q, size);
+  }
+  return out;
+}
+// GET ?bsj=<job>-<i>[&k=order][&dl=1]: clean only for the order that owns the job, otherwise the tagged sample
+async function bsJingleFile(u, env) {
+  const id = u.searchParams.get('bsj'), h = id.slice(0, 24), k = String(u.searchParams.get('k') || '').replace(/[^\w-]/g, '');
+  const job = await getJ(env, 'bs/j/' + h + '.json');
+  let clean = false;
+  if (job && job.mode === 'paid' && k && job.k === k) clean = true;
+  else if (job && k) { const o = await getJ(env, 'bs/o/' + k + '.json'); clean = !!(o && o.paid && o.pkg === 'jingle' && (o.jobs || []).includes(h)); }
+  let b;
+  if (clean) b = await getBin(env, 'bs/j/' + id + '.mp3');
+  else {
+    b = await getBin(env, 'bs/j/' + id + '.wm.mp3');
+    if (!b) { const c = await getBin(env, 'bs/j/' + id + '.mp3'); if (c) { b = await bsTagSong(c); await env.BUCKET.put('bs/j/' + id + '.wm.mp3', b, { httpMetadata: { contentType: 'audio/mpeg' } }); } }
+  }
+  if (!b) return new Response('not found', { status: 404, headers: H });
+  const hd = Object.assign({}, H, { 'Content-Type': 'audio/mpeg', 'Cache-Control': clean ? 'private, max-age=3600' : 'public, max-age=86400' });
+  if (u.searchParams.get('dl')) hd['Content-Disposition'] = "attachment; filename*=UTF-8''" + encodeURIComponent(((job && job.biz) || 'jingle') + ' - jingle ' + (+id.slice(-1) + 1) + (clean ? '' : ' (sample)') + '.mp3');
+  return new Response(b, { headers: hd });
 }
 async function bsVoiceSample(d, env, ip) {
   const vmap = bsVoices(env), v = vmap[d.voice] ? d.voice : null; if (!v) return { ok: false, error: 'קול לא מוכר' };
@@ -738,7 +828,7 @@ function bsCredits(o) {
 }
 function bsPublic(o) {
   return {
-    ok: true, paid: !!o.paid, code: o.code, pkg: o.pkg, human: !!o.human, studio: !!o.human || o.pkg === 'jingle', jingle: o.jingle || null,
+    ok: true, paid: !!o.paid, code: o.code, pkg: o.pkg, human: !!o.human, studio: !!o.human, jingle: o.jingle || null, jobs: o.pkg === 'jingle' ? (o.jobs || []) : [], jLeft: Math.max(0, BS_J_MAX - (o.jgen | 0)), jMax: BS_J_MAX,
     test: !!o.test, voice: o.voice, tone: o.tone || 'normal', music: o.music, mix: o.mix || {}, biz: o.biz,
     credits: bsCredits(o), langs: BS_LANGS,
     items: (o.items || []).map(x => ({ id: x.id, type: x.type, title: x.title, lang: x.lang || 'he', script: x.script, draft: !!x.draft, ver: x.ver | 0, pending: x.pending || '' }))
@@ -762,7 +852,12 @@ async function bsound(d, env, ip) {
   if (d.action === 'bs_jingle') return bsJingle(d, env, ip);
   if (d.action === 'bs_jingle_audio') return bsJingleAudio(d, env, ip);
   if (d.action === 'bs_jingle_poll') return bsJinglePoll(d, env);
-  if (d.action === 'bs_ver') return { ok: true, ver: 'nq1' };
+  if (d.action === 'bs_ver') return { ok: true, ver: 'wm1' };
+  if (d.action === 'bs_tag_tts') { // source audio for the voice tag on sample jingles (fixed text, cached)
+    const key = 'bs/wm-src-' + (d.v === 'm1' ? 'm1' : 'f1') + '.mp3'; let b = await getBin(env, key);
+    if (!b) { b = await bsTts(env, '[excited] בִּי סָאוּנְד!', bsVoices(env)[d.v === 'm1' ? 'm1' : 'f1']); await env.BUCKET.put(key, b); }
+    return { ok: true, mp3: bytesToB64(b) };
+  }
   if (d.action === 'bs_voice_sample') return bsVoiceSample(d, env, ip);
   // lost the link? order code + the phone used in the order bring it back
   if (d.action === 'bs_find') {
@@ -781,9 +876,11 @@ async function bsound(d, env, ip) {
     if (!o) { if (!(await bsIpOk(env, ip, 'order', BS_IP_DAY))) return { ok: false, error: 'הגעתם למספר ההזמנות היומי. פנו אלינו ונשמח לעזור' }; key = tok(); o = { code: bsCode(), created: Date.now(), previews: 0 }; await putJ(env, 'bs/idx/' + o.code + '.json', { k: key }); }
     const pkg = BS_PKG[d.pkg] ? d.pkg : 'hold';
     Object.assign(o, { pkg, items: bsItemsIn(d.items, pkg), voice: vmap[d.voice] ? d.voice : 'f1', tone: BS_TONES[d.tone] ? d.tone : 'normal', music: String(d.music || '').slice(0, 40), mix: d.mix || {},
-      human: !!d.human, jingle: pkg === 'jingle' ? { len: Math.max(7, Math.min(60, d.jingle && d.jingle.len | 0 || 30)), style: String(d.jingle && d.jingle.style || '').slice(0, 30), vocal: String(d.jingle && d.jingle.vocal || '').slice(0, 30) } : null,
+      human: !!d.human, jingle: pkg === 'jingle' ? { len: Math.max(7, Math.min(60, d.jingle && d.jingle.len | 0 || 12)), style: String(d.jingle && d.jingle.style || '').slice(0, 30), vocal: String(d.jingle && d.jingle.vocal || '').slice(0, 30) } : null,
+      trialJobs: pkg === 'jingle' && d.jingle && Array.isArray(d.jingle.jobs) ? d.jingle.jobs.map(x => String(x).replace(/[^0-9a-f]/g, '').slice(0, 24)).filter(x => x.length === 24).slice(-4) : [],
       biz: String(d.biz || '').slice(0, 80), site: String(d.site || '').slice(0, 120), name: String(d.name || '').slice(0, 60),
       phone: String(d.phone || '').replace(/[^\d+]/g, '').slice(0, 15), email: String(d.email || '').slice(0, 80), expires: Date.now() + BS_DAYS * 86400000 });
+    if (pkg === 'jingle') o.jobs = (o.trialJobs || []).concat((o.jobs || []).filter(x => !(o.trialJobs || []).includes(x)));
     await bsSave(env, key, o);
     return Object.assign(bsPublic(o), { k: key });
   }

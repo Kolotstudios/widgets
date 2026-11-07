@@ -210,7 +210,7 @@ aside dt{color:#5A606A;font-size:13px}aside dd{margin:2px 0 0;font-weight:700}
 <div class="acts"><button class="btn sm" id="jWrite" type="button">כתבו לי 4 אפשרויות</button><span id="jMsg" style="font-size:14px;color:#C9CED6"></span></div>
 <div id="jVers" style="display:flex;flex-direction:column;gap:10px;margin-top:14px"></div>
 <label class="f" style="margin-top:14px">המילים<textarea id="jText" rows="7" maxlength="900" class="lyr"></textarea></label>
-<div class="box" id="jAudio" style="margin-top:16px"><b style="font-size:17px">🎵 שמעו את הג'ינגל שלכם</b> <span class="badge mus">חינם</span><p class="hint" style="margin:6px 0 10px">אנחנו מלחינים ומפיקים את הג'ינגל עם המילים שבחרתם, בסגנון ובקולות שבחרתם. לוקח דקה-שתיים, ומקבלים 2 גרסאות.</p><div class="acts" style="margin-top:0"><button class="btn sm" id="jMake" type="button">הפיקו לי את הג'ינגל</button><span id="jAMsg" style="font-size:14px;color:#C9CED6"></span></div><div id="jTracks" hidden></div><div class="acts" id="jAfter" hidden style="margin-top:8px"><button class="btn ghost sm" id="jAgain" type="button">עוד 2 גרסאות עם אותן מילים</button></div></div>
+<div class="box" id="jAudio" style="margin-top:16px"><b style="font-size:17px">🎵 שמעו את הג'ינגל שלכם</b> <span class="badge mus">ניסיון אחד חינם</span><p class="hint" style="margin:6px 0 10px">אנחנו מלחינים ומפיקים את הג'ינגל עם המילים שבחרתם, תוך דקה-שתיים. מקבלים 2 גרסאות לדוגמה עם חותמת קולית קצרה של בי סאונד. אחרי ההזמנה הן נקיות, ומפיקים עוד עד 10 גרסאות לעסק.</p><div class="acts" style="margin-top:0"><button class="btn sm" id="jMake" type="button">הפיקו לי ג'ינגל לדוגמה</button><span id="jAMsg" style="font-size:14px;color:#C9CED6"></span></div><div id="jTracks" hidden></div><div class="acts" id="jAfter" hidden style="margin-top:10px"><button class="btn" id="jCta" type="button">אהבתם? להזמנת הג'ינגל ←</button></div></div>
 </div>
 <p class="err" id="e3" hidden></p>
 <div class="acts"><button class="btn" id="n3" type="button">המשך</button><button class="btn ghost" data-back type="button">חזרה</button></div>
@@ -288,6 +288,14 @@ aside dt{color:#5A606A;font-size:13px}aside dd{margin:2px 0 0;font-weight:700}
 <p class="sub">כאן מורידים קבצים, מתקנים נוסחים ומוסיפים הודעות ושפות.</p>
 <div class="box linkbox"><b>הקישור האישי שלכם</b><p class="hint" style="margin:4px 0 8px">דרכו חוזרים לאזור הלקוח מכל מכשיר. כדאי לשמור אותו.</p><div class="acts" style="margin-top:0"><button class="btn ghost sm" type="button" data-copy>העתקת הקישור</button><a class="btn ghost sm" data-wa-self target="_blank" rel="noopener">שליחה לעצמי בוואטסאפ</a></div></div>
 <div id="studioBox" class="box" hidden></div>
+<div id="jPortal" class="box" hidden>
+<div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px"><b style="font-size:20px">🎵 הג'ינגל של <span id="jpBiz"></span></b><span class="badge mus" id="jpLeft"></span></div>
+<p class="hint" style="margin:6px 0 0">כל הגרסאות כאן נקיות, בלי החותמת, ומוכנות להורדה. אפשר לשנות מילים, סגנון וקולות ולהפיק עוד. שם העסק חייב להופיע במילים.</p>
+<div id="jpList" style="margin-top:12px"></div>
+<label class="f" style="margin-top:16px">המילים<textarea id="jpText" rows="6" maxlength="900" class="lyr"></textarea></label>
+<div class="row"><label class="f">סגנון<select id="jpStyle"></select></label><label class="f">מי שר<select id="jpVocal"></select></label></div>
+<div class="acts"><button class="btn sm" id="jpMake" type="button">הפיקו 2 גרסאות חדשות</button><span id="jpMsg" style="font-size:14px;color:#C9CED6"></span></div>
+</div>
 <div id="aiArea">
 <div class="cr" id="credits"></div>
 <p class="err" id="e8" hidden></p>
@@ -377,7 +385,7 @@ var A={};
 var FORM=["biz","site","fName","fSlogan","fServices","fHours","ivrIntro","ivrText","subTitle","subText","holdText","closedText","jText","name","phone","email"];
 try{var saved=JSON.parse(localStorage.getItem("bs_order2")||"null");if(saved) Object.assign(S,saved.S||{})}catch(e){saved=null}
 var hk=(location.hash.match(/k=([a-f0-9]+)/)||[])[1],RETURNED=/paid=1/.test(location.hash);if(hk&&hk!==S.k){S.k=hk;S.step=7}
-function save(){try{var f={};FORM.forEach(function(id){f[id]=$("#"+id).value});var keep={};["tone","step","max","field","ai","product","deps","ivrManual","holdIdx","music","voice","vv","mv","duck","jLen","jVocal","jStyle","jVers","choice","k","code"].forEach(function(x){keep[x]=S[x]});localStorage.setItem("bs_order2",JSON.stringify({S:keep,f:f}))}catch(e){}}
+function save(){try{var f={};FORM.forEach(function(id){f[id]=$("#"+id).value});var keep={};["tone","step","max","field","ai","product","deps","ivrManual","holdIdx","music","voice","vv","mv","duck","jLen","jVocal","jStyle","jVers","jJobs","choice","k","code"].forEach(function(x){keep[x]=S[x]});localStorage.setItem("bs_order2",JSON.stringify({S:keep,f:f}))}catch(e){}}
 if(saved&&saved.f) FORM.forEach(function(id){if(saved.f[id]!=null) $("#"+id).value=saved.f[id]});
 if(TEST) $("#testBar").hidden=false;
 
@@ -517,6 +525,7 @@ function renderJingle(){
   jPills();
   $("#jVers").innerHTML=(S.jVers||[]).map(function(v,i){return '<button type="button" class="sc" data-jver="'+i+'"><b class="h"><span>גרסה '+(i+1)+'</span><span>בחירה</span></b><span class="t lyr">'+esc(v)+'</span></button>'}).join("");
   if(!$("#jText").value&&!S.jVers) $("#jText").value=jFallback();
+  jTrialState();
 }
 function jFallback(){var n=bizName()||"העסק",sl=$("#fSlogan").value.trim()||"פשוט הכי טוב";return S.jLen<=15?n+"\n"+sl+"!":n+", "+n+"\n"+sl+"\n"+n+" – תמיד איתכם!"}
 $("#jVocal").onclick=function(e){var b=e.target.closest("[data-jv]");if(!b)return;S.jVocal=+b.dataset.jv;jPills();side();save()};
@@ -532,50 +541,80 @@ $("#jWrite").onclick=function(){
     save();
   });
 };
-var jTake=0,jUrl=null,jPollT=null;
-function jShow(srcs,free){
-  var box=$("#jTracks");box.innerHTML=srcs.map(function(u,i){return '<div class="jtr"><b>גרסה '+(i+1)+'</b><audio controls preload="none" src="'+u+'"></audio>'+(free?'<a class="btn ghost sm" href="'+u+'" download="'+esc((bizName()||"jingle").replace(/[\\/:*?"<>|]/g,""))+' - jingle '+(i+1)+'.mp3" target="_blank" rel="noopener">הורדה</a>':'')+'</div>'}).join("");
-  box.hidden=false;$("#jAfter").hidden=false;$("#jMake").textContent="הפיקו שוב עם המילים המעודכנות";
-  $("#jAMsg").textContent=srcs.length>1?"✓ מוכן. "+srcs.length+" גרסאות, לחצו ▶ לשמיעה.":"✓ מוכן. לחצו ▶ לשמיעה.";
-  var first=box.querySelector("audio");if(first) first.play().catch(function(){});
-  box.querySelectorAll("audio").forEach(function(x){x.addEventListener("play",function(){box.querySelectorAll("audio").forEach(function(y){if(y!==x) y.pause()})})});
-}
-function jDone(b,a){clearInterval(waitT);clearTimeout(jPollT);b.disabled=a.disabled=false}
-function jMake(again){
-  var lyr=$("#jText").value.trim();if(lyr.length<4){$("#jAMsg").textContent="כתבו או בחרו קודם מילים.";return}
-  if(again) jTake++;
-  var b=$("#jMake"),a=$("#jAgain"),t0=Date.now();b.disabled=a.disabled=true;clearTimeout(jPollT);
-  waiting($("#jAMsg"),["מלחינים לחן…","מקליטים את הזמרים…","מערבבים את המיקס…","עוד קצת… ג'ינגל טוב לוקח דקה-שתיים","כמעט שם…"]);
-  function fail(r){jDone(b,a);$("#jAMsg").textContent=(r&&r.error)||"ההפקה נכשלה. נסו שוב."}
-  function fin(r){
-    jDone(b,a);
-    if(r.mp3){var bin=atob(r.mp3),u=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i);if(jUrl) URL.revokeObjectURL(jUrl);jUrl=URL.createObjectURL(new Blob([u],{type:"audio/mpeg"}));jShow([jUrl],r.free);return}
-    jShow(r.tracks.map(function(t){return API+t}),r.free);
-  }
-  function poll(job){
-    jPollT=setTimeout(function(){
-      call({action:"bs_jingle_poll",job:job}).then(function(r){
-        if(!r.ok) return fail(r);
-        if(r.done) return fin(r);
-        if(Date.now()-t0>6*60e3) return fail({error:"ההפקה לוקחת יותר מהרגיל. נסו שוב בעוד כמה דקות."});
-        poll(job);
-      });
-    },5000);
-  }
-  call({action:"bs_jingle_audio",k:S.k,lyrics:lyr,len:S.jLen,style:STYLES[S.jStyle],vocal:VOCALS[S.jVocal],take:jTake}).then(function(r){
+var jPollT=null;
+function jNorm(t){return String(t||"").replace(/[֑-ׇ]/g,"").replace(/[^א-תa-zA-Z0-9]+/g,"").toLowerCase()}
+function jPoll(job,done,fail,t0){
+  t0=t0||Date.now();
+  call({action:"bs_jingle_poll",job:job}).then(function(r){
     if(!r.ok) return fail(r);
-    if(r.done||r.mp3) return fin(r);
-    if(r.job) return poll(r.job);
-    fail(r);
+    if(r.done) return done(r);
+    if(Date.now()-t0>6*60e3) return fail({error:"ההפקה לוקחת יותר מהרגיל. נסו שוב בעוד כמה דקות."});
+    jPollT=setTimeout(function(){jPoll(job,done,fail,t0)},5000);
   });
 }
-$("#jMake").onclick=function(){jMake(false)};
+function jTrackHtml(tracks,k,label){
+  return tracks.map(function(t,i){var u=API+t+(k?"&k="+encodeURIComponent(k):"");return '<div class="jtr"><b>'+(label||"גרסה")+' '+(i+1)+'</b><audio controls preload="none" src="'+u+'"></audio>'+(k?'<a class="btn ghost sm" href="'+u+'&dl=1">הורדה</a>':'')+'</div>'}).join("");
+}
+function jOnePlayer(box){box.querySelectorAll("audio").forEach(function(x){x.addEventListener("play",function(){document.querySelectorAll("audio").forEach(function(y){if(y!==x) y.pause()})})})}
+function jShowTrial(r){
+  var box=$("#jTracks");box.innerHTML=jTrackHtml(r.tracks,null,"דוגמה");box.hidden=false;jOnePlayer(box);$("#jAfter").hidden=false;
+  $("#jAMsg").textContent="✓ מוכן. בדוגמה יש חותמת קולית של בי סאונד. אחרי ההזמנה תקבלו אותה נקייה.";
+}
+function jTrialState(){
+  if(!S.jJobs||!S.jJobs.length) return;
+  $("#jMake").disabled=true;$("#jMake").textContent="הפקתם ג'ינגל לדוגמה";
+  if($("#jTracks").hidden) jPoll(S.jJobs[S.jJobs.length-1],jShowTrial,function(){});
+}
+function jMake(){
+  var lyr=$("#jText").value.trim(),biz=bizName();
+  if(lyr.length<4){$("#jAMsg").textContent="כתבו או בחרו קודם מילים.";return}
+  if(!biz){$("#jAMsg").textContent="חסר שם העסק. חזרו לשלב הראשון.";return}
+  if(jNorm(lyr).indexOf(jNorm(biz))<0){$("#jAMsg").textContent='שם העסק "'+biz+'" חייב להופיע במילים.';return}
+  var b=$("#jMake");b.disabled=true;clearTimeout(jPollT);
+  waiting($("#jAMsg"),["מנקדים את המילים…","מלחינים לחן…","מקליטים את הזמרים…","מערבבים את המיקס…","עוד קצת… ג'ינגל טוב לוקח דקה-שתיים","כמעט שם…"]);
+  function fail(r){clearInterval(waitT);b.disabled=false;$("#jAMsg").textContent=(r&&r.error)||"ההפקה נכשלה. נסו שוב."}
+  function done(r){clearInterval(waitT);jShowTrial(r);jTrialState()}
+  call({action:"bs_jingle_audio",lyrics:lyr,biz:biz,len:S.jLen,style:STYLES[S.jStyle],vocal:VOCALS[S.jVocal],dev:Q.get("dev")||""}).then(function(r){
+    if(r.ok&&r.job){S.jJobs=(S.jJobs||[]).filter(function(x){return x!==r.job}).concat(r.job);save()}
+    if(!r.ok){if(r.used){clearInterval(waitT);$("#jAMsg").textContent=r.error;$("#jAfter").hidden=false;b.textContent="הפקתם ג'ינגל לדוגמה";jTrialState();return}return fail(r)}
+    if(r.done) return done(r);
+    jPoll(r.job,done,fail);
+  });
+}
+$("#jMake").onclick=jMake;
+$("#jCta").onclick=function(){$("#n3").click()};
+/* paid AI jingle: the customer's own studio in the customer area */
+function jPortal(r){
+  var box=$("#jPortal");box.hidden=false;
+  $("#jpLeft").textContent="נותרו "+r.jLeft+" מתוך "+r.jMax+" גרסאות";
+  $("#jpBiz").textContent=r.biz||"";
+  if(!$("#jpText").value) $("#jpText").value=((r.items||[])[0]||{}).script||"";
+  var jj=r.jingle||{};
+  $("#jpStyle").innerHTML=STYLES.map(function(v){return '<option'+(v===jj.style?' selected':'')+'>'+v+'</option>'}).join("");
+  $("#jpVocal").innerHTML=VOCALS.map(function(v){return '<option'+(v===jj.vocal?' selected':'')+'>'+v+'</option>'}).join("");
+  $("#jpMake").disabled=r.jLeft<2;
+  var list=$("#jpList"),jobs=(r.jobs||[]).slice().reverse();
+  if(!jobs.length){list.innerHTML='<p class="hint">עדיין אין גרסאות. כתבו מילים ולחצו "הפיקו 2 גרסאות".</p>';return}
+  list.innerHTML=jobs.map(function(j,i){return '<div class="itm" data-job="'+j+'"><b>סבב '+(jobs.length-i)+'</b><div class="jl"><span class="spin"></span></div></div>'}).join("");
+  jobs.forEach(function(j){jPoll(j,function(x){var el=list.querySelector('[data-job="'+j+'"] .jl');if(el){el.innerHTML=jTrackHtml(x.tracks,S.k);jOnePlayer(el)}},function(x){var el=list.querySelector('[data-job="'+j+'"] .jl');if(el) el.innerHTML='<p class="hint">'+esc((x&&x.error)||"ההפקה נכשלה")+'</p>'})});
+}
+$("#jpMake").onclick=function(){
+  var r=S.st,lyr=$("#jpText").value.trim(),b=this;
+  if(jNorm(lyr).indexOf(jNorm(r.biz))<0){$("#jpMsg").textContent='שם העסק "'+r.biz+'" חייב להופיע במילים.';return}
+  b.disabled=true;waiting($("#jpMsg"),["מנקדים את המילים…","מלחינים לחן…","מקליטים את הזמרים…","עוד קצת…","כמעט שם…"]);
+  call({action:"bs_jingle_audio",k:S.k,lyrics:lyr,len:(r.jingle&&r.jingle.len)||12,style:$("#jpStyle").value,vocal:$("#jpVocal").value,take:Date.now()%20}).then(function(x){
+    clearInterval(waitT);b.disabled=false;
+    if(!x.ok){$("#jpMsg").textContent=x.error||"ההפקה נכשלה. נסו שוב.";return}
+    $("#jpMsg").textContent="✓ ההפקה התחילה. הגרסאות יופיעו למעלה תוך דקה-שתיים.";
+    call({action:"bs_state",k:S.k}).then(function(st){if(st.ok){S.st=st;drawPortal()}});
+  });
+};
 var upA=new Audio(),upB=null;
 document.addEventListener("click",function(e){var b=e.target.closest("[data-upj]");if(!b) return;
   if(upB===b){upA.pause();b.textContent=b.textContent.replace("■","▶");upB=null;return}
   if(upB) upB.textContent=upB.textContent.replace("■","▶");
   upB=b;upA.src="https://www.b-sound.co.il/assets/jingles/"+b.dataset.upj+".mp3";upA.play().catch(function(){});b.textContent=b.textContent.replace("▶","■");
-  upA.onended=function(){if(upB) upB.textContent=upB.textContent.replace("■","▶");upB=null}});$("#jAgain").onclick=function(){jMake(true)};
+  upA.onended=function(){if(upB) upB.textContent=upB.textContent.replace("■","▶");upB=null}});
 function items(){
   if(S.product==="jingle") return [{id:"jingle",type:"jingle",title:"ג'ינגל מוזיקלי",script:$("#jText").value}];
   var out=[];
@@ -636,7 +675,7 @@ function onVoice(e){
 }
 $("#voicesF").onclick=onVoice;$("#voicesM").onclick=onVoice;
 function saveOrder(pkg,human){
-  return call({action:"bs_save",k:S.k,pkg:pkg,human:!!human,items:items(),voice:S.voice,tone:S.tone,music:S.music,mix:{vv:S.vv,mv:S.mv,duck:S.duck},jingle:{len:S.jLen,style:STYLES[S.jStyle],vocal:VOCALS[S.jVocal]},biz:bizName(),site:$("#site").value,name:$("#name").value,phone:$("#phone").value,email:$("#email").value})
+  return call({action:"bs_save",k:S.k,pkg:pkg,human:!!human,items:items(),voice:S.voice,tone:S.tone,music:S.music,mix:{vv:S.vv,mv:S.mv,duck:S.duck},jingle:{len:S.jLen,style:STYLES[S.jStyle],vocal:VOCALS[S.jVocal],jobs:S.jJobs||[]},biz:bizName(),site:$("#site").value,name:$("#name").value,phone:$("#phone").value,email:$("#email").value})
   .then(function(r){if(!r.ok) throw new Error(r.error);S.k=r.k;S.code=r.code;save();return r});
 }
 $("#n4").onclick=function(){
@@ -716,7 +755,7 @@ function optBtn(pkg,human,title,note){
 }
 function renderChoose(){
   var h="",pr=S.product;
-  var aiNote=pr==="jingle"?"עד 10 גרסאות לבחירה, 5 סבבים של 2. מוכן בתוך שעות.":"בדיוק מה ששמעתם, בלי סימן המים. מוכן מיד.";
+  var aiNote=pr==="jingle"?"הדוגמה שלכם נקייה, ועוד עד 10 גרסאות שמפיקים לבד באזור הלקוח. מוכן מיד.":"בדיוק מה ששמעתם, בלי סימן המים. מוכן מיד.";
   var huNote=pr==="jingle"?"לחן מקורי וזמרים באולפן, כולל שיחת אפיון וסבב תיקונים.":"קריין/ית מקצועי/ת באולפן, לפי הנוסח שאישרתם. מוכן תוך 48 שעות.";
   if(pr==="ivr"){
     h=TIERS.map(function(t){var on=S.choice&&S.choice.pkg===t[0];return '<div class="tier'+(on?" on":"")+'"><b style="font-size:19px">'+t[1]+'</b><ul>'+t[2].map(function(x){return "<li>✓ "+esc(x)+"</li>"}).join("")+'</ul><div class="opts">'+optBtn(t[0],false,"קריינות AI",aiNote)+optBtn(t[0],true,"קריין/ית באולפן",huNote)+'</div></div>'}).join("");
@@ -778,7 +817,9 @@ function drawPortal(){
   var r=S.st,c=r.credits;
   $("#upJingle").hidden=r.pkg==="jingle";
   if(r.pkg!=="jingle"){var nb=r.biz||bizName()||"";$("#upjBiz").textContent=nb||"עסק שלכם";$("#upjGo").href=location.pathname+"?p=jingle&new=1&go=1"+(nb?"&biz="+encodeURIComponent(nb):"")+($("#site").value?"&site="+encodeURIComponent($("#site").value):"")+(TEST?"&test=1":"")}
-  $("#studioBox").hidden=!r.studio;$("#aiArea").hidden=!!r.studio;
+  var jai=r.pkg==="jingle"&&!r.human;$("#jPortal").hidden=!jai;
+  $("#studioBox").hidden=!r.studio;$("#aiArea").hidden=!!r.studio||jai;
+  if(jai){jPortal(r);return}
   if(r.studio){
     var what=r.pkg==="jingle"?(r.human?"הג'ינגל בהפקה אצל המלחין והמפיק. נחזור אליכם תוך יום עסקים לשיחת אפיון.":"הג'ינגל בהפקה. 2 הגרסאות הראשונות יישלחו אליכם במייל ויופיעו כאן."):"הקריין/ית יקליטו באולפן את הנוסחים שאישרתם. הקבצים יישלחו אליכם במייל תוך 48 שעות.";
     $("#studioBox").innerHTML='<b style="font-size:19px">✓ התשלום התקבל · קוד '+esc(r.code)+'</b><p style="margin:10px 0 0;font-size:16px">'+what+'</p>'+r.items.map(function(it){return '<div class="itm"><b>'+esc(it.title)+'</b><p class="scr '+(it.type==="jingle"?"lyr":"")+'" dir="auto">'+esc(it.script)+'</p></div>'}).join("");
@@ -935,7 +976,7 @@ loadLib().then(side);
 var QB=Q.get("biz"),QS=Q.get("site"),QP=Q.get("p");
 if((QB||QS||QP)&&!hk){
   var fresh=Q.get("new")==="1"||(QB&&QB!==$("#biz").value)||(QS&&QS!==$("#site").value);
-  if(fresh){S.k=null;S.code="";S.ai=null;S.choice=null;S.deps=null;S.step=1;S.max=1;["fName","fSlogan","fServices","fHours","ivrIntro","ivrText","subTitle","subText","holdText","closedText","jText"].forEach(function(id){$("#"+id).value=""})}
+  if(fresh){S.k=null;S.code="";S.jJobs=null;S.jVers=null;S.ai=null;S.choice=null;S.deps=null;S.step=1;S.max=1;["fName","fSlogan","fServices","fHours","ivrIntro","ivrText","subTitle","subText","holdText","closedText","jText"].forEach(function(id){$("#"+id).value=""})}
   if(QB) $("#biz").value=QB;if(QS) $("#site").value=QS;
   if(QP&&/^(hold|ivr|jingle)$/.test(QP)){if(S.product!==QP){S.product=QP;S.choice=null}}
   history.replaceState(null,"",location.pathname+(TEST?"?test=1":""));

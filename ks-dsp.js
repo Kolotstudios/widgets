@@ -241,6 +241,44 @@ var KSDSP = (function () {
     function mk(a, b) { var len = b - a, a2 = a + Math.floor(len * 0.2), b2 = Math.max(a2 + 1, b - Math.floor(len * 0.2)), w = []; for (var q = a2; q < b2; q++) w.push(m[q]); w.sort(function (x, y) { return x - y; }); return { s: a, e: b, m: w[w.length >> 1] }; }
     return out;
   }
+  /* ---------- key map over time: playback harmony + the original singer's melody, changes must hold ~8 s ---------- */
+  var KMAJ = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88], KMIN = [6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
+  function zs(a) { var m = 0, v = 0, i; for (i = 0; i < a.length; i++) m += a[i]; m /= a.length; for (i = 0; i < a.length; i++) v += (a[i] - m) * (a[i] - m); v = Math.sqrt(v / a.length) || 1; return a.map(function (x) { return (x - m) / v; }); }
+  var KP = (function () { var o = [], r, i, a; for (r = 0; r < 24; r++) { a = []; for (i = 0; i < 12; i++) a.push((r < 12 ? KMAJ : KMIN)[((i - r % 12) + 12) % 12]); o.push(zs(a)); } return o; })();
+  function keymap(ref, inst, sr) {
+    var secs = Math.ceil(Math.max(ref.f0.length * ref.hop, inst ? inst.length / sr : 0)), ic = [], mc = [], s, i, k;
+    for (s = 0; s < secs; s++) { ic.push(new Float64Array(12)); mc.push(new Float64Array(12)); }
+    if (inst) {
+      var D = Math.max(1, Math.round(sr / 11025)), fs = sr / D, lp = filtfilt(inst, coef("lp", fs * 0.42, 0.7071, 0, sr)), n = Math.floor(lp.length / D), y = new Float32Array(n);
+      for (i = 0; i < n; i++) y[i] = lp[i * D];
+      var N = 4096, T = tables(N), re = new Float64Array(N), im = new Float64Array(N), pcOf = new Int8Array(N / 2).fill(-1), hop = Math.round(fs * 0.25);
+      for (k = 1; k < N / 2; k++) { var hz = k * fs / N; if (hz >= 55 && hz <= 1760) pcOf[k] = ((Math.round(12 * Math.log2(hz / 440)) + 9) % 12 + 12) % 12; }
+      for (var st = 0; st + N <= n; st += hop) {
+        for (i = 0; i < N; i++) { re[i] = y[st + i] * T.win[i]; im[i] = 0; } fft(re, im, T, false);
+        var c = new Float64Array(12), tot = 0; for (k = 1; k < N / 2; k++) if (pcOf[k] >= 0) { var m = Math.sqrt(re[k] * re[k] + im[k] * im[k]); c[pcOf[k]] += m; tot += m; }
+        if (tot > 0) { var sec = Math.min(secs - 1, Math.floor((st + N / 2) / fs)); for (i = 0; i < 12; i++) ic[sec][i] += c[i] / tot; }
+      }
+    }
+    for (i = 0; i < ref.f0.length; i++) if (ref.f0[i]) { var pc = ((Math.round(midi(ref.f0[i])) % 12) + 12) % 12, sc2 = Math.min(secs - 1, Math.floor(i * ref.hop)); mc[sc2][pc] += 1; }
+    // scores per second over a +-5 s window, melody weighted 1.5x
+    var sc = []; for (s = 0; s < secs; s++) {
+      var a = new Float64Array(12), b = new Float64Array(12), ta = 0, tb = 0;
+      for (var q = Math.max(0, s - 5); q <= Math.min(secs - 1, s + 5); q++) for (i = 0; i < 12; i++) { a[i] += ic[q][i]; b[i] += mc[q][i]; }
+      for (i = 0; i < 12; i++) { ta += a[i]; tb += b[i]; }
+      var v = []; for (i = 0; i < 12; i++) v.push((ta ? a[i] / ta : 0) + 1.5 * (tb ? b[i] / tb : 0)); var z = zs(v), row = new Float64Array(24);
+      for (k = 0; k < 24; k++) { var d2 = 0; for (i = 0; i < 12; i++) d2 += KP[k][i] * z[i]; row[k] = d2 / 12; } sc.push(row);
+    }
+    // Viterbi: staying is free, changing costs as much as ~8 s of a clearly better fit
+    var P = 1.2, Dp = new Float64Array(24), Bk = [], kk;
+    for (k = 0; k < 24; k++) Dp[k] = sc[0] ? sc[0][k] : 0;
+    for (s = 1; s < secs; s++) { var mx = -1e9, am = 0; for (k = 0; k < 24; k++) if (Dp[k] > mx) { mx = Dp[k]; am = k; } var nd = new Float64Array(24), bk = new Int8Array(24);
+      for (k = 0; k < 24; k++) { if (Dp[k] >= mx - P) { nd[k] = Dp[k] + sc[s][k]; bk[k] = k; } else { nd[k] = mx - P + sc[s][k]; bk[k] = am; } } Dp = nd; Bk.push(bk); }
+    var out = new Int8Array(secs), best = 0, bv = -1e9; for (k = 0; k < 24; k++) if (Dp[k] > bv) { bv = Dp[k]; best = k; }
+    out[secs - 1] = best; for (s = secs - 1; s > 0; s--) out[s - 1] = Bk[s - 1][out[s]];
+    return { hop: 1, k: out };
+  }
+  // the notes of key k (0-11 major, 12-23 minor; minor also allows the raised 7th)
+  function keyScale(k, semi) { var r = ((k % 12) + (semi || 0)) % 12; r = (r + 12) % 12; var iv = k < 12 ? [0, 2, 4, 5, 7, 9, 11] : [0, 2, 3, 5, 7, 8, 10, 11]; return iv.map(function (x) { return (r + x) % 12; }); }
   /* ---------- correction plan ----------
      every note the singer sings gets one target: the note the original singer sings at that moment
      (any octave, the song's own tuning), or the nearest note of the song's scale. The whole note moves
@@ -256,6 +294,7 @@ var KSDSP = (function () {
     offs.sort(function (a, b) { return a - b; }); var tun = offs.length ? offs[offs.length >> 1] : 0;
     var scale = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].sort(function (a, b) { return pc[b] - pc[a]; }).slice(0, 7);
     var snap = function (v) { return Math.round(v - tun) + tun; };
+    var km = opts.keys, scaleAt = function (t) { if (!km || !km.k || !km.k.length) return scale; var i = Math.max(0, Math.min(km.k.length - 1, Math.floor(t / (km.hop || 1)))); return keyScale(km.k[i], semi); };
     var want = new Float32Array(n), um = new Float32Array(n), stats = { notes: un.length, matched: 0, moved: 0 };
     for (f = 0; f < n; f++) um[f] = user.f0[f] ? midi(user.f0[f]) : 0;
     var rM = new Float32Array(ref.f0.length); for (f = 0; f < rM.length; f++) rM[f] = ref.f0[f] ? midi(ref.f0[f]) + semi : 0;
@@ -287,7 +326,7 @@ var KSDSP = (function () {
         }
         if (bestDm != null && bestScore < 0.6 && Math.abs(bestDm) <= 1.6) { best = u.m + bestDm; u.dl = bestDl; }
       }
-      if (best == null) { var bb = 99; for (var o = -2; o <= 2; o++) { var cand = Math.round(u.m - tun) + o, p = ((cand % 12) + 12) % 12; if (scale.indexOf(p) >= 0 && Math.abs(u.m - (cand + tun)) < bb) { bb = Math.abs(u.m - (cand + tun)); best = cand + tun; } } }
+      if (best == null) { var lsc = scaleAt((u.s + u.e) / 2 * hop + lag), bb = 99; for (var o = -2; o <= 2; o++) { var cand = Math.round(u.m - tun) + o, p = ((cand % 12) + 12) % 12; if (lsc.indexOf(p) >= 0 && Math.abs(u.m - (cand + tun)) < bb) { bb = Math.abs(u.m - (cand + tun)); best = cand + tun; } } }
       else stats.matched++;
       if (best == null) return;
       var dev = best - u.m; if (Math.abs(dev) > 1.6) return; // far off: another note on purpose
@@ -442,7 +481,7 @@ var KSDSP = (function () {
       });
     });
   }
-  return { shift: shift, stretch: stretch, resample: resample, f0: f0, nf0: nf0, clean: clean, notes: notes, plan: plan, psola: psola, tune: tune, denoise: denoise, voice: voice, deess: deess, coef: coef, filt: filt, filtfilt: filtfilt, highpass: highpass, removeDC: removeDC, follower: follower, fft: fft, tables: tables, midi: midi };
+  return { shift: shift, stretch: stretch, resample: resample, f0: f0, nf0: nf0, keymap: keymap, keyScale: keyScale, clean: clean, notes: notes, plan: plan, psola: psola, tune: tune, denoise: denoise, voice: voice, deess: deess, coef: coef, filt: filt, filtfilt: filtfilt, highpass: highpass, removeDC: removeDC, follower: follower, fft: fft, tables: tables, midi: midi };
 })();
 
 /* ---------- worker protocol: {id, op, ...} -> {id, ok, ...} ---------- */
@@ -462,6 +501,8 @@ if (typeof window === "undefined" && typeof self !== "undefined" && typeof self.
         KSDSP.nf0(m.x, m.sr, prog, function () { self.postMessage({ id: m.id, progress: 0, note: "model" }); })
           .then(function (t) { self.postMessage({ id: m.id, ok: true, f0: t.f0, hop: t.hop, neural: true }); })
           .catch(function () { var t = KSDSP.f0(m.x, m.sr, prog); self.postMessage({ id: m.id, ok: true, f0: t.f0, hop: t.hop, neural: false }); });
+      } else if (m.op === "keymap") {
+        var km = KSDSP.keymap({ f0: m.ref, hop: m.refHop }, m.inst, m.sr); self.postMessage({ id: m.id, ok: true, k: km.k, hop: km.hop });
       } else if (m.op === "voice") {
         var vo = { nr: m.nr, deess: m.deess, tune: m.tune, ref: m.ref ? { f0: m.ref, hop: m.refHop } : null };
         var finish = function (track) { try { var v = KSDSP.voice(m.x, m.sr, Object.assign(vo, { track: track }), prog); self.postMessage({ id: m.id, ok: true, y: v.y, stats: v.stats }, [v.y.buffer]); } catch (err) { self.postMessage({ id: m.id, ok: false, error: String(err && err.message || err) }); } };

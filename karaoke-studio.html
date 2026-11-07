@@ -337,7 +337,7 @@ body.docked{padding-bottom:120px}
             <div class="field"><h3>תיקון זיופים</h3>
               <div class="seg" id="tuneSeg"><button data-t="0" aria-pressed="true">כבוי</button><button data-t="1" aria-pressed="false">עדין</button><button data-t="2" aria-pressed="false">בינוני</button><button data-t="3" aria-pressed="false">חזק</button></div>
               <p class="note">המערכת בונה מפת תווים מהשירה של הזמר המקורי, ומזיזה כל תו שלכם כשלם אל התו שלו, עם הוויברטו והסלסולים שלכם. תווים שכבר מדויקים לא נוגעים בהם. עדין ובינוני נשמעים טבעיים, חזק מיישר את הצליל כמו אוטוטיון.</p>
-              <p class="status" id="tuneMsg"></p></div>
+              <p class="status" id="tuneMsg"></p><p class="note" id="keyMap"></p></div>
             <div class="field" id="cleanBox"><h3>ניקוי מוזיקה מההקלטה</h3>
               <p class="note">כששרים בלי אוזניות, המוזיקה מהרמקול נכנסת להקלטה. הניקוי משאיר רק את הקול שלכם. ההקלטה נשלחת לשרת ההפרדה ונמחקת ממנו מיד אחרי.</p>
               <div class="row"><button class="btn" id="cleanBtn">ניקוי המוזיקה מההקלטה</button><label class="check" id="useCleanBox" hidden><input type="checkbox" id="useClean" checked> להשתמש בגרסה הנקייה</label></div>
@@ -377,11 +377,11 @@ body.docked{padding-bottom:120px}
 <div class="dlg" id="dlg" hidden><div class="card" role="dialog" aria-modal="true"><p id="dlgMsg" style="margin:0"></p><div class="row"><button class="btn primary" id="dlgOk">אישור</button><button class="btn ghost" id="dlgNo">ביטול</button></div></div></div>
 <div class="toast" id="toast" hidden></div>
 
-<script src="ks-dsp.js?v=2026-11-07f"></script>
+<script src="ks-dsp.js?v=2026-11-07g"></script>
 <script>
 (function(){
 "use strict";
-var VER="2026-11-07f",TERMS_V="1";
+var VER="2026-11-07g",TERMS_V="1";
 var API="https://kolot-recorder.kolot-studios.workers.dev";
 var $=function(s){return document.getElementById(s)};
 var AC=window.AudioContext||window.webkitAudioContext,OAC=window.OfflineAudioContext||window.webkitOfflineAudioContext;
@@ -938,14 +938,21 @@ function renderTakes(){
 var TUNE=[null,{center:0.6,flat:0,ramp:0.06},{center:1,flat:0.15,ramp:0.04},{center:1,flat:0.7,ramp:0.04}];
 function encTrack(f){var b=new Uint8Array(f.length*2),dv=new DataView(b.buffer);for(var i=0;i<f.length;i++)dv.setInt16(i*2,f[i]>0?Math.round(1200*Math.log2(f[i]/10)):0,true);var s="";for(i=0;i<b.length;i+=8192)s+=String.fromCharCode.apply(null,b.subarray(i,i+8192));return btoa(s)}
 function decTrack(t){var s=atob(t),n=s.length>>1,f=new Float32Array(n);for(var i=0;i<n;i++){var v=(s.charCodeAt(i*2)|(s.charCodeAt(i*2+1)<<8))<<16>>16;f[i]=v>0?10*Math.pow(2,v/1200):0}return f}
+var KN_HE=["דו","דו#","רה","מי♭","מי","פה","פה#","סול","לה♭","לה","סי♭","סי"];
+function keyName2(k){return KN_HE[k%12]+(k<12?" מז'ור":" מינור")}
+// key map over time (playback harmony + the singer's melody): steers the correction where the original singer gives no clear note
+function withKeys(ref){if(ref.keys)return Promise.resolve(ref);var x=mono(S.stems.i);
+  return job(1,{op:"keymap",ref:ref.f0.slice(0),refHop:ref.hop,inst:x,sr:S.stems.i.sampleRate},[x.buffer]).then(function(r){ref.keys={hop:r.hop,k:Array.from(r.k)};showKeys(ref.keys);return ref},function(){return ref})}
+function showKeys(km){var out=[],s0=0,k=km.k;for(var i=1;i<=k.length;i++){if(i===k.length||k[i]!==k[s0]){if(i-s0>=6||!out.length)out.push((out.length?fmt(s0*km.hop)+" ":"")+keyName2(k[s0]));s0=i}}
+  $("keyMap").textContent="מפת הסולמות של השיר: "+out.join(" ← ")+(S.semi?" (בסולם שבחרתם הכול זז ב-"+(S.semi>0?"+":"")+S.semi+")":"")}
 function refTrack(){
   if(S.ref)return Promise.resolve(S.ref);if(S.refP)return S.refP;
-  if(S.refSaved){try{S.ref={f0:decTrack(S.refSaved),hop:0.01,neural:true};return Promise.resolve(S.ref)}catch(e){}}
+  if(S.refSaved){try{S.ref={f0:decTrack(S.refSaved),hop:0.01,neural:true};return withKeys(S.ref)}catch(e){}}
   var x=mono(S.stems.v),id=S.song.id,msg=$("recMsg");
   S.refP=job(1,{op:"nf0",x:x,sr:S.stems.v.sampleRate},[x.buffer],function(p,note){msg.textContent=note==="model"?"טוענים את מנוע זיהוי התווים (פעם ראשונה במכשיר, כמה עשרות MB)…":"בונים את מפת התווים של הזמר המקורי… "+Math.round(p*100)+"%"}).then(function(r){
     S.ref={f0:r.f0,hop:r.hop,neural:r.neural};S.refP=null;
     if(r.neural)api("ks_save",{id:id,ref:encTrack(r.f0)}).catch(function(){});
-    return S.ref});
+    return withKeys(S.ref)});
   S.refP.catch(function(){S.refP=null});
   return S.refP;
 }
@@ -955,7 +962,7 @@ function prepTake(tk){
   if(tk.prepP&&tk.prepPKey===key)return tk.prepP;
   var tn=S.tune>0?TUNE[S.tune]:null,msg=$("recMsg");msg.textContent="מעבדים את הקול…";
   tk.prepPKey=key;tk.prepP=(tn?refTrack():Promise.resolve(null)).then(function(ref){var x=src.slice(0);
-    return job(0,{op:"voice",x:x,sr:tk.sr,nr:k.nr/100,deess:k.deess/100,neural:true,tune:tn?Object.assign({semi:S.semi,lag:start},tn):null,ref:ref?ref.f0.slice(0):null,refHop:ref?ref.hop:0.01},[x.buffer],
+    return job(0,{op:"voice",x:x,sr:tk.sr,nr:k.nr/100,deess:k.deess/100,neural:true,tune:tn?Object.assign({semi:S.semi,lag:start,keys:ref&&ref.keys||null},tn):null,ref:ref?ref.f0.slice(0):null,refHop:ref?ref.hop:0.01},[x.buffer],
       function(p,note){msg.textContent=note==="model"?"טוענים את מנוע זיהוי התווים (פעם ראשונה במכשיר, כמה עשרות MB)…":(tn?"מעבדים את הקול ומתקנים זיופים… ":"מעבדים את הקול… ")+Math.round(p*100)+"%"});
   }).then(function(r){
     // level: active parts to about -18 dBFS before the compressor

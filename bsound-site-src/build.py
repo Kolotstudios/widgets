@@ -102,7 +102,7 @@ def fill(s, depth):
     """placeholders inside content: {{order}} {{wa}} {{tel}} {{phone}} {{p:slug}} {{api}}"""
     s = s.replace('{{order}}', rel(depth, 'order')).replace('{{wa}}', WA).replace('{{tel}}', 'tel:' + PHONE_INTL).replace('{{phone}}', PHONE)
     s = re.sub(r'\{\{start:([a-z]+)\}\}', lambda m: START.replace('{P}', m.group(1)).replace('{ORDER}', rel(depth, 'order')), s)
-    return re.sub(r'\{\{p:([a-z0-9\-/]*)\}\}', lambda m: rel(depth, m.group(1)), s)
+    return re.sub(r'\{\{p:([a-z0-9.\-/]*)\}\}', lambda m: rel(depth, m.group(1)), s)
 
 # the funnel entry: business name (+ site) -> /order prefilled, analysis starts by itself
 START = '''<form class="startform" action="{ORDER}" method="get" data-start>

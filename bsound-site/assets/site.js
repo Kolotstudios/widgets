@@ -52,6 +52,11 @@ document.querySelectorAll("[data-music]").forEach(function(box){
   }).catch(function(){box.innerHTML=""});
 });
 
+// sample players (jingle examples): <div data-audio><button data-src>
+document.querySelectorAll("[data-audio]").forEach(function(box){
+  box.addEventListener("click",function(e){var b=e.target.closest("[data-src]");if(b) play(b,b.dataset.src)});
+});
+
 // contact form -> WhatsApp
 document.querySelectorAll("[data-wa-form]").forEach(function(f){
   f.addEventListener("submit",function(e){e.preventDefault();var d=new FormData(f);

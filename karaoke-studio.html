@@ -377,11 +377,11 @@ body.docked{padding-bottom:120px}
 <div class="dlg" id="dlg" hidden><div class="card" role="dialog" aria-modal="true"><p id="dlgMsg" style="margin:0"></p><div class="row"><button class="btn primary" id="dlgOk">אישור</button><button class="btn ghost" id="dlgNo">ביטול</button></div></div></div>
 <div class="toast" id="toast" hidden></div>
 
-<script src="ks-dsp.js?v=2026-11-07e"></script>
+<script src="ks-dsp.js?v=2026-11-07f"></script>
 <script>
 (function(){
 "use strict";
-var VER="2026-11-07e",TERMS_V="1";
+var VER="2026-11-07f",TERMS_V="1";
 var API="https://kolot-recorder.kolot-studios.workers.dev";
 var $=function(s){return document.getElementById(s)};
 var AC=window.AudioContext||window.webkitAudioContext,OAC=window.OfflineAudioContext||window.webkitOfflineAudioContext;
@@ -935,7 +935,7 @@ function renderTakes(){
   updOut();
 }
 // noise reduction, tuning and de-ess are rendered once per setting (in the background); the rest are live nodes
-var TUNE=[null,{center:0.6,flat:0,ramp:0.06},{center:1,flat:0.15,ramp:0.04},{center:1,flat:0.75,ramp:0.02}];
+var TUNE=[null,{center:0.6,flat:0,ramp:0.06},{center:1,flat:0.15,ramp:0.04},{center:1,flat:0.7,ramp:0.04}];
 function encTrack(f){var b=new Uint8Array(f.length*2),dv=new DataView(b.buffer);for(var i=0;i<f.length;i++)dv.setInt16(i*2,f[i]>0?Math.round(1200*Math.log2(f[i]/10)):0,true);var s="";for(i=0;i<b.length;i+=8192)s+=String.fromCharCode.apply(null,b.subarray(i,i+8192));return btoa(s)}
 function decTrack(t){var s=atob(t),n=s.length>>1,f=new Float32Array(n);for(var i=0;i<n;i++){var v=(s.charCodeAt(i*2)|(s.charCodeAt(i*2+1)<<8))<<16>>16;f[i]=v>0?10*Math.pow(2,v/1200):0}return f}
 function refTrack(){

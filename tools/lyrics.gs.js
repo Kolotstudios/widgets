@@ -39,7 +39,7 @@ const LYR = {
   STUDIO: 'kolot.studios@gmail.com',
   PRODUCT_ID: 75982, PRICE: '550 ₪',
   CART: 'https://kolot.kala-crm.co.il/order/cart_buy?id=75982',
-  TRG_PAY: 718, TRG_SONG: 719,
+  TRG_PAY: 718, TRG_SONG: 719, TRG_SENT: 722,   // 722 → תבנית 328 "השאלון עבר לכתיבה"
   PAGE: 'https://www.kolot-studios.com/category/' + encodeURIComponent('טופס-כתיבת-מילים-מקוריות'),
   CLIP_TYPE: 2626,
   WON: [1794, 1795, 1800, 1801, 1815, 1816, 1819, 1907],   // סטטוסים של הזמנה סגורה (closed_won)
@@ -260,8 +260,14 @@ function lyrSendWriter_(rec) {
     '<div style="color:#999;font-size:12px;margin-top:20px">נשלח אוטומטית מהשאלון באתר אולפני קולות. לשאלות על הלקוח – ענו למייל הזה (הוא חוזר לאולפן).</div></div>';
   const opt = { to: live ? LYR.WRITER_TO : LYR.STUDIO, subject: subj, body: txt, htmlBody: html, name: 'אולפני קולות – שאלון כתיבת מילים', replyTo: LYR.STUDIO };
   if (live) opt.cc = LYR.STUDIO;
-  try { MailApp.sendEmail(opt); rec.sentAt = Date.now(); rec.log.push([Date.now(), live ? 'נשלח לליאור' : 'מצב בדיקה – נשלח לאולפן בלבד']); return true; }
+  try { MailApp.sendEmail(opt); rec.sentAt = Date.now(); rec.log.push([Date.now(), live ? 'נשלח לליאור' : 'מצב בדיקה – נשלח לאולפן בלבד']); lyrTellSent_(rec); return true; }
   catch (e) { rec.log.push([Date.now(), 'שליחת מייל נכשלה ' + e]); lyrAlert_('שליחת השאלון לליאור נכשלה', rec, String(e)); return false; }
+}
+
+/** הודעה ייעודית ללקוח: השאלון עבר לכתיבה (במקום הודעת הפתיחה הכללית של הסוכן) – פעם אחת */
+function lyrTellSent_(rec) {
+  if (rec.waSent) return;
+  if (lyrWa_(rec, LYR.TRG_SENT, { lyr_honoree: rec.honoree || 'השיר שלכם' }, 'הודעה: השאלון עבר לכתיבה')) rec.waSent = Date.now();
 }
 
 function lyrAlert_(title, rec, text) {

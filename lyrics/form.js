@@ -58,7 +58,7 @@
     '#klq .k-done .k-box{background:#fff;color:#2a2438;border-radius:16px;padding:16px;text-align:right;margin:14px 0 4px}#klq .k-done .k-box label{color:var(--p);font-weight:800}' +
     '#klq .k-wa{background:#25D366!important;color:#fff!important}' +
     '#klq .k-hp{position:absolute!important;left:-5000px!important;width:1px;height:1px;overflow:hidden}' +
-    '@media (max-width:600px){#klq .k-card{padding:18px 15px;border-radius:18px}#klq h2.k-ttl{font-size:21px}#klq .k-row{grid-template-columns:1fr}' +
+    '@media (max-width:600px){#klq{padding:0 12px;margin-bottom:110px}#klq .k-card{padding:18px 15px;border-radius:18px}#klq h2.k-ttl{font-size:21px}#klq .k-row{grid-template-columns:1fr}' +
     '#klq .k-how{grid-template-columns:1fr;gap:6px}#klq .k-how div{display:flex;gap:10px;align-items:center;text-align:right;padding:9px 12px}#klq .k-how b{display:inline;margin:0}' +
     '#klq .k-nav .k-btn{flex:1}}';
   var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
@@ -71,7 +71,7 @@
     return fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) })
       .then(function (r) { return r.json(); });
   }
-  function top(el) { try { (el || root).scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { } }
+  function top(el) { try { var y = (el || root).getBoundingClientRect().top + window.pageYOffset - 110; window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' }); } catch (e) { } }   // 110 = מתחת לכותרת הקבועה של האתר
   function load() { try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { return {}; } }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { } }
 

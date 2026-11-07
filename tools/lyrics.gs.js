@@ -239,7 +239,7 @@ function lyrEsc_(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g
 
 function lyrSendWriter_(rec) {
   if (rec.sentAt) return true;
-  const live = LYR.LIVE || LYR.TEST_PHONES.indexOf(rec.phone9) >= 0;
+  const live = LYR.LIVE;   // במצב בדיקה המייל לכותבת מגיע רק לאולפן – גם עבור הטלפון של אורן
   const cov = rec.coverage || {};
   const why = cov.kind === 'clip' ? 'כלול בקליפ (הזמנה ' + cov.orderId + ' – ' + cov.detail + ')' : cov.kind === 'paid' ? 'שולם (הזמנה ' + cov.orderId + ' – ' + cov.detail + ')' : 'אושר';
   const subj = (live ? '' : '[בדיקה – במצב פעיל היה נשלח לליאור] ') + 'שאלון לכתיבת מילים – ' + (rec.honoree || rec.contact) + (rec.occasion ? ' (' + rec.occasion + ')' : '');

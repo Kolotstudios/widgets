@@ -817,6 +817,7 @@ function drawPortal(){
   var r=S.st,c=r.credits;
   $("#upJingle").hidden=r.pkg==="jingle";
   if(r.pkg!=="jingle"){var nb=r.biz||bizName()||"";$("#upjBiz").textContent=nb||"עסק שלכם";$("#upjGo").href=location.pathname+"?p=jingle&new=1&go=1"+(nb?"&biz="+encodeURIComponent(nb):"")+($("#site").value?"&site="+encodeURIComponent($("#site").value):"")+(TEST?"&test=1":"")}
+  S.product=r.pkg==="jingle"?"jingle":r.pkg==="hold"?"hold":"ivr";if(r.biz&&!$("#biz").value) $("#biz").value=r.biz;try{side()}catch(e){}
   var jai=r.pkg==="jingle"&&!r.human;$("#jPortal").hidden=!jai;
   $("#studioBox").hidden=!r.studio;$("#aiArea").hidden=!!r.studio||jai;
   if(jai){jPortal(r);return}

@@ -19,14 +19,13 @@
  * (עם הכותרת [בדיקה]) – כך אפשר לראות על פניות אמיתיות מה המערכת הייתה עושה, בלי שום השפעה.
  */
 /* ------------------------------- setup (editor) ------------------------------ */
-/** מריצים פעם אחת מהעורך: יוצר סוד ל-webhook של קאלה ומתקין את הבדיקה השעתית. מדפיס את הסוד ללוג (לא לשתף). */
+/** מריצים פעם אחת מהעורך: מתקין את הבדיקה השעתית ויוצר את תיקיית השאלונים. */
 function lyrInstall() {
   const P = PropertiesService.getScriptProperties();
-  if (!P.getProperty('LYR_SECRET')) P.setProperty('LYR_SECRET', 'lyr_' + Utilities.getUuid().replace(/-/g, ''));
+  P.deleteProperty('LYR_SECRET');   // לא בשימוש – ההודעה מקאלה רק מפעילה בדיקה מול קאלה עצמה
   ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'lyrSweep').forEach(t => ScriptApp.deleteTrigger(t));
   ScriptApp.newTrigger('lyrSweep').timeBased().everyHours(1).create();
   lyrFolder_();
-  Logger.log('LYR_SECRET=' + P.getProperty('LYR_SECRET'));
   Logger.log('lyrSweep hourly trigger installed; folder ' + P.getProperty('LYR_FOLDER'));
 }
 
@@ -278,13 +277,15 @@ function lyrSongSet_(d) {
 }
 
 /* ------------------------------ payment arrived ----------------------------- */
-// נקרא מאוטומציה בקאלה: מוצר מסוג 2619 עבר ל"שולם במלואו". הגוף כולל סוד משותף (LYR_SECRET ב-Script Properties).
+// נקרא מאוטומציה בקאלה: מוצר מסוג 2619 עבר ל"שולם במלואו".
+// אין צורך בסוד: ההודעה רק מפעילה בדיקה מול קאלה (lyrStatus_), כך שהודעה מזויפת לא יכולה להעביר שאלון בלי תשלום אמיתי.
 function lyrPaid_(d) {
-  const secret = PropertiesService.getScriptProperties().getProperty('LYR_SECRET');
-  if (!secret || String(d.secret || '') !== secret) return { ok: false, error: 'bad secret' };
   const pid = Number(d.page_id || 0);
   if (pid && LYR.LYRIC_IDS.indexOf(pid) < 0) return { ok: true, ignored: true };
   const phones = [d.phone, d.mobile].map(lyrD9_).filter(x => x.length === 9);
+  if (!phones.length) return { ok: false, error: 'no phone' };
+  const C = CacheService.getScriptCache(), k = 'lyr_paid_' + phones[0];
+  if (C.get(k)) return { ok: true, throttled: true }; C.put(k, '1', 60);
   return { ok: true, handled: lyrRecheck_(phones, 'webhook ' + (d.order_id || '')) };
 }
 

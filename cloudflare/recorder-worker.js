@@ -334,7 +334,7 @@ const BS_PKG = {
   'ivr-premium': { items: ['ivr', 'hold', 'closed'], rev: 7, lang: 2, sub: true },
   'jingle': { items: ['jingle'], rev: 0, lang: 0, sub: false }
 };
-const BS_TYPES = { ivr: 'תפריט ניתוב', sub: 'תת־נתב', hold: 'צליל המתנה', closed: 'העסק סגור', custom: 'הודעה', jingle: "ג'ינגל מושר" };
+const BS_TYPES = { ivr: 'תפריט ניתוב', sub: 'תת־נתב', hold: 'צליל המתנה', closed: 'העסק סגור', custom: 'הודעה', jingle: "ג'ינגל מוזיקלי" };
 const BS_LANGS = { he: 'עברית', en: 'אנגלית', ar: 'ערבית', ru: 'רוסית', fr: 'צרפתית', es: 'ספרדית', uk: 'אוקראינית', ro: 'רומנית', fa: 'פרסית', th: 'תאית', fil: 'פיליפינית', hi: 'הינדית', zh: 'סינית', ka: 'גאורגית', tr: 'טורקית', pt: 'פורטוגזית', de: 'גרמנית', it: 'איטלקית', pl: 'פולנית' };
 const BS_MAX_CHARS = 1200, BS_MAX_ITEMS = 16, BS_PREVIEWS_DRAFT = 40, BS_PREVIEWS_PAID = 60, BS_IP_DAY = 40, BS_DAYS = 30, BS_YEAR = 365 * 86400000;
 // women: f1 Rachel (business), f2 Jessica (young), f3 Lily (soft) · men: m1 Josh (young), m2 Brian (warm), m3 Daniel (authoritative). Override any of them with the BS_VOICES variable
@@ -562,7 +562,7 @@ async function bsJingle(d, env, ip) {
   const f = bsFacts(d), len = Math.max(7, Math.min(60, d.len | 0 || 12)), style = String(d.style || '').slice(0, 30), rap = BS_RAP.test(style);
   const sh = bsJShape(len, rap);
   const avoid = (Array.isArray(d.avoid) ? d.avoid : []).slice(0, 8).map(x => String(x).slice(0, 200)).join('\n---\n');
-  const prompt = `אתה קופירייטר וכותב ג'ינגלים מנוסה בישראל. כתוב מילים לג'ינגל מושר לעסק.
+  const prompt = `אתה קופירייטר וכותב ג'ינגלים מנוסה בישראל. כתוב מילים לג'ינגל מוזיקלי לעסק.
 שם העסק: "${f.name}". סלוגן: "${f.slogan}". שירותים: ${f.services.join(', ')}. תחום: "${f.field}".
 אורך: ${len} שניות. סגנון: "${style}". קולות: "${String(d.vocal || '').slice(0, 30)}".
 מבנה: ${sh.form}

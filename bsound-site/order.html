@@ -119,6 +119,7 @@ aside dt{color:#5A606A;font-size:13px}aside dd{margin:2px 0 0;font-weight:700}
 .thanks{border-color:#3DD68C!important;background:rgba(61,214,140,.08)!important;margin-bottom:18px}
 .linkbox{margin-top:16px}
 .jtr{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;margin-top:10px}.jtr audio{width:100%}@media(max-width:560px){.jtr{grid-template-columns:1fr}}
+.upj{border:1px solid rgba(245,165,36,.45);background:linear-gradient(135deg,rgba(245,165,36,.12),rgba(245,165,36,.02));margin-top:22px}.upj-ex{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.upj-ex button{background:#2A313D;color:var(--fg,#F3F1EC);border:1px solid #3a4352;border-radius:999px;padding:7px 14px;font:inherit;font-size:14px;cursor:pointer}.upj-ex button:hover{border-color:var(--acc,#F5A524)}
 </style>
 </head>
 <body>
@@ -201,7 +202,7 @@ aside dt{color:#5A606A;font-size:13px}aside dd{margin:2px 0 0;font-weight:700}
 <div class="meter" data-for="closedText" data-max="40" data-music="0"><div class="t"><span>אורך משוער</span><b></b></div><div class="bar"><i></i></div></div>
 </div>
 <div id="bJingle" class="blk" hidden>
-<h2 class="it">הג'ינגל <span class="badge mus">שיר מושר עם שם העסק</span></h2>
+<h2 class="it">הג'ינגל <span class="badge mus">שיר קליט עם שם העסק</span></h2>
 <label class="f" style="margin-top:14px"><span style="display:flex;justify-content:space-between"><span>אורך</span><b id="jLenO" style="color:var(--acc)"></b></span><input type="range" id="jLen" min="10" max="60" value="12"></label>
 <p class="hint" style="margin:6px 0 0">ברירת המחדל: 10–15 שניות, שם העסק וסלוגן שחוזרים. 16–30: פזמון קליט. מעל 30: בית ופזמון.</p>
 <p style="margin:18px 0 8px;font-size:15px;font-weight:600">מי שר</p><div class="pills" id="jVocal"></div>
@@ -320,6 +321,13 @@ aside dt{color:#5A606A;font-size:13px}aside dd{margin:2px 0 0;font-weight:700}
 <p class="hint" id="langNote" style="margin:8px 0 0"></p>
 </div>
 </div>
+<div class="box upj" id="upJingle" hidden>
+<span class="badge mus">חדש</span>
+<b style="display:block;font-size:20px;margin-top:8px">🎵 ג'ינגל מוזיקלי ל<span id="upjBiz">עסק שלכם</span></b>
+<p style="margin:6px 0 10px">שיר קצר וקליט ששם העסק חוזר בו שוב ושוב, ונתקע בראש. מתאים לצליל ההמתנה שכבר יש לכם, לרשתות ולפרסומות. כותבים מילים ושומעים את הג'ינגל שלכם תוך דקה, בחינם.</p>
+<div class="upj-ex"><span class="hint">דוגמאות:</span> <button type="button" data-upj="pizza">פיצה בומבה ▶</button> <button type="button" data-upj="studio">סטודיו נשימה ▶</button> <button type="button" data-upj="bakery">מאפיית השכונה ▶</button></div>
+<div class="acts"><a class="btn" id="upjGo">צרו ג'ינגל לעסק שלכם · בחינם</a></div>
+</div>
 </section>
 
 </main>
@@ -351,7 +359,7 @@ var PRICE={
   "jingle":{ai:[800,76272],human:[3000,76273]}
 };
 var TIERS=[["ivr-basic","בייסיק",["תפריט ניתוב עד 9 שלוחות","צליל המתנה","הודעת סגור","בלי תיקונים"]],["ivr-standard","סטנדרט",["כל מה שבבייסיק","תת־נתב","2 תיקונים בשנה"]],["ivr-premium","פרימיום",["כל מה שבסטנדרט","7 תיקונים בשנה","2 שפות נוספות"]]];
-var PRODUCTS=[["hold","צליל המתנה","הודעה עם מוזיקה שהלקוחות שומעים בזמן ההמתנה. עד 30 שניות."],["ivr","נתב שיחות","תפריט ניתוב (\"למכירות הקישו 1\"), צליל המתנה והודעת \"העסק סגור\"."],["jingle","ג'ינגל מושר","שיר קצר וקליט עם שם העסק, 7 עד 60 שניות. לפרסומות, לרשתות ולצליל המתנה."]];
+var PRODUCTS=[["hold","צליל המתנה","הודעה עם מוזיקה שהלקוחות שומעים בזמן ההמתנה. עד 30 שניות."],["ivr","נתב שיחות","תפריט ניתוב (\"למכירות הקישו 1\"), צליל המתנה והודעת \"העסק סגור\"."],["jingle","ג'ינגל מוזיקלי","שיר קצר וקליט עם שם העסק, 7 עד 60 שניות. לפרסומות, לרשתות ולצליל המתנה."]];
 var CREDIT={revision:{id:76275,p:90,t:"תיקון"},message:{id:76276,p:90,t:"הודעה נוספת"},language:{id:76270,p:90,t:"שפה נוספת"}};
 var TEST_ID=76274,TEST_CREDIT=76277;
 var $=function(s){return document.querySelector(s)};
@@ -561,9 +569,15 @@ function jMake(again){
     fail(r);
   });
 }
-$("#jMake").onclick=function(){jMake(false)};$("#jAgain").onclick=function(){jMake(true)};
+$("#jMake").onclick=function(){jMake(false)};
+var upA=new Audio(),upB=null;
+document.addEventListener("click",function(e){var b=e.target.closest("[data-upj]");if(!b) return;
+  if(upB===b){upA.pause();b.textContent=b.textContent.replace("■","▶");upB=null;return}
+  if(upB) upB.textContent=upB.textContent.replace("■","▶");
+  upB=b;upA.src="https://www.b-sound.co.il/assets/jingles/"+b.dataset.upj+".mp3";upA.play().catch(function(){});b.textContent=b.textContent.replace("▶","■");
+  upA.onended=function(){if(upB) upB.textContent=upB.textContent.replace("■","▶");upB=null}});$("#jAgain").onclick=function(){jMake(true)};
 function items(){
-  if(S.product==="jingle") return [{id:"jingle",type:"jingle",title:"ג'ינגל מושר",script:$("#jText").value}];
+  if(S.product==="jingle") return [{id:"jingle",type:"jingle",title:"ג'ינגל מוזיקלי",script:$("#jText").value}];
   var out=[];
   if(S.product==="ivr") out.push({id:"ivr",type:"ivr",title:"תפריט ניתוב",script:$("#ivrText").value});
   if(S.product==="ivr"&&$("#subText").value.trim()) out.push({id:"sub",type:"sub",title:"תת־נתב · "+($("#subTitle").value.trim()||"מחלקה"),script:$("#subText").value});
@@ -762,6 +776,8 @@ function refresh(quiet){return call({action:"bs_state",k:S.k}).then(function(r){
 })}
 function drawPortal(){
   var r=S.st,c=r.credits;
+  $("#upJingle").hidden=r.pkg==="jingle";
+  if(r.pkg!=="jingle"){var nb=r.biz||bizName()||"";$("#upjBiz").textContent=nb||"עסק שלכם";$("#upjGo").href=location.pathname+"?p=jingle&new=1&go=1"+(nb?"&biz="+encodeURIComponent(nb):"")+($("#site").value?"&site="+encodeURIComponent($("#site").value):"")+(TEST?"&test=1":"")}
   $("#studioBox").hidden=!r.studio;$("#aiArea").hidden=!!r.studio;
   if(r.studio){
     var what=r.pkg==="jingle"?(r.human?"הג'ינגל בהפקה אצל המלחין והמפיק. נחזור אליכם תוך יום עסקים לשיחת אפיון.":"הג'ינגל בהפקה. 2 הגרסאות הראשונות יישלחו אליכם במייל ויופיעו כאן."):"הקריין/ית יקליטו באולפן את הנוסחים שאישרתם. הקבצים יישלחו אליכם במייל תוך 48 שעות.";
@@ -918,7 +934,7 @@ loadLib().then(side);
 /* entry from the website's "hear it now" form: ?biz=&site=&p=hold|ivr|jingle&go=1 */
 var QB=Q.get("biz"),QS=Q.get("site"),QP=Q.get("p");
 if((QB||QS||QP)&&!hk){
-  var fresh=(QB&&QB!==$("#biz").value)||(QS&&QS!==$("#site").value);
+  var fresh=Q.get("new")==="1"||(QB&&QB!==$("#biz").value)||(QS&&QS!==$("#site").value);
   if(fresh){S.k=null;S.code="";S.ai=null;S.choice=null;S.deps=null;S.step=1;S.max=1;["fName","fSlogan","fServices","fHours","ivrIntro","ivrText","subTitle","subText","holdText","closedText","jText"].forEach(function(id){$("#"+id).value=""})}
   if(QB) $("#biz").value=QB;if(QS) $("#site").value=QS;
   if(QP&&/^(hold|ivr|jingle)$/.test(QP)){if(S.product!==QP){S.product=QP;S.choice=null}}

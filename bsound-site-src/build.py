@@ -13,13 +13,13 @@ PHONE, PHONE_INTL = '03-6500031', '+97236500031'
 WA = 'https://wa.me/972555170280'
 TODAY = datetime.date.today().isoformat()
 
-NAV = [('music-on-hold', 'צליל המתנה'), ('extensions', 'נתב שיחות'), ('business-tune', "ג'ינגל מושר"),
+NAV = [('music-on-hold', 'צליל המתנה'), ('extensions', 'נתב שיחות'), ('business-tune', "ג'ינגל מוזיקלי"),
        ('sound-cleaning', 'ניקוי רעשים'), ('vinyl-tape', 'דיגיטציה'), ('blog', 'מאמרים'), ('contact', 'צור קשר')]
 
 BUSINESS = {
     "@context": "https://schema.org", "@type": "ProfessionalService", "@id": DOMAIN + "/#business",
     "name": "B-Sound בי סאונד", "alternateName": ["בי סאונד", "B-Sound"],
-    "description": "אולפן הקלטות לעסקים בחולון: צליל המתנה, קריינות לנתב שיחות, ג'ינגלים מושרים, ניקוי רעשים מהקלטות ודיגיטציה.",
+    "description": "אולפן הקלטות לעסקים בחולון: צליל המתנה, קריינות לנתב שיחות, ג'ינגלים מוזיקליים, ניקוי רעשים מהקלטות ודיגיטציה.",
     "url": DOMAIN + "/", "telephone": PHONE_INTL, "priceRange": "₪₪",
     "image": DOMAIN + "/assets/og.png",
     "address": {"@type": "PostalAddress", "streetAddress": "תמנע 3", "addressLocality": "חולון", "postalCode": "5881305", "addressCountry": "IL"},
@@ -86,8 +86,8 @@ def foot(depth):
     return f'''</main>
 <footer class="foot"><div class="wrap cols">
 <div><a class="logo" href="{rel(depth, '')}"><span class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span dir="ltr">B·SOUND</span></a>
-<p>אולפן הקלטות לעסקים. צליל המתנה, קריינות לנתבי שיחות, ג'ינגלים מושרים, ניקוי רעשים ודיגיטציה. חלק מ<a href="https://www.kolot-studios.com">אולפני קולות</a>.</p></div>
-<div><b>שירותים</b><a href="{rel(depth, 'music-on-hold')}">צליל המתנה לעסק</a><a href="{rel(depth, 'extensions')}">קריינות לנתב שיחות</a><a href="{rel(depth, 'business-tune')}">ג'ינגל מושר לעסק</a><a href="{rel(depth, 'vo-slidshow-movies-adr')}">קריינות מקצועית</a><a href="{rel(depth, 'sound-cleaning')}">ניקוי רעשים מהקלטה</a><a href="{rel(depth, 'secret-recordings')}">חידוד הקלטות ותמלול</a><a href="{rel(depth, 'vinyl-tape')}">המרת קלטות ותקליטים</a></div>
+<p>אולפן הקלטות לעסקים. צליל המתנה, קריינות לנתבי שיחות, ג'ינגלים מוזיקליים, ניקוי רעשים ודיגיטציה. חלק מ<a href="https://www.kolot-studios.com">אולפני קולות</a>.</p></div>
+<div><b>שירותים</b><a href="{rel(depth, 'music-on-hold')}">צליל המתנה לעסק</a><a href="{rel(depth, 'extensions')}">קריינות לנתב שיחות</a><a href="{rel(depth, 'business-tune')}">ג'ינגל מוזיקלי לעסק</a><a href="{rel(depth, 'vo-slidshow-movies-adr')}">קריינות מקצועית</a><a href="{rel(depth, 'sound-cleaning')}">ניקוי רעשים מהקלטה</a><a href="{rel(depth, 'secret-recordings')}">חידוד הקלטות ותמלול</a><a href="{rel(depth, 'vinyl-tape')}">המרת קלטות ותקליטים</a></div>
 <div><b>עוד</b><a href="{rel(depth, 'order')}">הזמנה אונליין</a><a href="{rel(depth, 'blog')}">מאמרים</a><a href="{rel(depth, 'audio-gain')}">הגברת הקלטה</a><a href="{rel(depth, 'restoration')}">שחזור הקלטות</a><a href="{rel(depth, 'sound-editing')}">עריכת סאונד</a><a href="{rel(depth, 'send-us-your-files')}">שליחת קבצים</a></div>
 <div><b>יצירת קשר</b><a href="tel:{PHONE_INTL}" dir="ltr">{PHONE}</a><a href="{WA}">וואטסאפ</a><span>תמנע 3, חולון</span><a href="{rel(depth, 'contact')}">כל הפרטים</a></div>
 </div><div class="wrap legal">© {datetime.date.today().year} B-Sound · אולפני קולות · כל המחירים באתר כוללים מע"מ</div></footer>
@@ -162,7 +162,7 @@ def article(a):
 
 def blog_index():
     p = {'slug': 'blog', 'title': 'מאמרים על צליל המתנה, נתבי שיחות, ג׳ינגלים וניקוי רעשים | B-Sound',
-         'desc': 'מדריכים מעשיים מהאולפן: כמה עולה צליל המתנה, איך כותבים תפריט לנתב שיחות, ג׳ינגל מושר מול הודעת המתנה, וניקוי רעשים מהקלטות.',
+         'desc': 'מדריכים מעשיים מהאולפן: כמה עולה צליל המתנה, איך כותבים תפריט לנתב שיחות, ג׳ינגל מוזיקלי מול הודעת המתנה, וניקוי רעשים מהקלטות.',
          'crumbs': [('', 'דף הבית'), ('blog', 'מאמרים')]}
     body = '<section class="wrap hero-s"><h1>מאמרים ומדריכים</h1><p class="lead">תשובות לשאלות שעסקים שואלים אותנו כל שבוע. בלי מילים מיותרות.</p></section><section class="wrap"><div class="cards">' + ''.join(
         f'<a class="card link" href="blog/{a["slug"]}"><small>{esc(a["tag"])}</small><b>{esc(a["h1"])}</b><span>{esc(a["desc"])}</span></a>' for a in ARTICLES) + '</div></section>'

@@ -196,22 +196,17 @@ function lyrWa_(rec, trg, data, what) {
   if (!r.ok) lyrAlert_('שליחת וואטסאפ נכשלה', rec, what + ' – ' + JSON.stringify(r).slice(0, 300));
   return !!r.ok;
 }
-/** מפעיל אוטומציה מסוג "קריאה נכנסת" בקאלה. את מפתח האוטומציה (trigger_key) השרת קורא מקאלה עצמה דרך ה-API,
- *  כך שאף אחד לא צריך להעתיק מפתחות ידנית. */
+/** מפעיל אוטומציה מסוג "קריאה נכנסת" בקאלה (718 / 719).
+ *  לאוטומציות האלה הוגדר בקאלה אותו מפתח כמו לאוטומציית הקריוקי 712, שכבר שמור בפרויקט (KALA_TRIGGER_KEY_712),
+ *  כך שלא היה צורך להעתיק מפתחות חדשים. אפשר לתת לכל אחת מפתח משלה: KALA_TRIGGER_KEY_718 / _719 גוברים אם קיימים. */
 function lyrKala_(trg, orderId, data) {
-  const C = CacheService.getScriptCache(), ck = 'lyr_tk_' + trg;
-  let tk = C.get(ck);
-  if (!tk) {
-    const j = kalaGet_('/api/v1/trigger/' + trg);
-    tk = j && j.payload && j.payload.trigger_data && j.payload.trigger_data.trigger_key;
-    if (!tk) return { ok: false, error: 'לא הצלחתי לקרוא את מפתח האוטומציה ' + trg + ' מקאלה', detail: JSON.stringify(j).slice(0, 160) };
-    C.put(ck, tk, 21600);
-  }
+  const P = PropertiesService.getScriptProperties();
+  const tk = P.getProperty('KALA_TRIGGER_KEY_' + trg) || P.getProperty('KALA_TRIGGER_KEY_712');
+  if (!tk) return { ok: false, error: 'חסר מפתח אוטומציה בקאלה' };
   const r = UrlFetchApp.fetch('https://kolot.kala-crm.co.il/trigger/' + trg + '?trigger_key=' + encodeURIComponent(tk) + '&order_id=' + encodeURIComponent(orderId),
     { method: 'post', contentType: 'application/json', payload: JSON.stringify(Object.assign({ order_id: orderId }, data)), muteHttpExceptions: true, followRedirects: false });
   const code = r.getResponseCode(), body = r.getContentText().slice(0, 200);
   if (code < 300 && !/"error"\s*:\s*true/.test(body)) return { ok: true };
-  if (code === 401 || code === 403) C.remove(ck);
   return { ok: false, error: 'קאלה החזירה ' + code, detail: body };
 }
 function lyrFirst_(n) { return String(n || '').trim().split(/\s+/)[0] || ''; }

@@ -44,6 +44,8 @@
     '#klq .k-song{background:#fff8e6;border:2px solid var(--g);border-radius:18px;padding:14px 14px 10px}'+
     '#klq .k-song>label{font-size:19px}#klq .k-song input[type=text]{font-size:18px;font-weight:700;background:#fff;border-color:#e9c46a}'+
     '#klq .k-song .k-hint a{color:var(--p2);font-weight:700}'+
+    '#klq .k-songs{margin:4px 0 6px}#klq .k-sgt{font-weight:800;color:var(--p);font-size:14.5px;margin:10px 0 6px}#klq .k-hidden{display:none}#klq .k-sgmore{margin-top:4px;border-radius:999px;padding:9px 14px;font:700 14px/1.3 inherit;cursor:pointer}'+
+    '#klq .k-song .k-chips button{background:#fff}#klq .k-song .k-chips button.on{background:var(--p);color:#fff}'+
     '#klq .k-quiet{font-size:13.5px!important;color:var(--mu)!important;font-weight:400}#klq .k-quiet input{width:17px!important;height:17px!important}'+
     '#klq .k-more{border:1.5px dashed var(--ln)!important;background:transparent!important;color:var(--p2)!important}'+
     '#klq .k-mic{float:left;border:1.5px solid var(--ln);background:#fff;color:var(--p2);border-radius:999px;padding:6px 12px;font:700 13.5px/1 inherit;cursor:pointer;margin-top:-2px}'+
@@ -97,6 +99,15 @@
   var V = S.v;
   var OCC = ['בת מצווה', 'בר מצווה', 'חתונה', 'יום הולדת', 'יום נישואין', 'אחר'];
   var TONES = ['מרגש', 'מצחיק', 'קצבי', 'קליל', 'אישי', 'משולב'];
+  // שירים מומלצים: המנגינות שנכתבו אצלנו הכי הרבה + תבנית "המלצות לשירים" בקאלה + עמוד השירים באתר.
+  // [שם, מבצע] – מבצע רק כשהוא ודאי; אחרת הלקוח משלים בעצמו.
+  var SONGS = [
+    { t: '⭐ הכי מבוקשים אצלנו', open: 1, s: [['מהפכה של שמחה', 'עומר אדם'], ['שבט אחים ואחיות', ''], ['מכתב לאחי', ''], ['קרמלה', ''], ['הנה זה בא', ''], ['זהב', ''], ['אם תרצי', ''], ['להשתטות לפעמים', ''], ['אבא', '']] },
+    { t: 'קצביים', s: [['רק רוצה לרקוד', ''], ['כביש החוף', ''], ['בית משוגעים', ''], ['לך לישון', ''], ['מי זאת', ''], ['פנתרה', ''], ['מי לא יבוא', ''], ['מיליון דולר', ''], ['תל אביב', 'עומר אדם'], ['Unicorn', 'נועה קירל']] },
+    { t: 'שמחים', s: [['קרן שמש', ''], ['מסע', ''], ['שבוע טוב', ''], ['סיבת הסיבות', ''], ['לאן שלא תלכי', 'שירי מימון']] },
+    { t: 'מרגשים', s: [['מתנות קטנות', 'רמי קלינשטיין'], ['אני ואתה', 'אריק איינשטיין'], ['כמעט לאהוב', ''], ['יש בך', ''], ['יש לך אותך', ''], ['מה שאת אוהבת', ''], ['זה מתחיל בצעד', ''], ['תודה', ''], ['שרק תחייך', ''], ['שלמים', ''], ['ילד של אבא', ''], ['תפילה', ''], ['מודה אני', ''], ['תמיד בשבילך', 'אייל גולן ואלין גולן'], ['חלק ממני', 'שרית חדד'], ['חוזרת אליך', 'אגם בוחבוט'], ['ילדה קטנה', 'משה פרץ ואגם בוחבוט'], ['על כל אלה', 'נעמי שמר']] },
+    { t: 'באנגלית', s: [['Happy', 'Pharrell Williams'], ['Dance Monkey', 'Tones and I'], ['Señorita', 'Shawn Mendes, Camila Cabello'], ['Count on Me', 'Bruno Mars'], ['Shake It Off', 'Taylor Swift'], ['A Million Dreams', 'The Greatest Showman']] }
+  ];
   var wed = function () { return V.occ === 'חתונה'; };
   var couple = function () { return V.occ === 'חתונה' || V.occ === 'יום נישואין'; };
   /** מי החוגג: teen (בר/בת מצווה ו-13–19), kid, adult, senior, couple */
@@ -250,6 +261,25 @@
     return b;
   }
 
+  function songPicker() {
+    var box = h('div', { 'class': 'k-songs' });
+    var cur0 = function (n) { return !V.noSong && V.song === n; };
+    SONGS.forEach(function (g, gi) {
+      var sec = h('div', { 'class': 'k-sg' + (g.open ? '' : ' k-hidden') });
+      sec.appendChild(h('div', { 'class': 'k-sgt', text: g.t }));
+      sec.appendChild(chipRow(g.s.map(function (x) { return x[1] ? x[0] + ' – ' + x[1] : x[0]; }), function (c) { return cur0(c.split(' – ')[0]); }, function (c) {
+        var it = g.s.filter(function (x) { return (x[1] ? x[0] + ' – ' + x[1] : x[0]) === c; })[0];
+        V.song = it[0]; V.artist = it[1] || ''; V.noSong = false; save(); render();
+        setTimeout(function () { var e = root.querySelector('.k-song'); if (e) top(e); }, 50);
+      }));
+      box.appendChild(sec);
+    });
+    var more = h('button', { type: 'button', 'class': 'k-more k-sgmore' }, ['עוד שירים מומלצים: קצביים, שמחים, מרגשים, באנגלית +']);
+    more.onclick = function () { [].forEach.call(box.querySelectorAll('.k-hidden'), function (x) { x.classList.remove('k-hidden'); }); more.remove(); };
+    box.appendChild(more);
+    return box;
+  }
+
   function chipRow(list, isOn, onTap, limit) {
     var box = h('div', { 'class': 'k-chips' }), more = null;
     list.forEach(function (c, i) {
@@ -321,7 +351,8 @@
     if (o.song) {
       if (V.noSong) { inp.disabled = true; inp.value = ''; inp.setAttribute('placeholder', 'נבחר בהמשך'); }
       w.appendChild(inp);
-      w.appendChild(h('div', { 'class': 'k-hint', html: 'כותבים מילים חדשות על המנגינה של שיר קיים. צריכים רעיון? <a href="/category/' + encodeURIComponent('המלצות-לשירים') + '" target="_blank" rel="noopener">רשימת שירים מומלצים</a>' }));
+      w.appendChild(h('div', { 'class': 'k-hint', text: 'כותבים מילים חדשות על המנגינה של שיר קיים. לא בטוחים? בחרו מהשירים המומלצים:' }));
+      w.appendChild(songPicker(w));
       var ck = h('input', { type: 'checkbox' }); ck.checked = !!V.noSong;
       ck.onchange = function () { V.noSong = ck.checked; if (ck.checked) { V.song = ''; V.artist = ''; } save(); render(); };
       w.appendChild(h('label', { 'class': 'k-chk k-quiet' }, [ck, 'עוד לא בחרנו – נבחר בהמשך']));

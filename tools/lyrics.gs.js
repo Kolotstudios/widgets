@@ -191,10 +191,28 @@ function lyrWa_(rec, trg, data, what) {
   let orderId = (rec.coverage && rec.coverage.msgOrderId) || rec.orderId;
   if (!orderId) orderId = lyrCreateOrder_(rec);
   if (!orderId) { rec.log.push([Date.now(), what + ': אין הזמנה בקאלה ולא הצלחתי ליצור – לא נשלח']); lyrAlert_('לא נשלח וואטסאפ ללקוח', rec, 'אין לטלפון הזה הזמנה בקאלה, ויצירת הזמנה נכשלה. צריך לשלוח ללקוח ידנית: ' + what); return false; }
-  const r = kkKala_(trg, orderId, Object.assign({ send_to: t.phone, first_name: lyrFirst_(rec.contact) }, data));
+  const r = lyrKala_(trg, orderId, Object.assign({ send_to: t.phone, first_name: lyrFirst_(rec.contact) }, data));
   rec.log.push([Date.now(), what + (r.ok ? ': נשלח (הזמנה ' + orderId + ')' : ': נכשל ' + JSON.stringify(r).slice(0, 160))]);
   if (!r.ok) lyrAlert_('שליחת וואטסאפ נכשלה', rec, what + ' – ' + JSON.stringify(r).slice(0, 300));
   return !!r.ok;
+}
+/** מפעיל אוטומציה מסוג "קריאה נכנסת" בקאלה. את מפתח האוטומציה (trigger_key) השרת קורא מקאלה עצמה דרך ה-API,
+ *  כך שאף אחד לא צריך להעתיק מפתחות ידנית. */
+function lyrKala_(trg, orderId, data) {
+  const C = CacheService.getScriptCache(), ck = 'lyr_tk_' + trg;
+  let tk = C.get(ck);
+  if (!tk) {
+    const j = kalaGet_('/api/v1/trigger/' + trg);
+    tk = j && j.payload && j.payload.trigger_data && j.payload.trigger_data.trigger_key;
+    if (!tk) return { ok: false, error: 'לא הצלחתי לקרוא את מפתח האוטומציה ' + trg + ' מקאלה', detail: JSON.stringify(j).slice(0, 160) };
+    C.put(ck, tk, 21600);
+  }
+  const r = UrlFetchApp.fetch('https://kolot.kala-crm.co.il/trigger/' + trg + '?trigger_key=' + encodeURIComponent(tk) + '&order_id=' + encodeURIComponent(orderId),
+    { method: 'post', contentType: 'application/json', payload: JSON.stringify(Object.assign({ order_id: orderId }, data)), muteHttpExceptions: true, followRedirects: false });
+  const code = r.getResponseCode(), body = r.getContentText().slice(0, 200);
+  if (code < 300 && !/"error"\s*:\s*true/.test(body)) return { ok: true };
+  if (code === 401 || code === 403) C.remove(ck);
+  return { ok: false, error: 'קאלה החזירה ' + code, detail: body };
 }
 function lyrFirst_(n) { return String(n || '').trim().split(/\s+/)[0] || ''; }
 

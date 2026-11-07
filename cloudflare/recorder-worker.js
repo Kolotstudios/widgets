@@ -969,11 +969,12 @@ async function ksAction(d, env, ip) {
     }
     return { ok: true, song: ksPub(s), stage: (s.job || {}).status || '', queue: (s.job || {}).queue, chunks: (s.job || {}).chunks || null, dbg: (s.job || {}).dbg || '' };
   }
-  if (d.action === 'ks_song') return { ok: true, song: ksPub(s), lyrics: s.lyrics || null, words: s.words || null, lang: s.lang || '', cleans: (s.cleans || []).map((c, n) => ({ n, status: c.status, err: c.err || '', at: c.at })) };
+  if (d.action === 'ks_song') return { ok: true, song: ksPub(s), lyrics: s.lyrics || null, words: s.words || null, lang: s.lang || '', ref: s.ref || null, cleans: (s.cleans || []).map((c, n) => ({ n, status: c.status, err: c.err || '', at: c.at })) };
   if (d.action === 'ks_save') {
     if (d.title != null) s.title = String(d.title).trim().slice(0, 80) || s.title;
     if (Array.isArray(d.lyrics)) s.lyrics = d.lyrics.slice(0, 400).map(l => ({ text: String(l.text || '').slice(0, 160), t: +l.t || 0, e: +l.e || 0, w: Array.isArray(l.w) ? l.w.slice(0, 40).map(x => [+(+x[0]).toFixed(2), +(+x[1]).toFixed(2)]) : null }));
     if (d.lang != null) s.lang = String(d.lang).slice(0, 5);
+    if (d.ref != null && /^[A-Za-z0-9+/=]{0,400000}$/.test(String(d.ref))) s.ref = String(d.ref); // the original singer's pitch map (int16 cents, base64)
     await ksPut(env, s); return { ok: true };
   }
   if (d.action === 'ks_tr') {

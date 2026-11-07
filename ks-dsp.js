@@ -183,7 +183,7 @@ var KSDSP = (function () {
     var frames = Math.max(0, Math.floor((n - W - tmax) / hop) + 1), out = new Float32Array(frames), lev = new Float32Array(frames);
     var d = new Float64Array(tmax + 1), cm = new Float64Array(tmax + 1);
     // frames centred on t = f*10ms: the analysis window starts half a window earlier
-    var half = Math.round((W + tmax) / 2), st = function (f) { return Math.round(f * hop) - half; };
+    var half = Math.round(W / 2), st = function (f) { return Math.round(f * hop) - half; };
     var gpk = 0, f;
     for (f = 0; f < frames; f++) { var s0 = st(f), e = 0, c = 0; for (i = 0; i < W; i += 2) { var k = s0 + i; if (k >= 0 && k < n) { e += y[k] * y[k]; c++; } } lev[f] = c ? Math.sqrt(e / c) : 0; if (lev[f] > gpk) gpk = lev[f]; }
     var gate = Math.max(gpk * 0.035, 1e-4);
@@ -338,8 +338,8 @@ var KSDSP = (function () {
     });
     return out;
   }
-  function tune(x, sr, ref, opts, onp) {
-    var tr = f0(x, sr, onp && function (p) { onp(p * 0.6); });
+  function tune(x, sr, ref, opts, onp, track) {
+    var tr = track || f0(x, sr, onp && function (p) { onp(p * 0.6); });
     var pl = plan(tr, ref, opts); if (onp) onp(0.7);
     var y = psola(x, sr, tr, pl.cents); if (onp) onp(1);
     return { y: y, stats: pl.stats };
@@ -379,11 +379,57 @@ var KSDSP = (function () {
   function voice(x, sr, o, onp) {
     var y = highpass(removeDC(x), 75, sr), st = null;
     if (o.nr) y = denoise(y, sr, o.nr); if (onp) onp(0.25);
-    if (o.tune && o.ref) { var r = tune(y, sr, o.ref, o.tune, onp && function (p) { onp(0.25 + p * 0.6); }); y = r.y; st = r.stats; }
+    if (o.tune && o.ref) { var r = tune(y, sr, o.ref, o.tune, onp && function (p) { onp(0.25 + p * 0.6); }, o.track); y = r.y; st = r.stats; if (st) st.neural = !!(o.track && o.track.neural); }
     if (o.deess) y = deess(y, sr, o.deess); if (onp) onp(1);
     return { y: y, stats: st };
   }
-  return { shift: shift, stretch: stretch, resample: resample, f0: f0, notes: notes, plan: plan, psola: psola, tune: tune, denoise: denoise, voice: voice, deess: deess, coef: coef, filt: filt, filtfilt: filtfilt, highpass: highpass, removeDC: removeDC, follower: follower, fft: fft, tables: tables, midi: midi };
+  /* ---------- neural pitch track: FCPE (MIT, CNChTu) in onnxruntime-web; YIN stays as the fallback ---------- */
+  var ORT = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/", NN = { p: null };
+  var FCC = (function () { var c = new Float64Array(360), a = 1200 * Math.log2(3.27), b = 1200 * Math.log2(197.55); for (var i = 0; i < 360; i++) c[i] = a + (b - a) * i / 359; return c; })();
+  function nnLoad(note) {
+    if (NN.p) return NN.p;
+    NN.p = new Promise(function (res, rej) {
+      if (typeof importScripts !== "function") return rej(new Error("no worker"));
+      try { if (typeof ort === "undefined") importScripts(ORT + "ort.wasm.min.js"); } catch (e) { return rej(e); }
+      ort.env.wasm.numThreads = 1; ort.env.wasm.wasmPaths = ORT;
+      if (note) note();
+      ort.InferenceSession.create(new URL("models/fcpe.onnx", self.location.href).href, { executionProviders: ["wasm"] }).then(res, rej);
+    });
+    NN.p.catch(function () { NN.p = null; });
+    return NN.p;
+  }
+  function nf0(x, sr, onp, note) {
+    var r = sr / 16000, n16 = Math.floor(x.length / r), y = resample(x, r, n16);
+    return nnLoad(note).then(function (sess) {
+      var CH = 16000 * 30, OV = 16000, total = Math.floor(n16 / 160) + 1, f = new Float32Array(total), starts = [], i;
+      for (var s0 = 0; s0 < n16; s0 += CH) starts.push(s0);
+      var chain = Promise.resolve();
+      starts.forEach(function (s0, ci) {
+        chain = chain.then(function () {
+          var a = Math.max(0, s0 - OV), b = Math.min(n16, s0 + CH + OV), seg = y.slice(a, b);
+          var feeds = {}; feeds[sess.inputNames[0]] = new ort.Tensor("float32", seg, [1, seg.length]);
+          return sess.run(feeds).then(function (out) {
+            var sal = out[sess.outputNames[0]].data, T = out[sess.outputNames[0]].dims[1], f0a = Math.floor(a / 160);
+            var keepFrom = Math.floor(s0 / 160), keepTo = Math.min(total, Math.floor((s0 + CH) / 160));
+            for (var k = 0; k < T; k++) {
+              var g = f0a + k; if (g < keepFrom || g >= keepTo) continue;
+              var o = k * 360, best = 0, bv = -1; for (i = 0; i < 360; i++) if (sal[o + i] > bv) { bv = sal[o + i]; best = i; }
+              if (bv <= 0.25) { f[g] = 0; continue; }
+              var ws = 0, cs = 0; for (i = Math.max(0, best - 4); i <= Math.min(359, best + 4); i++) { ws += sal[o + i]; cs += sal[o + i] * FCC[i]; }
+              f[g] = 10 * Math.pow(2, cs / ws / 1200);
+            }
+            if (onp) onp((ci + 1) / starts.length);
+          });
+        });
+      });
+      return chain.then(function () {
+        // FCPE frames sit at i*10 ms + 5 ms: move them onto the 10 ms grid
+        var gr = new Float32Array(total); for (i = 0; i < total; i++) gr[i] = i && f[i] && f[i - 1] ? Math.sqrt(f[i] * f[i - 1]) : f[i];
+        return { f0: clean(gr), hop: 0.01, neural: true };
+      });
+    });
+  }
+  return { shift: shift, stretch: stretch, resample: resample, f0: f0, nf0: nf0, clean: clean, notes: notes, plan: plan, psola: psola, tune: tune, denoise: denoise, voice: voice, deess: deess, coef: coef, filt: filt, filtfilt: filtfilt, highpass: highpass, removeDC: removeDC, follower: follower, fft: fft, tables: tables, midi: midi };
 })();
 
 /* ---------- worker protocol: {id, op, ...} -> {id, ok, ...} ---------- */
@@ -399,9 +445,15 @@ if (typeof window === "undefined" && typeof self !== "undefined" && typeof self.
       } else if (m.op === "tune") {
         var r = KSDSP.tune(m.x, m.sr, { f0: m.ref, hop: m.refHop }, m.opts, prog);
         self.postMessage({ id: m.id, ok: true, y: r.y, stats: r.stats }, [r.y.buffer]);
+      } else if (m.op === "nf0") {
+        KSDSP.nf0(m.x, m.sr, prog, function () { self.postMessage({ id: m.id, progress: 0, note: "model" }); })
+          .then(function (t) { self.postMessage({ id: m.id, ok: true, f0: t.f0, hop: t.hop, neural: true }); })
+          .catch(function () { var t = KSDSP.f0(m.x, m.sr, prog); self.postMessage({ id: m.id, ok: true, f0: t.f0, hop: t.hop, neural: false }); });
       } else if (m.op === "voice") {
-        var v = KSDSP.voice(m.x, m.sr, { nr: m.nr, deess: m.deess, tune: m.tune, ref: m.ref ? { f0: m.ref, hop: m.refHop } : null }, prog);
-        self.postMessage({ id: m.id, ok: true, y: v.y, stats: v.stats }, [v.y.buffer]);
+        var vo = { nr: m.nr, deess: m.deess, tune: m.tune, ref: m.ref ? { f0: m.ref, hop: m.refHop } : null };
+        var finish = function (track) { try { var v = KSDSP.voice(m.x, m.sr, Object.assign(vo, { track: track }), prog); self.postMessage({ id: m.id, ok: true, y: v.y, stats: v.stats }, [v.y.buffer]); } catch (err) { self.postMessage({ id: m.id, ok: false, error: String(err && err.message || err) }); } };
+        if (m.tune && m.neural) KSDSP.nf0(m.x, m.sr, function (p) { prog(p * 0.2); }, function () { self.postMessage({ id: m.id, progress: 0, note: "model" }); }).then(finish, function () { finish(null); });
+        else finish(null);
       } else if (m.op === "deess") {
         var d = KSDSP.deess(m.x, m.sr, m.amount); self.postMessage({ id: m.id, ok: true, y: d }, [d.buffer]);
       } else self.postMessage({ id: m.id, ok: false, error: "unknown op" });

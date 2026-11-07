@@ -704,7 +704,7 @@ async function bsJingleAudio(d, env, ip) {
   const h = await bsHash([mode === 'paid' ? 'paid:' + k : mode === 'team' ? 'team:' + code.name : 'trial', P.lyrics, P.len, P.style, P.vocal, P.take].join('|'));
   const jk = 'bs/j/' + h + '.json', ex = await getJ(env, jk);
   if (ex && (ex.tracks || Date.now() - ex.at < 10 * 60e3)) return ex.tracks ? Object.assign(await bsJingleReady(ex, h, env), { tk: mode === 'team' ? ex.tk : undefined }) : { ok: true, job: h, tk: mode === 'team' ? ex.tk : undefined };
-  const marks = [];
+  const marks = []; let trialKeys = [];
   if (paid) {
     if ((o.jgen | 0) + 2 > BS_J_MAX) return { ok: false, error: 'ניצלתם את כל ' + BS_J_MAX + ' הגרסאות. לגרסאות נוספות פנו אלינו' };
   } else if (code) {
@@ -718,7 +718,7 @@ async function bsJingleAudio(d, env, ip) {
     const netKey = 'bs/jt/net-' + day + '-' + (await bsHash(bsNet(ip))) + '.json', dayKey = 'bs/jt/day-' + day + '.json';
     if ((await bsCount(env, netKey)) >= BS_TRIAL_NET) return { ok: false, used: true, error: 'הגעתם למספר הדוגמאות היומי מהרשת הזאת. נסו מחר, או המשיכו להזמנה' };
     if ((await bsCount(env, dayKey)) >= BS_TRIAL_DAY) return { ok: false, error: 'הדוגמאות החינמיות להיום נגמרו. נסו מחר, או המשיכו להזמנה' };
-    marks.push(netKey, dayKey); marks.keys = keys;
+    marks.push(netKey, dayKey); trialKeys = keys;
   }
   if (!(await bsIpOk(env, 'all', 'jg-all', 300))) return { ok: false, error: 'השירות עמוס היום. נסו מחר' };
   let sung;
@@ -733,10 +733,10 @@ async function bsJingleAudio(d, env, ip) {
   const taskId = j.taskId || (j.data && j.data.taskId);
   if (!r.ok || !taskId) return { ok: false, error: "הפקת הג'ינגל נכשלה. נסו שוב בעוד רגע", detail: ('kinovi ' + r.status + ': ' + tx).slice(0, 300) };
   const tk = mode === 'team' ? tok() : '';
-  await putJ(env, jk, { taskId, at: Date.now(), sung, mode, k: paid ? k : '', biz, tk, code: code ? code.name : '', ip: await bsHash(ip), trialKeys: marks.keys || [] });
+  await putJ(env, jk, { taskId, at: Date.now(), sung, mode, k: paid ? k : '', biz, tk, code: code ? code.name : '', ip: await bsHash(ip), trialKeys });
   if (paid) { o.jgen = (o.jgen | 0) + 2; o.jobs = (o.jobs || []).concat(h).slice(-40); await bsSave(env, k, o); }
   for (const m of marks) await bsBump(env, m);
-  for (const key of (marks.keys || [])) await putJ(env, key, { at: Date.now(), h, biz });
+  for (const key of trialKeys) await putJ(env, key, { at: Date.now(), h, biz });
   return { ok: true, job: h, sung, tk: tk || undefined };
 }
 // A sample is ready when its tagged copies exist (mixed by the GitHub action, or by frame insertion as a fallback)
@@ -923,7 +923,7 @@ async function bsound(d, env, ip) {
   if (d.action === 'bs_jingle') return bsJingle(d, env, ip);
   if (d.action === 'bs_jingle_audio') return bsJingleAudio(d, env, ip);
   if (d.action === 'bs_jingle_poll') return bsJinglePoll(d, env);
-  if (d.action === 'bs_ver') return { ok: true, ver: 'mix1', mixer: !!env.GH_TOKEN, codes: bsCodes(env).length };
+  if (d.action === 'bs_ver') return { ok: true, ver: 'mix2', mixer: !!env.GH_TOKEN, codes: bsCodes(env).length };
   if (d.action === 'bs_tag_tts') { // source audio for the voice tag on sample jingles (fixed text, cached)
     const key = 'bs/wm-src-' + (d.v === 'm1' ? 'm1' : 'f1') + '.mp3'; let b = await getBin(env, key);
     if (!b) { b = await bsTts(env, '[excited] בִּי סָאוּנְד!', bsVoices(env)[d.v === 'm1' ? 'm1' : 'f1']); await env.BUCKET.put(key, b); }

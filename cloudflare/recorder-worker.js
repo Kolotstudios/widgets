@@ -639,7 +639,32 @@ async function bsJParams(d) {
   const lyrics = bsClean(String(d.lyrics || '')).slice(0, 900).trim();
   const len = Math.max(10, Math.min(60, d.len | 0 || 12)), style = String(d.style || 'מתאים לתחום').slice(0, 30), vocal = String(d.vocal || 'זמרת').slice(0, 30);
   const take = Math.max(0, Math.min(20, d.take | 0));
-  return { lyrics, len, style, vocal, take, h: await bsHash(['suno', lyrics, len, style, vocal, take].join('|')) };
+  return { lyrics, len, style, vocal, take, h: await bsHash(['suno-nq', lyrics, len, style, vocal, take].join('|')) };
+}
+// Hebrew for Suno must carry full niqqud (Gemini adds it), or Suno mispronounces. Cached per text.
+const BS_NQ = /[֑-ׇ]/g;
+async function bsNiqqud(env, text) {
+  const key = 'bs/nq/' + (await bsHash('nq2|' + text)) + '.json', c = await getJ(env, key);
+  if (c && c.t) return c.t;
+  const plain = (x) => String(x || '').replace(BS_NQ, '').replace(/[\s"'״׳.,!?־-]+/g, '');
+  const prompt = `אתה מנקד עברית מקצועי. הוסף ניקוד מלא ומדויק לכל מילה בטקסט, לפי ההגייה הישראלית המדוברת והמקובלת, כדי שזמר ישיר אותו נכון.
+- אל תשנה, תוסיף או תמחק אף אות, מילה, סימן פיסוק או ירידת שורה. רק הוסף ניקוד.
+- נקד גם שמות עסקים ושמות פרטיים לפי ההגייה הסבירה ביותר.
+- שמור על שורות ריקות ועל סוגריים מרובעים כמו שהם.
+הטקסט:
+${text}
+החזר JSON בלבד: {"text":"..."}`;
+  let best = '';
+  for (let i = 0; i < 2; i++) {
+    const j = await bsLLM(env, prompt), t = String((j && j.text) || '').trim();
+    if (!t || !BS_NQ.test(t)) continue;
+    BS_NQ.lastIndex = 0;
+    best = t;
+    if (plain(t) === plain(text)) break;
+  }
+  if (!best) throw new Error('niqqud failed');
+  await putJ(env, key, { t: best, at: Date.now() });
+  return best;
 }
 async function bsJingleAudio(d, env, ip) {
   if (!env.KINOVI_API_KEY) return bsJingleEleven(d, env, ip);
@@ -656,14 +681,16 @@ async function bsJingleAudio(d, env, ip) {
   const rap = BS_RAP.test(P.style);
   const tags = ['catchy commercial jingle', 'short ' + P.len + ' second radio ad', 'Hebrew vocals', 'clear vocals', 'memorable hook']
     .concat(BS_JSTYLE[P.style] || BS_JSTYLE['מתאים לתחום'], [BS_JVOCAL[P.vocal] || 'female lead vocal'], rap ? ['rap'] : []).join(', ');
-  const parts = P.lyrics.split(/\n\s*\n/).map(x => x.trim()).filter(Boolean);
+  let sung;
+  try { sung = await bsNiqqud(env, P.lyrics); } catch (e) { return { ok: false, error: 'הניקוד נכשל כרגע. נסו שוב בעוד רגע', detail: String((e && e.message) || e).slice(0, 200) }; }
+  const parts = sung.split(/\n\s*\n/).map(x => x.trim()).filter(Boolean);
   const song = parts.map((t, i) => '[' + (parts.length > 1 && i < parts.length - 1 ? 'Verse' : 'Chorus') + ']\n' + t).join('\n\n') + '\n\n[End]';
   const r = await kin(env, 'createTask', { model: 'suno-music', inputs: { custom: true, instrumental: false, mv: 'chirp-v5-5', prompt: song, tags, title: P.lyrics.split('\n')[0].slice(0, 60) } });
   const tx = await r.text(); let j = {}; try { j = JSON.parse(tx); } catch (e) {}
   const taskId = j.taskId || (j.data && j.data.taskId);
   if (!r.ok || !taskId) return { ok: false, error: "הפקת הג'ינגל נכשלה. נסו שוב בעוד רגע", detail: ('kinovi ' + r.status + ': ' + tx).slice(0, 300) };
-  await putJ(env, jk, { taskId, at: Date.now() });
-  return { ok: true, job: P.h };
+  await putJ(env, jk, { taskId, at: Date.now(), sung });
+  return { ok: true, job: P.h, sung };
 }
 async function bsJinglePoll(d, env) {
   const h = String(d.job || '').replace(/[^0-9a-f]/g, '').slice(0, 24), jk = 'bs/j/' + h + '.json', ex = h && await getJ(env, jk);
@@ -733,6 +760,7 @@ async function bsound(d, env, ip) {
   if (d.action === 'bs_jingle') return bsJingle(d, env, ip);
   if (d.action === 'bs_jingle_audio') return bsJingleAudio(d, env, ip);
   if (d.action === 'bs_jingle_poll') return bsJinglePoll(d, env);
+  if (d.action === 'bs_ver') return { ok: true, ver: 'nq1' };
   if (d.action === 'bs_voice_sample') return bsVoiceSample(d, env, ip);
   // lost the link? order code + the phone used in the order bring it back
   if (d.action === 'bs_find') {

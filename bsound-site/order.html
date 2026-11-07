@@ -210,7 +210,7 @@ aside dt{color:#5A606A;font-size:13px}aside dd{margin:2px 0 0;font-weight:700}
 <div class="acts"><button class="btn sm" id="jWrite" type="button">כתבו לי 4 אפשרויות</button><span id="jMsg" style="font-size:14px;color:#C9CED6"></span></div>
 <div id="jVers" style="display:flex;flex-direction:column;gap:10px;margin-top:14px"></div>
 <label class="f" style="margin-top:14px">המילים<textarea id="jText" rows="7" maxlength="900" class="lyr"></textarea></label>
-<div class="box" id="jAudio" style="margin-top:16px"><b style="font-size:17px">🎵 שמעו את הג'ינגל שלכם</b> <span class="badge mus">ניסיון אחד חינם</span><p class="hint" style="margin:6px 0 10px">אנחנו מלחינים ומפיקים את הג'ינגל עם המילים שבחרתם, תוך דקה-שתיים. מקבלים 2 גרסאות לדוגמה עם חותמת קולית קצרה של בי סאונד. אחרי ההזמנה הן נקיות, ומפיקים עוד עד 10 גרסאות לעסק.</p><div class="acts" style="margin-top:0"><button class="btn sm" id="jMake" type="button">הפיקו לי ג'ינגל לדוגמה</button><span id="jAMsg" style="font-size:14px;color:#C9CED6"></span></div><div id="jTracks" hidden></div><div class="acts" id="jAfter" hidden style="margin-top:10px"><button class="btn" id="jCta" type="button">אהבתם? להזמנת הג'ינגל ←</button></div></div>
+<div class="box" id="jAudio" style="margin-top:16px"><b style="font-size:17px">🎵 שמעו את הג'ינגל שלכם</b> <span class="badge mus">ניסיון אחד חינם</span><p class="hint" style="margin:6px 0 10px">אנחנו מלחינים ומפיקים את הג'ינגל עם המילים שבחרתם, תוך דקה-שתיים. מקבלים 2 גרסאות לדוגמה עם חותמת קולית קצרה של בי סאונד. אחרי ההזמנה הן נקיות, ומפיקים עוד עד 10 גרסאות לעסק.</p><div class="acts" style="margin-top:0"><button class="btn sm" id="jMake" type="button">הפיקו לי ג'ינגל לדוגמה</button><span id="jAMsg" style="font-size:14px;color:#C9CED6"></span></div><div id="jTracks" hidden></div><div class="acts" id="jAfter" hidden style="margin-top:10px"><button class="btn" id="jCta" type="button">אהבתם? להזמנת הג'ינגל ←</button></div><p style="margin:12px 0 0;font-size:13px"><a href="#" id="jCodeLink" style="color:var(--muted)">יש לכם קוד צוות או קופון?</a></p><div class="row" id="jCodeRow" hidden style="margin-top:6px"><label class="f">קוד<input id="jCode" autocomplete="off" dir="ltr" maxlength="40"></label></div></div>
 </div>
 <p class="err" id="e3" hidden></p>
 <div class="acts"><button class="btn" id="n3" type="button">המשך</button><button class="btn ghost" data-back type="button">חזרה</button></div>
@@ -541,7 +541,9 @@ $("#jWrite").onclick=function(){
     save();
   });
 };
-var jPollT=null;
+var jPollT=null,jTk={};
+function jDevice(){try{var v=localStorage.getItem("bs_dev");if(!v){v=(crypto.randomUUID?crypto.randomUUID():String(Math.random()).slice(2)+Date.now()).replace(/[^\w-]/g,"");localStorage.setItem("bs_dev",v)}return v}catch(e){return ""}}
+$("#jCodeLink").onclick=function(e){e.preventDefault();$("#jCodeRow").hidden=false;$("#jCode").focus();$("#jMake").disabled=false;$("#jMake").textContent="הפיקו עם הקוד"};
 function jNorm(t){return String(t||"").replace(/[֑-ׇ]/g,"").replace(/[^א-תa-zA-Z0-9]+/g,"").toLowerCase()}
 function jPoll(job,done,fail,t0){
   t0=t0||Date.now();
@@ -557,7 +559,9 @@ function jTrackHtml(tracks,k,label){
 }
 function jOnePlayer(box){box.querySelectorAll("audio").forEach(function(x){x.addEventListener("play",function(){document.querySelectorAll("audio").forEach(function(y){if(y!==x) y.pause()})})})}
 function jShowTrial(r){
-  var box=$("#jTracks");box.innerHTML=jTrackHtml(r.tracks,null,"דוגמה");box.hidden=false;jOnePlayer(box);$("#jAfter").hidden=false;
+  var box=$("#jTracks"),tk=jTk[r.job];
+  if(tk){box.insertAdjacentHTML("afterbegin",r.tracks.map(function(t,i){var u=API+t+"&t="+tk;return '<div class="jtr"><b>צוות '+(i+1)+'</b><audio controls preload="none" src="'+u+'"></audio><a class="btn ghost sm" href="'+u+'&dl=1">הורדה</a></div>'}).join(""));box.hidden=false;jOnePlayer(box);$("#jAMsg").textContent="✓ מוכן (קוד צוות, בלי חותמת).";return}
+  box.innerHTML=jTrackHtml(r.tracks,null,"דוגמה");box.hidden=false;jOnePlayer(box);$("#jAfter").hidden=false;
   $("#jAMsg").textContent="✓ מוכן. בדוגמה יש חותמת קולית של בי סאונד. אחרי ההזמנה תקבלו אותה נקייה.";
 }
 function jTrialState(){
@@ -571,11 +575,13 @@ function jMake(){
   if(!biz){$("#jAMsg").textContent="חסר שם העסק. חזרו לשלב הראשון.";return}
   if(jNorm(lyr).indexOf(jNorm(biz))<0){$("#jAMsg").textContent='שם העסק "'+biz+'" חייב להופיע במילים.';return}
   var b=$("#jMake");b.disabled=true;clearTimeout(jPollT);
-  waiting($("#jAMsg"),["מנקדים את המילים…","מלחינים לחן…","מקליטים את הזמרים…","מערבבים את המיקס…","עוד קצת… ג'ינגל טוב לוקח דקה-שתיים","כמעט שם…"]);
+  waiting($("#jAMsg"),["מנקדים את המילים…","מלחינים לחן…","מקליטים את הזמרים…","מערבבים את המיקס…","עוד קצת… ג'ינגל טוב לוקח דקה-שתיים","מוסיפים את החותמת של בי סאונד…","כמעט שם…"]);
   function fail(r){clearInterval(waitT);b.disabled=false;$("#jAMsg").textContent=(r&&r.error)||"ההפקה נכשלה. נסו שוב."}
-  function done(r){clearInterval(waitT);jShowTrial(r);jTrialState()}
-  call({action:"bs_jingle_audio",lyrics:lyr,biz:biz,len:S.jLen,style:STYLES[S.jStyle],vocal:VOCALS[S.jVocal],dev:Q.get("dev")||""}).then(function(r){
-    if(r.ok&&r.job){S.jJobs=(S.jJobs||[]).filter(function(x){return x!==r.job}).concat(r.job);save()}
+  function done(r){clearInterval(waitT);jShowTrial(r);if($("#jCode").value.trim()){b.disabled=false;b.textContent="הפקה נוספת עם הקוד"}else jTrialState()}
+  var code=$("#jCode").value.trim();
+  call({action:"bs_jingle_audio",lyrics:lyr,biz:biz,len:S.jLen,style:STYLES[S.jStyle],vocal:VOCALS[S.jVocal],device:jDevice(),code:code,take:code?Date.now()%20:0}).then(function(r){
+    if(r.tk) jTk[r.job]=r.tk;
+    if(r.ok&&r.job&&!code){S.jJobs=(S.jJobs||[]).filter(function(x){return x!==r.job}).concat(r.job);save()}
     if(!r.ok){if(r.used){clearInterval(waitT);$("#jAMsg").textContent=r.error;$("#jAfter").hidden=false;b.textContent="הפקתם ג'ינגל לדוגמה";jTrialState();return}return fail(r)}
     if(r.done) return done(r);
     jPoll(r.job,done,fail);

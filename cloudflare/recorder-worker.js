@@ -1,5 +1,5 @@
 /** Kolot – remote blessing recorder backend on Cloudflare Workers + R2.
- * Bindings: BUCKET (R2 bucket). Secrets for B-Sound (bs_*): ELEVENLABS_API_KEY (voice), GEMINI_API_KEY (reads the client's site and writes scripts). Optional var BS_VOICES (JSON {id: elevenlabs voice id}). No secrets: the studio password is set on first use from the admin page
+ * Bindings: BUCKET (R2 bucket). Secrets for B-Sound (bs_*): ELEVENLABS_API_KEY (voice), GEMINI_API_KEY (reads the client's site and writes scripts), KINOVI_API_KEY (sung jingles with Suno). Optional var BS_VOICES (JSON {id: elevenlabs voice id}). No secrets: the studio password is set on first use from the admin page
  * and stored hashed in the bucket (config/admin.json).
  * Karaoke studio (ks_* actions, ?ks= binary routes): secrets MVSEP_API_TOKEN (stem separation), optional OPENAI_API_KEY (Whisper; otherwise Gemini transcribes).
  * Same API as the Apps Script version: POST JSON {action, ...}, actions rc_ping / rc_setup / rc_login / rc_* (studio) / rc_c_* (client link).
@@ -23,6 +23,11 @@ export default {
   async fetch(req, env) {
     if (req.method === 'OPTIONS') return new Response(null, { headers: H });
     const u = new URL(req.url);
+    const bsj = u.searchParams.get('bsj');
+    if (bsj && /^[0-9a-f]{24}-[01]$/.test(bsj)) {
+      const o = await env.BUCKET.get('bs/j/' + bsj + '.mp3'); if (!o) return new Response('not found', { status: 404, headers: H });
+      return new Response(o.body, { headers: Object.assign({}, H, { 'Content-Type': 'audio/mpeg', 'Cache-Control': 'public, max-age=31536000' }) });
+    }
     if (u.searchParams.get('ks')) { try { return await ksHttp(req, env, u); } catch (err) { return out({ ok: false, error: String((err && err.message) || err).slice(0, 200) }); } }
     if (req.method !== 'POST') return out({ ok: true, service: 'kolot-recorder' });
     const raw = await req.text();
@@ -584,7 +589,7 @@ const BS_JSTYLE = {
   'שמח ומקפיץ': ['happy upbeat pop', 'claps', 'bouncy', 'feel-good']
 };
 const BS_JVOCAL = { 'זמר': 'male lead vocal', 'זמרת': 'female lead vocal', 'דואט': 'male and female duet vocals', 'מקהלה': 'group choir vocals', 'קולות ילדים': "children's choir vocals" };
-async function bsJingleAudio(d, env, ip) {
+async function bsJingleEleven(d, env, ip) {
   if (!BS_JINGLE_FREE) {
     const o = d.k ? await getJ(env, 'bs/o/' + String(d.k).replace(/[^\w-]/g, '') + '.json') : null;
     if (!o || !o.paid || o.pkg !== 'jingle') return { ok: false, error: "הפקת הג'ינגל זמינה אחרי ההזמנה" };
@@ -625,6 +630,61 @@ async function bsJingleAudio(d, env, ip) {
     await env.BUCKET.put(key, b, { httpMetadata: { contentType: 'audio/mpeg' } });
   }
   return { ok: true, free: BS_JINGLE_FREE, mp3: bytesToB64(b) };
+}
+// Suno through Kinovi (secret KINOVI_API_KEY): async. bs_jingle_audio starts a job (2 tracks per request),
+// bs_jingle_poll checks it; finished tracks are copied to R2 and served from ?bsj=<id>. Without the key: ElevenLabs Music.
+const KINOVI = 'https://kinovi.ai/api/v1/jobs/';
+const kin = (env, path, body) => fetch(KINOVI + path, { method: body ? 'POST' : 'GET', headers: { 'Authorization': 'Bearer ' + String(env.KINOVI_API_KEY).trim(), 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+async function bsJParams(d) {
+  const lyrics = bsClean(String(d.lyrics || '')).slice(0, 900).trim();
+  const len = Math.max(10, Math.min(60, d.len | 0 || 12)), style = String(d.style || 'מתאים לתחום').slice(0, 30), vocal = String(d.vocal || 'זמרת').slice(0, 30);
+  const take = Math.max(0, Math.min(20, d.take | 0));
+  return { lyrics, len, style, vocal, take, h: await bsHash(['suno', lyrics, len, style, vocal, take].join('|')) };
+}
+async function bsJingleAudio(d, env, ip) {
+  if (!env.KINOVI_API_KEY) return bsJingleEleven(d, env, ip);
+  if (!BS_JINGLE_FREE) {
+    const o = d.k ? await getJ(env, 'bs/o/' + String(d.k).replace(/[^\w-]/g, '') + '.json') : null;
+    if (!o || !o.paid || o.pkg !== 'jingle') return { ok: false, error: "הפקת הג'ינגל זמינה אחרי ההזמנה" };
+  }
+  const P = await bsJParams(d);
+  if (P.lyrics.length < 4) return { ok: false, error: "כתבו קודם את מילות הג'ינגל" };
+  const jk = 'bs/j/' + P.h + '.json', ex = await getJ(env, jk);
+  if (ex && (ex.tracks || Date.now() - ex.at < 10 * 60e3)) return ex.tracks ? { ok: true, done: true, free: BS_JINGLE_FREE, tracks: ex.tracks } : { ok: true, job: P.h };
+  if (!(await bsIpOk(env, ip, 'jg', 15))) return { ok: false, error: 'הגעתם למספר ההפקות היומי. נסו מחר' };
+  if (!(await bsIpOk(env, 'all', 'jg-all', 300))) return { ok: false, error: 'השירות עמוס היום. נסו מחר' };
+  const rap = BS_RAP.test(P.style);
+  const tags = ['catchy commercial jingle', 'short ' + P.len + ' second radio ad', 'Hebrew vocals', 'clear vocals', 'memorable hook']
+    .concat(BS_JSTYLE[P.style] || BS_JSTYLE['מתאים לתחום'], [BS_JVOCAL[P.vocal] || 'female lead vocal'], rap ? ['rap'] : []).join(', ');
+  const parts = P.lyrics.split(/\n\s*\n/).map(x => x.trim()).filter(Boolean);
+  const song = parts.map((t, i) => '[' + (parts.length > 1 && i < parts.length - 1 ? 'Verse' : 'Chorus') + ']\n' + t).join('\n\n') + '\n\n[End]';
+  const r = await kin(env, 'createTask', { model: 'suno-music', inputs: { custom: true, instrumental: false, mv: 'chirp-v5-5', prompt: song, tags, title: P.lyrics.split('\n')[0].slice(0, 60) } });
+  const tx = await r.text(); let j = {}; try { j = JSON.parse(tx); } catch (e) {}
+  const taskId = j.taskId || (j.data && j.data.taskId);
+  if (!r.ok || !taskId) return { ok: false, error: "הפקת הג'ינגל נכשלה. נסו שוב בעוד רגע", detail: ('kinovi ' + r.status + ': ' + tx).slice(0, 300) };
+  await putJ(env, jk, { taskId, at: Date.now() });
+  return { ok: true, job: P.h };
+}
+async function bsJinglePoll(d, env) {
+  const h = String(d.job || '').replace(/[^0-9a-f]/g, '').slice(0, 24), jk = 'bs/j/' + h + '.json', ex = h && await getJ(env, jk);
+  if (!ex) return { ok: false, error: 'ההפקה לא נמצאה. נסו שוב' };
+  if (ex.tracks) return { ok: true, done: true, free: BS_JINGLE_FREE, tracks: ex.tracks };
+  const r = await kin(env, 'recordInfo?taskId=' + encodeURIComponent(ex.taskId)); const tx = await r.text(); let j = {}; try { j = JSON.parse(tx); } catch (e) {}
+  const rec = j.data && j.data.status ? j.data : j, st = String(rec.status || '').toLowerCase();
+  if (st === 'success') {
+    const outs = (rec.output || rec.outputs || []).map(o => typeof o === 'string' ? o : (o.url || o.audioUrl || o.audio_url)).filter(Boolean).slice(0, 2);
+    const tracks = [];
+    for (let i = 0; i < outs.length; i++) {
+      const a = await fetch(outs[i]); if (!a.ok) continue;
+      await env.BUCKET.put('bs/j/' + h + '-' + i + '.mp3', a.body, { httpMetadata: { contentType: 'audio/mpeg' } });
+      tracks.push('?bsj=' + h + '-' + i);
+    }
+    if (!tracks.length) return { ok: false, error: 'ההפקה הסתיימה אבל הקובץ לא נמצא. נסו שוב' };
+    await putJ(env, jk, { taskId: ex.taskId, at: ex.at, tracks });
+    return { ok: true, done: true, free: BS_JINGLE_FREE, tracks };
+  }
+  if (st === 'fail' || st === 'failed' || Date.now() - ex.at > 10 * 60e3) { await env.BUCKET.delete(jk); return { ok: false, error: "הפקת הג'ינגל נכשלה. נסו שוב", detail: String(rec.error || tx).slice(0, 300) }; }
+  return { ok: true, pending: true, status: st || 'waiting' };
 }
 async function bsVoiceSample(d, env, ip) {
   const vmap = bsVoices(env), v = vmap[d.voice] ? d.voice : null; if (!v) return { ok: false, error: 'קול לא מוכר' };
@@ -672,6 +732,7 @@ async function bsound(d, env, ip) {
   if (d.action === 'bs_site' || d.action === 'bs_write') return bsSite(d, env, ip);
   if (d.action === 'bs_jingle') return bsJingle(d, env, ip);
   if (d.action === 'bs_jingle_audio') return bsJingleAudio(d, env, ip);
+  if (d.action === 'bs_jingle_poll') return bsJinglePoll(d, env);
   if (d.action === 'bs_voice_sample') return bsVoiceSample(d, env, ip);
   // lost the link? order code + the phone used in the order bring it back
   if (d.action === 'bs_find') {

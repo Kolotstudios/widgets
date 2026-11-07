@@ -41,6 +41,15 @@
     '#klq .k-chips button{border:1.5px solid var(--ln);background:#fff;color:var(--p);border-radius:999px;padding:9px 15px;font:700 14.5px/1 inherit;cursor:pointer;min-height:40px}' +
     '#klq .k-chips button.on{background:var(--p);border-color:var(--p);color:#fff}' +
     '#klq .k-chk{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:15px;cursor:pointer;color:var(--p)}#klq .k-chk input{width:20px;height:20px;accent-color:var(--p2)}' +
+    '#klq .k-song{background:#fff8e6;border:2px solid var(--g);border-radius:18px;padding:14px 14px 10px}'+
+    '#klq .k-song>label{font-size:19px}#klq .k-song input[type=text]{font-size:18px;font-weight:700;background:#fff;border-color:#e9c46a}'+
+    '#klq .k-song .k-hint a{color:var(--p2);font-weight:700}'+
+    '#klq .k-quiet{font-size:13.5px!important;color:var(--mu)!important;font-weight:400}#klq .k-quiet input{width:17px!important;height:17px!important}'+
+    '#klq .k-more{border:1.5px dashed var(--ln)!important;background:transparent!important;color:var(--p2)!important}'+
+    '#klq .k-mic{float:left;border:1.5px solid var(--ln);background:#fff;color:var(--p2);border-radius:999px;padding:6px 12px;font:700 13.5px/1 inherit;cursor:pointer;margin-top:-2px}'+
+    '#klq .k-mic.on{background:#c93434;border-color:#c93434;color:#fff;animation:kpulse 1.2s infinite}@keyframes kpulse{50%{opacity:.7}}'+
+    '#klq .k-mic-msg{font-size:13px;color:var(--p2);margin-top:4px;min-height:0}'+
+    '#klq .k-f>label::after{content:"";display:table;clear:both}'+
     '#klq .k-note{background:#fff8e6;border:1px solid #f3dfa6;border-radius:14px;padding:11px 13px;font-size:14.5px;line-height:1.45;color:#5c4a14;margin:4px 0 14px}' +
     '#klq .k-nav{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:6px}' +
     '#klq .k-btn{border:0;border-radius:999px;padding:15px 28px;font:800 17px/1 inherit;cursor:pointer;background:var(--g);color:var(--p);min-height:52px;text-decoration:none!important;display:inline-flex;align-items:center;justify-content:center;gap:8px}' +
@@ -59,7 +68,7 @@
     '#klq .k-wa{background:#25D366!important;color:#fff!important}' +
     '#klq .k-hp{position:absolute!important;left:-5000px!important;width:1px;height:1px;overflow:hidden}' +
     '@media (max-width:600px){#klq{padding:0 12px;margin-bottom:110px}#klq .k-card{padding:18px 15px;border-radius:18px}#klq h2.k-ttl{font-size:21px}#klq .k-row{grid-template-columns:1fr}' +
-    '#klq .k-how{grid-template-columns:1fr;gap:6px}#klq .k-how div{display:flex;gap:10px;align-items:center;text-align:right;padding:9px 12px}#klq .k-how b{display:inline;margin:0}' +
+    '#klq .k-chips{gap:7px}#klq .k-chips button{padding:9px 13px;font-size:14.5px}#klq .k-how{grid-template-columns:1fr;gap:6px}#klq .k-how div{display:flex;gap:10px;align-items:center;text-align:right;padding:9px 12px}#klq .k-how b{display:inline;margin:0}' +
     '#klq .k-nav .k-btn{flex:1}}';
   var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
 
@@ -87,42 +96,122 @@
   var S = load(); S.v = S.v || {}; if (!S.t0) S.t0 = Date.now();
   var V = S.v;
   var OCC = ['בת מצווה', 'בר מצווה', 'חתונה', 'יום הולדת', 'יום נישואין', 'אחר'];
-  var TRAITS = ['מצחיק/ה', 'טוב/ת לב', 'חכם/ה', 'חברותי/ת', 'ספורטיבי/ת', 'יצירתי/ת', 'רקדן/ית', 'אוהב/ת לעזור', 'שקט/ה ורגיש/ה', 'מלא/ת אנרגיה'];
-  var SINGS = ['החוגג/ת שר/ה בעצמו/ה', 'המשפחה שרה לחוגג/ת', 'החוגג/ת והמשפחה יחד', 'זמר/ת מהאולפן'];
   var TONES = ['מרגש', 'מצחיק', 'קצבי', 'קליל', 'אישי', 'משולב'];
   var wed = function () { return V.occ === 'חתונה'; };
+  var couple = function () { return V.occ === 'חתונה' || V.occ === 'יום נישואין'; };
+  /** מי החוגג: teen (בר/בת מצווה ו-13–19), kid, adult, senior, couple */
+  function prof() {
+    if (couple()) return 'couple';
+    if (V.occ === 'בת מצווה' || V.occ === 'בר מצווה') return 'teen';
+    var a = parseInt(String(V.age || '').replace(/\D/g, ''), 10);
+    if (!a) return 'adult';
+    return a < 13 ? 'kid' : a < 20 ? 'teen' : a < 60 ? 'adult' : 'senior';
+  }
+  /** מגדר: מבר/בת מצווה, או מהבחירה בן/בת. 'm' / 'f' / '' (לא ידוע – משאירים "/") */
+  function sex() { return V.occ === 'בר מצווה' ? 'm' : V.occ === 'בת מצווה' ? 'f' : V.gender === 'בן' ? 'm' : V.gender === 'בת' ? 'f' : ''; }
+  var SP = { 'הוא/היא': ['הוא', 'היא'], 'לו/ה': ['לו', 'לה'], 'אותו/ה': ['אותו', 'אותה'], 'עליו/ה': ['עליו', 'עליה'], 'בחייו/ה': ['בחייו', 'בחייה'], 'שלו/ה': ['שלו', 'שלה'], 'בו/ה': ['בו', 'בה'], 'החוגג/ת': ['החוגג', 'החוגגת'], 'קטן/ה': ['קטן', 'קטנה'], 'היה/הייתה': ['היה', 'הייתה'], 'בן/בת': ['בן', 'בת'], 'החבר/ה': ['החבר', 'החברה'], 'שר/ה': ['שר', 'שרה'], 'בעצמו/ה': ['בעצמו', 'בעצמה'], 'אשתו/בעלה': ['אשתו', 'בעלה'] };
+  /** "מצחיק/ה" → מצחיק / מצחיקה לפי המגדר */
+  function gx(s) {
+    var g = sex(); if (!g) return s;
+    return String(s).replace(/[֐-׿"']+\/[֐-׿"']+/g, function (w) {
+      if (SP[w]) return SP[w][g === 'm' ? 0 : 1];
+      var p = w.split('/');
+      if (p[1].length <= 3) return g === 'm' ? p[0] : p[0] + p[1];
+      return g === 'm' ? p[0] : p[1];
+    });
+  }
+  var who = function () { var g = sex(); return couple() ? 'הם' : g === 'm' ? 'הוא' : g === 'f' ? 'היא' : 'הוא/היא'; };
 
-  // field: [key, label, opts]
+  var C = {   // אפשרויות לבחירה לפי סוג החוגג
+    traits: {
+      base: ['מצחיק/ה', 'טוב/ת לב', 'רגיש/ה', 'מתחשב/ת', 'חכם/ה', 'חברותי/ת', 'אוהב/ת לעזור', 'מלא/ת אנרגיה', 'יצירתי/ת', 'אחראי/ת', 'נדיב/ה', 'אופטימי/ת', 'עם חיוך שלא יורד'],
+      kid: ['שובב/ה', 'סקרן/ית', 'מתוק/ה', 'ספורטיבי/ת', 'ביישן/ית', 'דרמטי/ת', 'תמיד בתנועה', 'חולם/ת', 'עם תלתלים', 'עיניים גדולות'],
+      teen: ['ספורטיבי/ת', 'מנהיג/ה', 'ביישן/ית', 'דרמטי/ת', 'סקרן/ית', 'אוהב/ת להיות במרכז', 'חולם/ת', 'שובב/ה', 'עם תלתלים', 'גבוה/ה', 'תמיד מסודר/ת'],
+      adult: ['חרוץ/ה', 'מסור/ה למשפחה', 'אוהב/ת לפנק', 'הרפתקן/ית', 'מארח/ת בחסד', 'עם הומור עוקצני', 'תמיד בשביל כולם'],
+      senior: ['חם/ה ואוהב/ת', 'סבלני/ת', 'עמוד התווך של המשפחה', 'מארח/ת בחסד', 'תמיד דואג/ת לכולם', 'צעיר/ה ברוח', 'מלא/ת סיפורים', 'מפנק/ת את הנכדים', 'צנוע/ה', 'חרוץ/ה'],
+      couple: ['משלימים זה את זו', 'צוחקים כל הזמן', 'רומנטיים', 'הרפתקנים', 'החברים הכי טובים', 'ביתיים', 'אוהבים לארח', 'תמיד ביחד', 'נשמות תאומות', 'תומכים זה בזו', 'מצחיקים', 'רגישים ומתחשבים']
+    },
+    hobbies: {
+      kidm: ['כדורגל', 'פלייסטיישן', 'לגו', 'אופניים', 'קורקינט', 'שחייה', 'טרמפולינה', 'ציור', 'משחקים בחצר', 'ג\'ודו / קראטה', 'טיקטוק', 'יוטיוב', 'ריקוד', 'שירה', 'בעלי חיים'],
+      kidf: ['ריקוד', 'שירה', 'התעמלות', 'ציור ויצירה', 'בובות ומשחקי דמיון', 'אופניים', 'קורקינט', 'שחייה', 'טרמפולינה', 'טיקטוק', 'בעלי חיים', 'לגו', 'אפייה', 'יוטיוב'],
+      teenm: ['כדורגל', 'כדורסל', 'פלייסטיישן', 'גיימינג', 'אופניים', 'סקייטבורד', 'קורקינט', 'שחייה', 'טניס', 'ג\'ודו / קראטה', 'נגינה', 'שירה', 'ריקוד', 'טיקטוק', 'יוטיוב', 'מחשבים ותכנות', 'לגו', 'בישול', 'ציור', 'קריאה', 'טיולים', 'דיג', 'שחמט'],
+      teenf: ['ריקוד', 'שירה', 'התעמלות', 'ציור ויצירה', 'טיקטוק', 'איפור וטיפוח', 'אופנה', 'בישול ואפייה', 'קריאה', 'בעלי חיים', 'רכיבה על סוסים', 'שחייה', 'כדורעף', 'נגינה', 'תיאטרון', 'יוגה', 'סקייטבורד', 'אופניים', 'גיימינג', 'כדורגל', 'יוטיוב'],
+      adult: ['ספורט', 'ריצה', 'חדר כושר', 'טיולים', 'בישול', 'נגינה', 'קריאה', 'יוגה', 'אופניים', 'טיסות לחו"ל', 'צילום', 'מוזיקה', 'ים', 'גינון', 'כדורגל עם החבר\'ה', 'פודקאסטים', 'ריקודים'],
+      senior: ['טיולים עם הנכדים', 'לארח את המשפחה', 'בישול ואפייה', 'גינון', 'קריאה ועיתון', 'תשבצים', 'הליכות בבוקר', 'שחייה', 'ריקודי עם', 'טיולים בארץ ובעולם', 'שש-בש', 'קלפים', 'נגינה', 'התנדבות', 'כדורגל בטלוויזיה', 'נסיעות לחו"ל', 'מוזיקה ישנה'],
+      couple: ['טיולים', 'טיסות לחו"ל', 'ים', 'בישול ביחד', 'ערבי סרטים וסדרות', 'ספורט', 'הכלב שלנו', 'מסעדות', 'הופעות', 'משחקי קופסה', 'לארח חברים', 'ריקודים', 'קמפינג']
+    },
+    happy: {
+      kid: ['חופשות עם המשפחה', 'הכלב / החתול', 'ממתקים ושוקולד', 'ים ובריכה', 'חברים', 'מסיבות פיג\'מה', 'נסיעות לחו"ל', 'האוכל של סבתא', 'מוזיקה', 'ימי הולדת', 'פיצה', 'מתנות', 'לישון עד מאוחר'],
+      adult: ['המשפחה', 'זמן עם הילדים', 'ארוחות שישי', 'טיולים', 'הצלחה בעבודה', 'מוזיקה', 'ים', 'קפה של בוקר', 'חברים טובים', 'שקט בבית'],
+      senior: ['הנכדים', 'ארוחות שישי עם כל המשפחה', 'חגים', 'כשכולם ביחד', 'מוזיקה ישנה', 'הגינה', 'טיולים', 'חברים ותיקים', 'לבשל לכולם', 'תמונות של המשפחה'],
+      couple: ['להיות ביחד', 'הבית שבנו', 'הילדים', 'החיות', 'טיולים', 'ארוחות עם המשפחה', 'חברים', 'ים', 'בוקר עצל ביחד']
+    },
+    clubs: {
+      kid: ['בית הספר והכיתה', 'תנועת נוער', 'צופים', 'בני עקיבא', 'קבוצת ספורט', 'להקת מחול', 'חוג דרמה', 'קונסרבטוריון', 'מקהלה', 'רובוטיקה', 'חוג אומנות', 'נבחרת שחייה', 'שחמט', 'הגן'],
+      adult: ['העבודה', 'הצבא', 'הלימודים', 'חדר הכושר', 'קבוצת ריצה', 'הקהילה / בית הכנסת', 'התנדבות', 'להקה / הרכב'],
+      senior: ['שנות העבודה', 'הצבא', 'חוג תנועה', 'מקהלה', 'קבוצת הליכה', 'התנדבות', 'מועדון / בית הכנסת', 'האוניברסיטה העממית', 'הקיבוץ / המושב'],
+      couple: ['איפה הכירו', 'הצבא', 'הלימודים', 'העבודה שלו', 'העבודה שלה', 'החברים המשותפים']
+    },
+    people: {
+      kid: ['אמא', 'אבא', 'אחים', 'אחיות', 'סבא', 'סבתא', 'החבר/ה הכי טוב/ה', 'בני הדודים', 'הדודים', 'הכלב / החתול', 'המורה', 'החברים מהכיתה'],
+      adult: ['אשתו/בעלה', 'הילדים', 'ההורים', 'האחים', 'החברים הכי טובים', 'הכלב / החתול', 'החברים מהעבודה'],
+      senior: ['אשתו/בעלה', 'הילדים', 'הנכדים', 'הנינים', 'האחים', 'החברים הוותיקים', 'הכלות והחתנים'],
+      couple: ['ההורים שלו', 'ההורים שלה', 'האחים', 'החברים', 'הסבים', 'השושבינים', 'הילדים', 'הכלב / החתול']
+    },
+    story: {
+      kid: ['משפט שהוא/היא תמיד אומר/ת: ', 'הפעם ש', 'טיול משפחתי שלא נשכח: ', 'כשהיה/הייתה קטן/ה ', 'משהו מצחיק שקרה: ', 'רגע שהיינו גאים בו/ה: '],
+      adult: ['משפט קבוע שלו/ה: ', 'הפעם ש', 'רגע מרגש: ', 'משהו מצחיק שקרה: ', 'טיול שלא נשכח: '],
+      senior: ['משפט שהוא/היא תמיד אומר/ת: ', 'מהילדות שלו/ה: ', 'איך הכירו בני הזוג: ', 'סיפור עם הנכדים: ', 'המאכל המפורסם שלו/ה: ', 'רגע שכולם זוכרים: '],
+      couple: ['איך הכירו: ', 'הדייט הראשון: ', 'ההצעה: ', 'טיול משותף שלא נשכח: ', 'הבדיחה הפנימית שלהם: ', 'משהו מצחיק שקרה: ']
+    },
+    notes: ['חשוב שיופיע: ', 'לא להזכיר: ', 'בדיחה פנימית: ', 'ביטוי שחייב להיכנס: ', 'לשלב את השמות: ']
+  };
+  function pick(map) {
+    var p = prof(), g = sex() || 'm';
+    var arr = map[p + g] || map[p] || (p === 'teen' ? map.kid : null) || (p === 'kid' ? map.kid : null) || map.adult || map.base || [];
+    if (map === C.traits) arr = (p === 'couple' ? [] : map.base).concat(map[p] || []);
+    if (map === C.hobbies && (p === 'kid' || p === 'teen') && !sex()) arr = uniq(map[p + 'm'].concat(map[p + 'f']));
+    return uniq(arr.map(gx));
+  }
+  function uniq(a) { var o = []; a.forEach(function (x) { if (o.indexOf(x) < 0) o.push(x); }); return o; }
+  function sings() {
+    if (couple()) return ['החתן והכלה שרים', 'המשפחה והחברים שרים להם', 'כולם ביחד', 'זמר/ת מהאולפן'];
+    var p = prof();
+    return [gx('החוגג/ת שר/ה בעצמו/ה'), gx('המשפחה שרה ל') + (sex() === 'm' ? 'חוגג' : sex() === 'f' ? 'חוגגת' : 'חוגג/ת'), p === 'senior' ? 'הילדים והנכדים שרים' : 'החברים שרים', 'כולם ביחד', 'זמר/ת מהאולפן'];
+  }
+
+  // field: [key, label, opts]   chipsAdd = רשימה להוספה בפסיקים · starters = פתיחי משפטים בשורה חדשה
   var STEPS = [
     { t: 'קודם כל – מי ממלא את השאלון?', d: 'כדי שנוכל לשלוח לכם את המילים והגייד', f: [
       ['contact', 'השם שלכם', { req: 1, ph: 'למשל: מיכל לוי' }],
       ['phone', 'טלפון נייד', { req: 1, type: 'tel', ph: '050-0000000', hint: 'אותו מספר שמופיע בהזמנה שלכם, אם כבר הזמנתם' }],
       ['email', 'אימייל', { req: 1, type: 'email', ph: 'name@example.com', hint: 'לכאן יישלחו המילים והגייד' }]
     ] },
-    { t: 'על מי השיר?', d: 'נתחיל מהבסיס', f: [
-      ['occ', 'מה חוגגים?', { req: 1, chips: OCC, single: 1 }],
-      ['honoree', function () { return wed() ? 'שמות החתן והכלה' : 'שם החוגג/ת'; }, { req: 1, ph: function () { return wed() ? 'למשל: דנה ויואב' : 'למשל: נועה כהן'; } }],
+    { t: 'על מי השיר?', d: 'נתחיל מהבסיס – לפי זה נתאים את כל האפשרויות בהמשך', f: [
+      ['occ', 'מה חוגגים?', { req: 1, chips: OCC, single: 1, rerender: 1 }],
+      ['gender', 'השיר מוקדש ל…', { chips: ['בן', 'בת'], single: 1, opt: 1, rerender: 1, when: function () { return V.occ && !couple() && V.occ !== 'בר מצווה' && V.occ !== 'בת מצווה'; } }],
+      ['honoree', function () { return couple() ? (wed() ? 'שמות החתן והכלה' : 'שמות בני הזוג') : gx('שם החוגג/ת'); }, { req: 1, ph: function () { return couple() ? 'למשל: דנה ויואב' : 'למשל: נועה כהן'; } }],
       ['nick', 'שם חיבה', { ph: 'למשל: נוני', opt: 1 }],
-      ['age', 'גיל', { req: 1, ph: 'למשל: 12', when: function () { return !wed(); }, small: 1 }],
+      ['age', function () { return V.occ === 'יום נישואין' ? 'כמה שנים ביחד?' : 'גיל'; }, { req: 1, ph: 'למשל: 12', when: function () { return !wed(); }, numeric: 1, rerenderOnBlur: 1 }],
       ['date', 'מתי האירוע?', { type: 'date', opt: 1 }],
       ['place', 'איפה?', { ph: 'למשל: אולם גני הדר, ראשון לציון', opt: 1 }]
     ] },
-    { t: function () { return wed() ? 'ספרו לנו עליהם' : 'ספרו לנו עליו/ה'; }, d: 'ככל שתפרטו יותר – השיר יהיה אישי יותר', f: [
-      ['traits', function () { return wed() ? 'איך הייתם מתארים אותם? אופי, מראה, מה מיוחד בהם' : 'איך הייתם מתארים אותו/ה? אופי, מראה, מה מיוחד'; }, { req: 1, area: 1, chipsAdd: TRAITS, ph: 'אפשר לבחור למעלה ולהוסיף במילים שלכם' }],
-      ['hobbies', 'תחביבים ודברים שהוא/היא הכי אוהב/ת לעשות', { area: 1, ph: 'למשל: ריקוד, כדורגל, טיקטוק, בישול עם סבתא' }],
-      ['happy', 'מה עושה לו/ה שמח?', { area: 1, ph: 'למשל: חופשות עם המשפחה, הכלב שלנו, שוקולד', opt: 1 }],
-      ['clubs', 'חוגים, מסגרות או תנועות נוער', { area: 1, ph: 'למשל: חוג דרמה, הצופים, נבחרת כדורסל', opt: 1 }]
+    { t: function () { return couple() ? 'ספרו לנו עליהם' : gx('ספרו לנו עליו/ה'); }, d: 'לחצו על מה שמתאים והוסיפו במילים שלכם – ככל שתפרטו יותר, השיר יהיה אישי יותר', f: [
+      ['traits', function () { return couple() ? 'איך הייתם מתארים אותם? מה מיוחד בהם כזוג' : gx('איך הייתם מתארים אותו/ה? אופי, מראה, מה מיוחד'); }, { req: 1, area: 1, chipsAdd: function () { return pick(C.traits); }, ph: 'בחרו למעלה והוסיפו במילים שלכם', mic: 1 }],
+      ['hobbies', function () { return couple() ? 'מה הם אוהבים לעשות ביחד?' : gx('תחביבים ודברים ש' + who() + ' הכי אוהב/ת לעשות'); }, { area: 1, chipsAdd: function () { return pick(C.hobbies); }, ph: 'בחרו למעלה או כתבו', mic: 1 }],
+      ['happy', function () { return couple() ? 'מה עושה להם שמח?' : gx('מה עושה לו/ה שמח?'); }, { area: 1, chipsAdd: function () { return pick(C.happy); }, opt: 1, mic: 1 }],
+      ['clubs', function () { var p = prof(); return p === 'kid' || p === 'teen' ? 'בית ספר, חוגים ותנועות נוער' : p === 'couple' ? 'איך הכירו, עבודה, צבא, לימודים' : 'עבודה, צבא, חוגים ומסגרות'; }, { area: 1, chipsAdd: function () { return pick(C.clubs); }, opt: 1, mic: 1 }]
     ] },
     { t: 'אנשים ורגעים', d: 'אלה בדרך כלל השורות שכולם מתרגשים מהן', f: [
-      ['people', 'מי האנשים החשובים בחייו/ה, ומה מיוחד בקשר איתם?', { req: 1, area: 1, ph: 'למשל: אמא ואבא, האחים יואב ומאיה, סבתא רחל שמפנקת, החברה הכי טובה שירה' }],
-      ['story', 'סיפור, רגע או זיכרון מצחיק / מרגש שתרצו בשיר', { area: 1, ph: 'למשל: הפעם שהלכנו לאיבוד בטיול בצפון וכולם צחקו', opt: 1 }]
+      ['people', function () { return couple() ? 'מי האנשים החשובים להם?' : gx('מי האנשים החשובים בחייו/ה, ומה מיוחד בקשר איתם?'); }, { req: 1, area: 1, chipsAdd: function () { return pick(C.people); }, ph: 'למשל: אמא ואבא, האחים יואב ומאיה, סבתא רחל שמפנקת', mic: 1 }],
+      ['story', 'סיפור, רגע או זיכרון מצחיק / מרגש שתרצו בשיר', { area: 1, starters: function () { return pick(C.story); }, opt: 1, mic: 1, rows: 5 }]
     ] },
     { t: 'השיר', d: 'על איזו מנגינה נכתוב, ובאיזה אופי', f: [
-      ['song', 'על איזה שיר מוכר לכתוב את המילים?', { req: 1, ph: 'שם השיר', song: 1, hint: 'כותבים מילים חדשות על המנגינה של שיר קיים. כדאי לוודא איתנו שיש לו פלייבק במאגר.' }],
-      ['artist', 'מי שר את השיר המקורי?', { ph: 'למשל: נועה קירל', opt: 1, songDep: 1 }],
-      ['sings', 'מי ישיר את השיר?', { req: 1, chips: SINGS, single: 1 }],
+      ['song', 'על איזה שיר מוכר נכתוב את המילים?', { req: 1, ph: 'שם השיר – למשל: מתנות קטנות', song: 1 }],
+      ['artist', 'מי שר את השיר המקורי?', { ph: 'למשל: רמי קלינשטיין', opt: 1, songDep: 1 }],
+      ['sings', 'מי ישיר את השיר?', { req: 1, chips: function () { return sings(); }, single: 1 }],
       ['tone', 'מה השיר צריך לשדר?', { chips: TONES, opt: 1, multi: 1 }],
-      ['notes', 'עוד משהו שחשוב לכם?', { area: 1, opt: 1, ph: 'מילים שחייבות להופיע, דברים שעדיף לא להזכיר, בדיחות פנימיות…' }]
+      ['notes', 'עוד משהו שחשוב לכם?', { area: 1, opt: 1, starters: function () { return C.notes; }, ph: 'מילים שחייבות להופיע, דברים שעדיף לא להזכיר, בדיחות פנימיות…', mic: 1 }]
     ] },
     { t: 'סיכום ושליחה', d: 'בדקו שהכול נכון, ושלחו', review: 1, f: [] }
   ];
@@ -131,67 +220,116 @@
 
   function intro() {
     return h('div', { 'class': 'k-how' }, [
-      h('div', { html: '<i>📝</i><b>ממלאים</b>כ-5 דקות, בשלבים קצרים' }),
+      h('div', { html: '<i>📝</i><b>ממלאים</b>כ-5 דקות, בעיקר בלחיצות' }),
       h('div', { html: '<i>✍️</i><b>אנחנו כותבים</b>מילים אישיות על המנגינה שבחרתם' }),
       h('div', { html: '<i>🎧</i><b>מקבלים</b>מילים + גייד מוקלט לתרגול' })
     ]);
   }
 
+  /* ---- הקלטה ותמלול (זיהוי דיבור של הדפדפן, עברית). מוצג רק כשהדפדפן תומך. ---- */
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var recNow = null;
+  function micBtn(inp, key, w) {
+    if (!SR) return null;
+    var b = h('button', { type: 'button', 'class': 'k-mic', 'aria-label': 'הקלטה ותמלול' }, ['🎤 הקלטה']);
+    b.onclick = function () {
+      if (recNow) { recNow.stop(); return; }
+      var r; try { r = new SR(); } catch (e) { return; }
+      r.lang = 'he-IL'; r.continuous = true; r.interimResults = true;
+      var base = inp.value, fin = '';
+      r.onresult = function (ev) {
+        var interim = '';
+        for (var i = ev.resultIndex; i < ev.results.length; i++) { var t = ev.results[i][0].transcript; if (ev.results[i].isFinal) fin += t + ' '; else interim += t; }
+        inp.value = (base ? base.replace(/\s+$/, '') + (/[.,\n]$/.test(base.trim()) ? ' ' : ', ') : '') + (fin + interim).trim();
+        V[key] = inp.value; save(); w.classList.remove('k-bad');
+      };
+      r.onend = function () { recNow = null; b.classList.remove('on'); b.textContent = '🎤 הקלטה'; };
+      r.onerror = function (e) { var m = w.querySelector('.k-mic-msg'); if (m) m.textContent = e.error === 'not-allowed' ? 'צריך לאשר גישה למיקרופון בדפדפן' : 'ההקלטה נעצרה – אפשר לנסות שוב'; };
+      try { r.start(); recNow = r; b.classList.add('on'); b.textContent = '⏹ סיום הקלטה'; var m = w.querySelector('.k-mic-msg'); if (m) m.textContent = 'מדברים – והטקסט נכתב לבד. לחצו "סיום" כשמסיימים.'; } catch (e) { }
+    };
+    return b;
+  }
+
+  function chipRow(list, isOn, onTap, limit) {
+    var box = h('div', { 'class': 'k-chips' }), more = null;
+    list.forEach(function (c, i) {
+      var b = h('button', { type: 'button', 'aria-pressed': isOn(c) ? 'true' : 'false', 'class': isOn(c) ? 'on' : '' }, [c]);
+      if (limit && i >= limit && !isOn(c)) b.style.display = 'none';
+      b.onclick = function () { onTap(c, b); };
+      box.appendChild(b);
+    });
+    if (limit && list.length > limit) {
+      more = h('button', { type: 'button', 'class': 'k-more' }, ['עוד אפשרויות +']);
+      more.onclick = function () { [].forEach.call(box.children, function (x) { x.style.display = ''; }); more.remove(); };
+      box.appendChild(more);
+    }
+    return box;
+  }
+
   function field(def) {
     var key = def[0], o = def[2] || {};
     if (o.when && !o.when()) return null;
+    if (o.songDep && V.noSong) return null;
     var lab = fv(def[1]);
-    var w = h('div', { 'class': 'k-f', 'data-k': key });
+    var w = h('div', { 'class': 'k-f' + (o.song ? ' k-song' : ''), 'data-k': key });
     var l = h('label', { 'for': 'klq-' + key }, [lab]); if (o.opt) l.appendChild(h('small', { text: '(לא חובה)' }));
     w.appendChild(l);
     if (o.hint) w.appendChild(h('div', { 'class': 'k-hint', text: o.hint }));
-    if (o.chips) {
-      var box = h('div', { 'class': 'k-chips', role: o.single ? 'radiogroup' : 'group' });
-      var sel = o.multi ? String(V[key] || '').split(/,\s*/).filter(Boolean) : [V[key]];
-      o.chips.forEach(function (c) {
-        var b = h('button', { type: 'button', 'aria-pressed': sel.indexOf(c) >= 0 ? 'true' : 'false', 'class': sel.indexOf(c) >= 0 ? 'on' : '' }, [c]);
-        b.onclick = function () {
-          if (o.single) { V[key] = c; }
-          else { var a = String(V[key] || '').split(/,\s*/).filter(Boolean); var i = a.indexOf(c); if (i >= 0) a.splice(i, 1); else a.push(c); V[key] = a.join(', '); }
-          save(); if (key === 'occ') render(); else { [].forEach.call(box.children, function (x) { var on = o.single ? x.textContent === V[key] : String(V[key] || '').split(/,\s*/).indexOf(x.textContent) >= 0; x.className = on ? 'on' : ''; x.setAttribute('aria-pressed', on); }); w.classList.remove('k-bad'); }
-        };
-        box.appendChild(b);
+    var chips = fv(o.chips);
+    if (chips) {
+      var multiSel = function () { return String(V[key] || '').split(/,\s*/).filter(Boolean); };
+      var box = chipRow(chips, function (c) { return o.multi ? multiSel().indexOf(c) >= 0 : V[key] === c; }, function (c, b) {
+        if (o.single) V[key] = V[key] === c && o.opt ? '' : c;
+        else { var a = multiSel(); var i = a.indexOf(c); if (i >= 0) a.splice(i, 1); else a.push(c); V[key] = a.join(', '); }
+        save(); w.classList.remove('k-bad');
+        if (o.rerender) { render(); return; }
+        [].forEach.call(box.querySelectorAll('button:not(.k-more)'), function (x) { var on = o.multi ? multiSel().indexOf(x.textContent) >= 0 : V[key] === x.textContent; x.className = on ? 'on' : ''; x.setAttribute('aria-pressed', on); });
       });
       w.appendChild(box);
+      w.appendChild(h('div', { 'class': 'k-err', text: errText(key) }));
+      return w;
     }
-    if (!o.chips) {
-      var inp;
-      if (o.area) inp = h('textarea', { id: 'klq-' + key, rows: 4 });
-      else inp = h('input', { id: 'klq-' + key, type: o.type || 'text' });
-      if (o.type === 'tel') { inp.setAttribute('inputmode', 'tel'); inp.setAttribute('autocomplete', 'tel'); inp.setAttribute('dir', 'ltr'); inp.style.textAlign = 'right'; }
-      if (o.type === 'email') { inp.setAttribute('autocomplete', 'email'); inp.setAttribute('dir', 'ltr'); inp.style.textAlign = 'right'; }
-      if (key === 'contact') inp.setAttribute('autocomplete', 'name');
-      if (o.ph) inp.setAttribute('placeholder', fv(o.ph));
-      inp.value = V[key] || '';
-      inp.oninput = function () { V[key] = inp.value; save(); w.classList.remove('k-bad'); };
-      if (o.chipsAdd) {
-        var cb = h('div', { 'class': 'k-chips' });
-        o.chipsAdd.forEach(function (c) {
-          var b = h('button', { type: 'button', 'class': (V[key] || '').indexOf(c) >= 0 ? 'on' : '' }, [c]);
-          b.onclick = function () {
-            var v = inp.value; if (v.indexOf(c) >= 0) { v = v.replace(new RegExp('(,\\s*)?' + c.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&')), '').replace(/^,\s*/, ''); b.className = ''; }
-            else { v = v.trim() ? v.replace(/[,\s]+$/, '') + ', ' + c : c; b.className = 'on'; }
-            inp.value = v; V[key] = v; save(); w.classList.remove('k-bad');
-          };
-          cb.appendChild(b);
-        });
-        w.appendChild(cb);
-      }
-      if (o.songDep && V.noSong) { return null; }
-      if (o.song && V.noSong) { inp.disabled = true; inp.value = ''; inp.setAttribute('placeholder', 'נבחר בהמשך'); }
+    var inp;
+    if (o.area) inp = h('textarea', { id: 'klq-' + key, rows: o.rows || 3 });
+    else inp = h('input', { id: 'klq-' + key, type: o.type || 'text' });
+    if (o.type === 'tel') { inp.setAttribute('inputmode', 'tel'); inp.setAttribute('autocomplete', 'tel'); inp.setAttribute('dir', 'ltr'); inp.style.textAlign = 'right'; }
+    if (o.type === 'email') { inp.setAttribute('autocomplete', 'email'); inp.setAttribute('dir', 'ltr'); inp.style.textAlign = 'right'; }
+    if (o.numeric) inp.setAttribute('inputmode', 'numeric');
+    if (key === 'contact') inp.setAttribute('autocomplete', 'name');
+    if (o.ph) inp.setAttribute('placeholder', fv(o.ph));
+    inp.value = V[key] || '';
+    inp.oninput = function () { V[key] = inp.value; save(); w.classList.remove('k-bad'); };
+    if (o.rerenderOnBlur) inp.onchange = function () { V[key] = inp.value; save(); };
+    var add = fv(o.chipsAdd);
+    if (add && add.length) {
+      var has = function (c) { return (', ' + (inp.value || '') + ',').indexOf(', ' + c + ',') >= 0 || (inp.value || '').split(/,\s*/).indexOf(c) >= 0; };
+      w.appendChild(chipRow(add, has, function (c, b) {
+        var parts = (inp.value || '').split(/,\s*/).filter(function (x) { return x.trim(); });
+        var i = parts.indexOf(c);
+        if (i >= 0) { parts.splice(i, 1); b.className = ''; } else { parts.push(c); b.className = 'on'; }
+        inp.value = parts.join(', '); V[key] = inp.value; save(); w.classList.remove('k-bad');
+      }, 10));
+    }
+    var st = fv(o.starters);
+    if (st && st.length) {
+      w.appendChild(h('div', { 'class': 'k-hint', text: 'לחצו על פתיח והמשיכו לכתוב:' }));
+      w.appendChild(chipRow(st, function () { return false; }, function (c) {
+        var v = inp.value.replace(/\s+$/, ''); inp.value = (v ? v + '\n' : '') + c; V[key] = inp.value; save();
+        try { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); } catch (e) { }
+      }));
+    }
+    if (o.song) {
+      if (V.noSong) { inp.disabled = true; inp.value = ''; inp.setAttribute('placeholder', 'נבחר בהמשך'); }
       w.appendChild(inp);
-      if (o.song) {
-        var ck = h('input', { type: 'checkbox' }); ck.checked = !!V.noSong;
-        ck.onchange = function () { V.noSong = ck.checked; if (ck.checked) { V.song = ''; V.artist = ''; } save(); render(); };
-        w.appendChild(h('label', { 'class': 'k-chk' }, [ck, 'עוד לא בחרנו מנגינה']));
-        if (V.noSong) w.appendChild(h('div', { 'class': 'k-note', text: 'אין בעיה. אחרי השליחה נשלח לכם לינק קצר לבחירת המנגינה, ונתחיל לכתוב ברגע שתבחרו.' }));
-      }
+      w.appendChild(h('div', { 'class': 'k-hint', html: 'כותבים מילים חדשות על המנגינה של שיר קיים. צריכים רעיון? <a href="/category/' + encodeURIComponent('המלצות-לשירים') + '" target="_blank" rel="noopener">רשימת שירים מומלצים</a>' }));
+      var ck = h('input', { type: 'checkbox' }); ck.checked = !!V.noSong;
+      ck.onchange = function () { V.noSong = ck.checked; if (ck.checked) { V.song = ''; V.artist = ''; } save(); render(); };
+      w.appendChild(h('label', { 'class': 'k-chk k-quiet' }, [ck, 'עוד לא בחרנו – נבחר בהמשך']));
+      if (V.noSong) w.appendChild(h('div', { 'class': 'k-note', text: 'אין בעיה. אחרי השליחה נשלח לכם לינק קצר לבחירת המנגינה, ונתחיל לכתוב ברגע שתבחרו.' }));
+    } else {
+      w.appendChild(inp);
     }
+    if (o.mic) { var mb = micBtn(inp, key, w); if (mb) { l.appendChild(mb); w.appendChild(h('div', { 'class': 'k-mic-msg' })); } }
     w.appendChild(h('div', { 'class': 'k-err', text: errText(key) }));
     return w;
   }
@@ -294,7 +432,7 @@
   function answers() {
     var a = [];
     a.push(['מה חוגגים', [V.occ, fmtDate(V.date), V.place].filter(Boolean).join(' · ')]);
-    a.push([wed() ? 'החתן והכלה' : 'החוגג/ת', V.honoree + (V.nick ? ' (שם חיבה: ' + V.nick + ')' : '') + (!wed() && V.age ? ', גיל ' + V.age : '')]);
+    a.push([couple() ? 'בני הזוג' : 'החוגג/ת', V.honoree + (V.nick ? ' (שם חיבה: ' + V.nick + ')' : '') + (V.gender && !couple() ? ', ' + V.gender : '') + (!wed() && V.age ? (V.occ === 'יום נישואין' ? ', ' + V.age + ' שנים ביחד' : ', גיל ' + V.age) : '')]);
     a.push(['תיאור – אופי ומראה', V.traits]);
     a.push(['תחביבים', V.hobbies]); a.push(['מה עושה לו/ה שמח', V.happy]); a.push(['חוגים ומסגרות', V.clubs]);
     a.push(['אנשים חשובים', V.people]); a.push(['סיפור / זיכרון', V.story]);

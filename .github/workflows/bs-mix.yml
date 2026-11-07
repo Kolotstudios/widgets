@@ -29,10 +29,10 @@ jobs:
             curl -fsSL -o in.mp3 "${API}?bsmix=get&id=${JOB}-${i}&t=${TOK}"
             D=$(ffprobe -v error -show_entries format=duration -of csv=p=0 in.mp3)
             POS=$(python3 -c "d=float('$D');p=[0.22,0.52,0.82] if d>22 else [0.3,0.72] if d>8 else [0.5];print(' '.join(str(int(d*x*1000)) for x in p))")
-            set -- $POS; C=$#; F="[1:a]aformat=sample_rates=48000:channel_layouts=stereo,volume=1.15,asplit=$C"; L=""
+            set -- $POS; C=$#; F="[1:a]aformat=sample_rates=48000:channel_layouts=stereo,volume=0.4,asplit=$C"; L=""
             for k in $(seq 1 $C); do F="$F[t$k]"; done; F="$F;"
             k=1; for ms in $POS; do F="$F[t$k]adelay=${ms}|${ms},apad[d$k];"; L="$L[d$k]"; k=$((k+1)); done
-            F="${F}${L}amix=inputs=$C:normalize=0:duration=first,asplit=2[sc][tb];[0:a]aformat=sample_rates=48000:channel_layouts=stereo[m];[m][sc]sidechaincompress=threshold=0.02:ratio=5:attack=15:release=300[duck];[duck][tb]amix=inputs=2:normalize=0:duration=first,alimiter=limit=0.95[out]"
+            F="${F}${L}amix=inputs=$C:normalize=0:duration=first,asplit=2[sc][tb];[0:a]aformat=sample_rates=48000:channel_layouts=stereo[m];[m][sc]sidechaincompress=threshold=0.06:ratio=2.5:attack=20:release=300[duck];[duck][tb]amix=inputs=2:normalize=0:duration=first,alimiter=limit=0.95[out]"
             ffmpeg -v error -y -i in.mp3 -i tag.mp3 -filter_complex "$F" -map "[out]" -ar 48000 -ac 2 -c:a libmp3lame -b:a 192k out.mp3
             curl -fsS -X PUT --data-binary @out.mp3 -H "Content-Type: audio/mpeg" "${API}?bsmix=put&id=${JOB}-${i}&t=${TOK}"
             echo; echo "mixed track $i"

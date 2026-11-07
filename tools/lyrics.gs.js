@@ -18,6 +18,21 @@
  * מצב בדיקה: כל עוד LYR.LIVE=false, וואטסאפ יוצא רק לטלפונים שב-LYR.TEST_PHONES, ומייל "לליאור" מגיע רק לאולפן
  * (עם הכותרת [בדיקה]) – כך אפשר לראות על פניות אמיתיות מה המערכת הייתה עושה, בלי שום השפעה.
  */
+/* ------------------------------- setup (editor) ------------------------------ */
+/** מריצים פעם אחת מהעורך: יוצר סוד ל-webhook של קאלה ומתקין את הבדיקה השעתית. מדפיס את הסוד ללוג (לא לשתף). */
+function lyrInstall() {
+  const P = PropertiesService.getScriptProperties();
+  if (!P.getProperty('LYR_SECRET')) P.setProperty('LYR_SECRET', 'lyr_' + Utilities.getUuid().replace(/-/g, ''));
+  ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'lyrSweep').forEach(t => ScriptApp.deleteTrigger(t));
+  ScriptApp.newTrigger('lyrSweep').timeBased().everyHours(1).create();
+  lyrFolder_();
+  Logger.log('LYR_SECRET=' + P.getProperty('LYR_SECRET'));
+  Logger.log('lyrSweep hourly trigger installed; folder ' + P.getProperty('LYR_FOLDER'));
+}
+
+/** בדיקה מהעורך: מה המערכת מחליטה עבור טלפון מסוים (בלי לשלוח כלום) */
+function lyrTestStatus() { Logger.log(JSON.stringify(lyrStatus_('547689850'))); }
+
 const LYR = {
   LIVE: false,                                   // לפתוח ללקוחות אמיתיים רק באישור אורן
   TEST_PHONES: ['547689850'],                    // הטלפון של אורן
@@ -305,18 +320,3 @@ function lyrSweep() {
     rec.waSong = 0; lyrAskSong_(rec); rec.songReminded = now; lyrPut_(rec);
   });
 }
-
-/* ------------------------------- setup (editor) ------------------------------ */
-/** מריצים פעם אחת מהעורך: יוצר סוד ל-webhook של קאלה ומתקין את הבדיקה השעתית. מדפיס את הסוד ללוג (לא לשתף). */
-function lyrInstall() {
-  const P = PropertiesService.getScriptProperties();
-  if (!P.getProperty('LYR_SECRET')) P.setProperty('LYR_SECRET', 'lyr_' + Utilities.getUuid().replace(/-/g, ''));
-  ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'lyrSweep').forEach(t => ScriptApp.deleteTrigger(t));
-  ScriptApp.newTrigger('lyrSweep').timeBased().everyHours(1).create();
-  lyrFolder_();
-  Logger.log('LYR_SECRET=' + P.getProperty('LYR_SECRET'));
-  Logger.log('lyrSweep hourly trigger installed; folder ' + P.getProperty('LYR_FOLDER'));
-}
-
-/** בדיקה מהעורך: מה המערכת מחליטה עבור טלפון מסוים (בלי לשלוח כלום) */
-function lyrTestStatus() { Logger.log(JSON.stringify(lyrStatus_('547689850'))); }

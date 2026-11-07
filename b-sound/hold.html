@@ -201,13 +201,14 @@ aside dt{color:#5A606A;font-size:13px}aside dd{margin:2px 0 0;font-weight:700}
 </div>
 <div id="bJingle" class="blk" hidden>
 <h2 class="it">הג'ינגל <span class="badge mus">שיר מושר עם שם העסק</span></h2>
-<label class="f" style="margin-top:14px"><span style="display:flex;justify-content:space-between"><span>אורך</span><b id="jLenO" style="color:var(--acc)"></b></span><input type="range" id="jLen" min="7" max="60" value="30"></label>
-<p class="hint" style="margin:6px 0 0">עד 15 שניות: שם העסק וסלוגן מושר. 16–30: פזמון. מעל 30: בית מחורז ופזמון.</p>
+<label class="f" style="margin-top:14px"><span style="display:flex;justify-content:space-between"><span>אורך</span><b id="jLenO" style="color:var(--acc)"></b></span><input type="range" id="jLen" min="10" max="60" value="12"></label>
+<p class="hint" style="margin:6px 0 0">ברירת המחדל: 10–15 שניות, שם העסק וסלוגן שחוזרים. 16–30: פזמון קליט. מעל 30: בית ופזמון.</p>
 <p style="margin:18px 0 8px;font-size:15px;font-weight:600">מי שר</p><div class="pills" id="jVocal"></div>
 <p style="margin:18px 0 8px;font-size:15px;font-weight:600">סגנון</p><div class="pills" id="jStyle"></div>
-<div class="acts"><button class="btn sm" id="jWrite" type="button">כתבו לי מילים</button><span id="jMsg" style="font-size:14px;color:#C9CED6"></span></div>
+<div class="acts"><button class="btn sm" id="jWrite" type="button">כתבו לי 4 אפשרויות</button><span id="jMsg" style="font-size:14px;color:#C9CED6"></span></div>
 <div id="jVers" style="display:flex;flex-direction:column;gap:10px;margin-top:14px"></div>
 <label class="f" style="margin-top:14px">המילים<textarea id="jText" rows="7" maxlength="900" class="lyr"></textarea></label>
+<div class="box" id="jAudio" style="margin-top:16px"><b style="font-size:17px">🎵 שמעו את הג'ינגל שלכם</b> <span class="badge mus">חינם</span><p class="hint" style="margin:6px 0 10px">אנחנו מלחינים ומפיקים את הג'ינגל עם המילים שבחרתם, בסגנון ובקולות שבחרתם. לוקח כחצי דקה עד דקה.</p><div class="acts" style="margin-top:0"><button class="btn sm" id="jMake" type="button">הפיקו לי את הג'ינגל</button><span id="jAMsg" style="font-size:14px;color:#C9CED6"></span></div><audio id="jPlayer" controls hidden style="width:100%;margin-top:12px"></audio><div class="acts" id="jAfter" hidden style="margin-top:8px"><button class="btn ghost sm" id="jAgain" type="button">גרסה נוספת עם אותן מילים</button><a class="btn ghost sm" id="jDl" download="jingle.mp3">הורדה</a></div></div>
 </div>
 <p class="err" id="e3" hidden></p>
 <div class="acts"><button class="btn" id="n3" type="button">המשך</button><button class="btn ghost" data-back type="button">חזרה</button></div>
@@ -362,7 +363,7 @@ var VOCALS=["זמר","זמרת","דואט","מקהלה","קולות ילדים"]
 var STYLES=["מתאים לתחום","פופ","ים תיכוני","רוק","היפ הופ","ג'אז / סווינג","אלקטרוני","אקוסטי","שמח ומקפיץ"];
 var STEPS=["העסק","מה צריך","נוסחים","קול ומוזיקה","האזנה","איך להפיק","תשלום","האזור שלכם"];
 var LIB=null;
-var S={step:1,max:1,field:"food",ai:null,product:"hold",deps:null,ivrManual:false,holdIdx:0,music:"hold-pattern",mcat:null,tone:"normal",voice:"f1",vv:100,mv:35,duck:true,jLen:30,jVocal:1,jStyle:0,jVers:null,choice:null,k:null,code:"",st:null};
+var S={step:1,max:1,field:"food",ai:null,product:"hold",deps:null,ivrManual:false,holdIdx:0,music:"hold-pattern",mcat:null,tone:"normal",voice:"f1",vv:100,mv:35,duck:true,jLen:12,jVocal:1,jStyle:0,jVers:null,choice:null,k:null,code:"",st:null};
 var A={};
 var FORM=["biz","site","fName","fSlogan","fServices","fHours","ivrIntro","ivrText","subTitle","subText","holdText","closedText","jText","name","phone","email"];
 try{var saved=JSON.parse(localStorage.getItem("bs_order2")||"null");if(saved) Object.assign(S,saved.S||{})}catch(e){saved=null}
@@ -501,7 +502,7 @@ function meters(){
 function jPills(){
   $("#jVocal").innerHTML=VOCALS.map(function(v,i){return '<button type="button" class="pill'+(i===S.jVocal?" on":"")+'" data-jv="'+i+'">'+v+'</button>'}).join("");
   $("#jStyle").innerHTML=STYLES.map(function(v,i){return '<button type="button" class="pill'+(i===S.jStyle?" on":"")+'" data-js="'+i+'">'+v+'</button>'}).join("");
-  $("#jLen").value=S.jLen;$("#jLenO").textContent=S.jLen+" שניות · "+(S.jLen<=15?"שם וסלוגן":S.jLen<=30?"פזמון":"בית ופזמון");
+  $("#jLen").value=S.jLen;$("#jLenO").textContent=S.jLen+" שניות · "+(S.jLen<=15?"שם וסלוגן":S.jLen<=30?"פזמון":"בית ופזמון");$("#jWrite").textContent=S.jVers?"כתבו לי 4 אפשרויות חדשות":"כתבו לי 4 אפשרויות";
 }
 function renderJingle(){
   jPills();
@@ -515,13 +516,29 @@ $("#jLen").oninput=function(){S.jLen=+this.value;jPills();save()};
 $("#jVers").onclick=function(e){var b=e.target.closest("[data-jver]");if(!b)return;$("#jText").value=S.jVers[+b.dataset.jver];save()};
 $("#jWrite").onclick=function(){
   var b=this;b.disabled=true;waiting($("#jMsg"),["כותבים מילים…","מחפשים חריזה טובה…","עוד כמה שניות…"]);
-  call({action:"bs_jingle",facts:facts(),field:fieldName(),len:S.jLen,style:STYLES[S.jStyle],vocal:VOCALS[S.jVocal]}).then(function(r){
+  call({action:"bs_jingle",facts:facts(),field:fieldName(),len:S.jLen,style:STYLES[S.jStyle],vocal:VOCALS[S.jVocal],avoid:S.jVers||[]}).then(function(r){
     clearInterval(waitT);b.disabled=false;
-    if(r.ok&&r.versions&&r.versions.length){S.jVers=r.versions;$("#jText").value=r.versions[0];$("#jMsg").textContent="✓ שתי גרסאות. בחרו אחת וערכו כרצונכם.";renderJingle()}
+    if(r.ok&&r.versions&&r.versions.length){S.jVers=r.versions;$("#jText").value=r.versions[0];$("#jMsg").textContent="✓ "+r.versions.length+" אפשרויות. בחרו אחת וערכו כרצונכם, או בקשו חדשות.";renderJingle()}
     else $("#jMsg").textContent="לא הצלחנו לכתוב כרגע. אפשר לכתוב בעצמכם או לנסות שוב.";
     save();
   });
 };
+var jTake=0,jUrl=null;
+function jMake(again){
+  var lyr=$("#jText").value.trim();if(lyr.length<4){$("#jAMsg").textContent="כתבו או בחרו קודם מילים.";return}
+  if(again) jTake++;
+  var b=$("#jMake"),a=$("#jAgain");b.disabled=a.disabled=true;waiting($("#jAMsg"),["מלחינים לחן…","מקליטים את הזמרים…","מערבבים את המיקס…","עוד כמה שניות…"]);
+  call({action:"bs_jingle_audio",k:S.k,lyrics:lyr,len:S.jLen,style:STYLES[S.jStyle],vocal:VOCALS[S.jVocal],take:jTake}).then(function(r){
+    clearInterval(waitT);b.disabled=a.disabled=false;
+    if(!r.ok||!r.mp3){$("#jAMsg").textContent=r.error||"ההפקה נכשלה. נסו שוב.";return}
+    var bin=atob(r.mp3),u=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i);
+    if(jUrl) URL.revokeObjectURL(jUrl);jUrl=URL.createObjectURL(new Blob([u],{type:"audio/mpeg"}));
+    var p=$("#jPlayer");p.src=jUrl;p.hidden=false;$("#jAfter").hidden=false;$("#jDl").href=jUrl;$("#jDl").hidden=!r.free;
+    $("#jDl").download=(bizName()||"jingle").replace(/[\\/:*?"<>|]/g,"")+" - jingle.mp3";
+    b.textContent="הפיקו שוב עם המילים המעודכנות";$("#jAMsg").textContent="✓ מוכן. לחצו ▶ לשמיעה.";p.play().catch(function(){});
+  });
+}
+$("#jMake").onclick=function(){jMake(false)};$("#jAgain").onclick=function(){jMake(true)};
 function items(){
   if(S.product==="jingle") return [{id:"jingle",type:"jingle",title:"ג'ינגל מושר",script:$("#jText").value}];
   var out=[];

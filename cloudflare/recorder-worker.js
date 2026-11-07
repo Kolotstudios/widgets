@@ -543,22 +543,88 @@ async function bsSite(d, env, ip) {
   try { return { ok: true, ai: true, site: meta, result: await bsWrite(env, facts, site) }; }
   catch (e) { const m = String((e && e.message) || e); return { ok: true, ai: false, busy: /429|503|timeout/.test(m), llmError: m.slice(0, 900), site: meta }; }
 }
+// Jingle lyrics: short lines (2-4 words; rap/hip-hop gets more words), rhymed, the business name repeated,
+// a call to action at the end. 4 versions each time, "write again" gives 4 new ones.
+const BS_RAP = /ראפ|היפ|hip|rap/i;
+function bsJShape(len, rap) {
+  const w = rap ? '4–7 מילים' : '2–4 מילים';
+  if (len <= 15) return { lines: rap ? '3–4' : '2–4', words: w, form: 'שם העסק + הסלוגן בלבד. שם העסק מופיע לפחות פעמיים (למשל בתחילה ובסוף). בלי בית ובלי פזמון.' };
+  if (len <= 30) return { lines: rap ? '6–8' : '4–6', words: w, form: 'פזמון אחד. שם העסק מופיע לפחות 3 פעמים. השורה האחרונה היא הנעה לפעולה קצרה.' };
+  return { lines: rap ? '10–14' : '8–10', words: w, form: 'בית קצר על מה שהעסק עושה, שורה ריקה, ואז פזמון שבו שם העסק חוזר לפחות 3 פעמים. השורה האחרונה היא הנעה לפעולה קצרה.' };
+}
 async function bsJingle(d, env, ip) {
-  if (!(await bsIpOk(env, ip, 'site', 25))) return { ok: false, error: 'הגעתם למספר הכתיבות היומי. נסו מחר או פנו אלינו' };
-  const f = bsFacts(d), len = Math.max(7, Math.min(60, d.len | 0 || 30));
-  const shape = len <= 15 ? 'שם העסק והסלוגן בלבד, מושרים בצורה קליטה (2 שורות קצרות).' : len <= 30 ? 'פזמון אחד של 3–4 שורות, שם העסק מופיע פעמיים.' : 'בית אחד של 4 שורות מחורזות על מה שהעסק עושה, ואחריו פזמון של 3–4 שורות ששם העסק מופיע בו פעמיים.';
-  const prompt = `אתה כותב ג'ינגלים מנוסה בישראל. כתוב מילים לג'ינגל מושר לעסק.
+  if (!(await bsIpOk(env, ip, 'site', 40))) return { ok: false, error: 'הגעתם למספר הכתיבות היומי. נסו מחר או פנו אלינו' };
+  const f = bsFacts(d), len = Math.max(7, Math.min(60, d.len | 0 || 12)), style = String(d.style || '').slice(0, 30), rap = BS_RAP.test(style);
+  const sh = bsJShape(len, rap);
+  const avoid = (Array.isArray(d.avoid) ? d.avoid : []).slice(0, 8).map(x => String(x).slice(0, 200)).join('\n---\n');
+  const prompt = `אתה קופירייטר וכותב ג'ינגלים מנוסה בישראל. כתוב מילים לג'ינגל מושר לעסק.
 שם העסק: "${f.name}". סלוגן: "${f.slogan}". שירותים: ${f.services.join(', ')}. תחום: "${f.field}".
-אורך: ${len} שניות. סגנון: "${String(d.style || '').slice(0, 30)}". קולות: "${String(d.vocal || '').slice(0, 30)}".
-מבנה: ${shape}
+אורך: ${len} שניות. סגנון: "${style}". קולות: "${String(d.vocal || '').slice(0, 30)}".
+מבנה: ${sh.form}
+כמות טקסט: ${sh.lines} שורות בסך הכול, ${sh.words} בכל שורה.${rap ? ' זה ראפ/היפ הופ: קצב דיבורי, חריזה פנימית מותרת.' : ' מינימליסטי: מעט מילים, הרבה חזרתיות.'}
 כללים:
-- עברית פשוטה, טבעית ותקנית. כל שורה היא משפט הגיוני שעומד בפני עצמו. אף שורה לא נכתבת רק בשביל החריזה.
-- חריזה מלאה ומוכרת עדיפה על חריזה מקורית ומאולצת. בלי מילים מוזרות או לא טבעיות.
-- שם העסק בפזמון. הפזמון קליט, קל לשיר ולזכור.
-- בלי להמציא עובדות, מחירים או מבצעים.
-החזר JSON בלבד: {"versions":[{"lyrics":""},{"lyrics":""}]} – שתי גרסאות שונות, שורות מופרדות ב-\\n.`;
-  try { const j = await bsLLM(env, prompt); return { ok: true, ai: true, versions: (j.versions || []).map(v => bsClean(v.lyrics)).filter(Boolean).slice(0, 2) }; }
-  catch (e) { return { ok: true, ai: false, llmError: String((e && e.message) || e).slice(0, 300) }; }
+- הכי חשוב בג'ינגל: חזרתיות על שם העסק. שם העסק נשמע ברור, בתחילה ובסוף.
+- כל שורה קצרה (${sh.words}). עברית פשוטה, טבעית ותקנית, קלה לשיר ולזכור.
+- חריזה מלאה בין שורות סמוכות. חריזה מוכרת עדיפה על חריזה מאולצת. אף שורה לא נכתבת רק בשביל החריזה.
+- המילים מכוונות לתחום של העסק ולמה שהלקוח מקבל.
+- הנעה לפעולה קצרה כשמתאים (למשל "התקשרו עכשיו", "בואו לטעום", "היכנסו לאתר").
+- בלי להמציא עובדות, מחירים או מבצעים. בלי סימני פיסוק מיותרים.
+${avoid ? 'אל תחזור על הגרסאות האלה, כתוב רעיונות חדשים:\n' + avoid + '\n' : ''}החזר JSON בלבד: {"versions":[{"lyrics":""},{"lyrics":""},{"lyrics":""},{"lyrics":""}]} – 4 גרסאות שונות זו מזו ברעיון, שורות מופרדות ב-\\n.`;
+  try { const j = await bsLLM(env, prompt); return { ok: true, ai: true, versions: (j.versions || []).map(v => bsClean(v.lyrics)).filter(Boolean).slice(0, 4) }; }
+  catch (e) { return { ok: true, ai: false, busy: /429|503|timeout/.test(String(e)), llmError: String((e && e.message) || e).slice(0, 300) }; }
+}
+// Sung jingle audio (ElevenLabs Music). BS_JINGLE_FREE = true while testing: anyone can generate and download.
+// Set it to false to bring back payment (then only a paid jingle order gets audio).
+const BS_JINGLE_FREE = true;
+const BS_JSTYLE = {
+  'מתאים לתחום': ['modern Israeli pop', 'bright', 'catchy'], 'פופ': ['modern pop', 'catchy hook', 'bright synths'],
+  'ים תיכוני': ['Mediterranean Israeli pop', 'darbuka', 'oud', 'festive'], 'רוק': ['pop rock', 'electric guitars', 'live drums', 'energetic'],
+  'היפ הופ': ['hip hop', 'rap vocals', 'punchy drums', 'groovy bass'], "ג'אז / סווינג": ['swing jazz', 'big band brass', 'walking bass', 'playful'],
+  'אלקטרוני': ['electronic dance pop', 'synth bass', 'four on the floor'], 'אקוסטי': ['acoustic', 'acoustic guitar', 'warm', 'claps'],
+  'שמח ומקפיץ': ['happy upbeat pop', 'claps', 'bouncy', 'feel-good']
+};
+const BS_JVOCAL = { 'זמר': 'male lead vocal', 'זמרת': 'female lead vocal', 'דואט': 'male and female duet vocals', 'מקהלה': 'group choir vocals', 'קולות ילדים': "children's choir vocals" };
+async function bsJingleAudio(d, env, ip) {
+  if (!BS_JINGLE_FREE) {
+    const o = d.k ? await getJ(env, 'bs/o/' + String(d.k).replace(/[^\w-]/g, '') + '.json') : null;
+    if (!o || !o.paid || o.pkg !== 'jingle') return { ok: false, error: "הפקת הג'ינגל זמינה אחרי ההזמנה" };
+  }
+  if (!env.ELEVENLABS_API_KEY) return { ok: false, error: 'חסר מפתח ElevenLabs בשרת' };
+  const lyrics = bsClean(String(d.lyrics || '')).slice(0, 900).trim();
+  if (lyrics.length < 4) return { ok: false, error: "כתבו קודם את מילות הג'ינגל" };
+  const len = Math.max(10, Math.min(60, d.len | 0 || 12)), style = String(d.style || 'מתאים לתחום').slice(0, 30), vocal = String(d.vocal || 'זמרת').slice(0, 30);
+  const take = Math.max(0, Math.min(20, d.take | 0));
+  const key = 'bs/j/' + (await bsHash([lyrics, len, style, vocal, take].join('|'))) + '.mp3';
+  let b = await getBin(env, key);
+  if (!b) {
+    if (!(await bsIpOk(env, ip, 'jg', 15))) return { ok: false, error: 'הגעתם למספר ההפקות היומי. נסו מחר' };
+    if (!(await bsIpOk(env, 'all', 'jg-all', 300))) return { ok: false, error: 'השירות עמוס היום. נסו מחר' };
+    const rap = BS_RAP.test(style);
+    const styles = ['catchy commercial jingle', 'radio advertisement', 'Hebrew lyrics', 'clear intelligible vocals', 'memorable hook', 'professional mix']
+      .concat(BS_JSTYLE[style] || BS_JSTYLE['מתאים לתחום'], [BS_JVOCAL[vocal] || 'female lead vocal']);
+    const neg = ['long intro', 'instrumental only', 'mumbled vocals', 'fade out'].concat(rap ? [] : ['rap', 'spoken word']);
+    const parts = lyrics.split(/\n\s*\n/).map(x => x.trim()).filter(Boolean);
+    const total = len * 1000, nLines = parts.map(x => x.split('\n').length), sum = nLines.reduce((a, c) => a + c, 0);
+    let chunks = parts.map((t, i) => ({
+      text: '[' + (parts.length > 1 && i < parts.length - 1 ? 'Verse' : 'Chorus') + ']\n' + t,
+      duration_ms: Math.max(3000, Math.round(total * nLines[i] / sum / 100) * 100),
+      positive_styles: styles, negative_styles: neg
+    }));
+    const over = chunks.reduce((a, c) => a + c.duration_ms, 0) - total; if (over) chunks[chunks.length - 1].duration_ms = Math.max(3000, chunks[chunks.length - 1].duration_ms - over);
+    const call = (body) => fetch('https://api.elevenlabs.io/v1/music?output_format=mp3_44100_128', {
+      method: 'POST', headers: { 'xi-api-key': env.ELEVENLABS_API_KEY, 'Content-Type': 'application/json', 'Accept': 'audio/mpeg' }, body: JSON.stringify(body)
+    });
+    let r = await call({ model_id: 'music_v2_5', composition_plan: { chunks } }), errs = [];
+    if (!r.ok) {
+      errs.push('v2.5 ' + r.status + ': ' + (await r.text()).slice(0, 200));
+      // plan without the newer model: a text prompt with the lyrics
+      r = await call({ model_id: 'music_v1', music_length_ms: total, prompt: 'A ' + styles.join(', ') + ' jingle, sung in Hebrew. Sing exactly these lyrics, repeat the brand name clearly:\n' + lyrics });
+    }
+    if (!r.ok) { errs.push('v1 ' + r.status + ': ' + (await r.text()).slice(0, 200)); return { ok: false, error: "הפקת הג'ינגל נכשלה. נסו שוב בעוד רגע", detail: errs.join(' | ') }; }
+    b = new Uint8Array(await r.arrayBuffer());
+    await env.BUCKET.put(key, b, { httpMetadata: { contentType: 'audio/mpeg' } });
+  }
+  return { ok: true, free: BS_JINGLE_FREE, mp3: bytesToB64(b) };
 }
 async function bsVoiceSample(d, env, ip) {
   const vmap = bsVoices(env), v = vmap[d.voice] ? d.voice : null; if (!v) return { ok: false, error: 'קול לא מוכר' };
@@ -605,6 +671,7 @@ async function bsSave(env, k, o) { o.updated = Date.now(); await putJ(env, 'bs/o
 async function bsound(d, env, ip) {
   if (d.action === 'bs_site' || d.action === 'bs_write') return bsSite(d, env, ip);
   if (d.action === 'bs_jingle') return bsJingle(d, env, ip);
+  if (d.action === 'bs_jingle_audio') return bsJingleAudio(d, env, ip);
   if (d.action === 'bs_voice_sample') return bsVoiceSample(d, env, ip);
   // lost the link? order code + the phone used in the order bring it back
   if (d.action === 'bs_find') {

@@ -549,10 +549,25 @@ async function bsSite(d, env, ip) {
 // Jingle lyrics: short lines (2-4 words; rap/hip-hop gets more words), rhymed, the business name repeated,
 // a call to action at the end. 4 versions each time, "write again" gives 4 new ones.
 const BS_RAP = /ראפ|היפ|hip|rap/i;
+// The fixed template every lyrics batch includes as version 1 (Oren's rule)
+function bsJTemplate(len, f) {
+  if (len <= 15) return `גרסה 1 חייבת להיות בדיוק במבנה הזה (קצר מאוד):
+שורה 1: ${f.name}
+שורה 2: ${f.slogan ? 'הסלוגן "' + f.slogan + '" (אפשר לקצר מעט, בלי לשנות את המשמעות)' : 'משפט קצר וקליט על העסק'}
+מותר להוסיף לכל היותר עוד שורה אחת קצרה. לא יותר מ-3 שורות.`;
+  return `גרסה 1 חייבת להיות בדיוק במבנה הזה, שורה אחרי שורה:
+שורה 1: ${f.name}
+שורה 2: משפט קצר על העסק
+שורה 3: ${f.name}
+שורה 4: משפט קצר שמתחרז עם שורה 2
+שורה 5: ${f.name}
+שורה 6: משפט קצר שמתחרז עם שורות 2 ו-4
+שורה 7: ${f.name}, ${f.name} – ${f.slogan ? 'והסלוגן "' + f.slogan + '"' : 'ומשפט סיום קליט שהוא כמו סלוגן'}`;
+}
 function bsJShape(len, rap) {
   const w = rap ? '4–7 מילים' : '2–4 מילים';
   if (len <= 15) return { lines: rap ? '3–4' : '2–4', words: w, form: 'שם העסק + הסלוגן בלבד. שם העסק מופיע לפחות פעמיים (למשל בתחילה ובסוף). בלי בית ובלי פזמון.' };
-  if (len <= 30) return { lines: rap ? '6–8' : '4–6', words: w, form: 'פזמון אחד. שם העסק מופיע לפחות 3 פעמים. השורה האחרונה היא הנעה לפעולה קצרה.' };
+  if (len <= 30) return { lines: rap ? '7–9' : '6–8', words: w, form: 'פזמון אחד. שם העסק מופיע לפחות 3 פעמים. בסוף שם העסק עם הסלוגן או הנעה לפעולה קצרה.' };
   return { lines: rap ? '10–14' : '8–10', words: w, form: 'בית קצר על מה שהעסק עושה, שורה ריקה, ואז פזמון שבו שם העסק חוזר לפחות 3 פעמים. השורה האחרונה היא הנעה לפעולה קצרה.' };
 }
 async function bsJingle(d, env, ip) {
@@ -572,7 +587,7 @@ async function bsJingle(d, env, ip) {
 - המילים מכוונות לתחום של העסק ולמה שהלקוח מקבל.
 - הנעה לפעולה קצרה כשמתאים (למשל "התקשרו עכשיו", "בואו לטעום", "היכנסו לאתר").
 - בלי להמציא עובדות, מחירים או מבצעים. בלי סימני פיסוק מיותרים.
-${avoid ? 'אל תחזור על הגרסאות האלה, כתוב רעיונות חדשים:\n' + avoid + '\n' : ''}החזר JSON בלבד: {"versions":[{"lyrics":""},{"lyrics":""},{"lyrics":""},{"lyrics":""}]} – 4 גרסאות שונות זו מזו ברעיון, שורות מופרדות ב-\\n.`;
+${len <= 30 ? bsJTemplate(len, f) + '\nגרסאות 2–4: חופשיות לפי הכללים למעלה.\n' : ''}${avoid ? 'אל תחזור על הגרסאות האלה, כתוב רעיונות חדשים:\n' + avoid + '\n' : ''}החזר JSON בלבד: {"versions":[{"lyrics":""},{"lyrics":""},{"lyrics":""},{"lyrics":""}]} – 4 גרסאות שונות זו מזו ברעיון, שורות מופרדות ב-\\n.`;
   try { const j = await bsLLM(env, prompt); return { ok: true, ai: true, versions: (j.versions || []).map(v => bsClean(v.lyrics)).filter(Boolean).slice(0, 4) }; }
   catch (e) { return { ok: true, ai: false, busy: /429|503|timeout/.test(String(e)), llmError: String((e && e.message) || e).slice(0, 300) }; }
 }
@@ -923,7 +938,7 @@ async function bsound(d, env, ip) {
   if (d.action === 'bs_jingle') return bsJingle(d, env, ip);
   if (d.action === 'bs_jingle_audio') return bsJingleAudio(d, env, ip);
   if (d.action === 'bs_jingle_poll') return bsJinglePoll(d, env);
-  if (d.action === 'bs_ver') return { ok: true, ver: 'mix2', mixer: !!env.GH_TOKEN, codes: bsCodes(env).length };
+  if (d.action === 'bs_ver') return { ok: true, ver: 'mix3', mixer: !!env.GH_TOKEN, codes: bsCodes(env).length };
   if (d.action === 'bs_tag_tts') { // source audio for the voice tag on sample jingles (fixed text, cached)
     const key = 'bs/wm-src-' + (d.v === 'm1' ? 'm1' : 'f1') + '.mp3'; let b = await getBin(env, key);
     if (!b) { b = await bsTts(env, '[excited] בִּי סָאוּנְד!', bsVoices(env)[d.v === 'm1' ? 'm1' : 'f1']); await env.BUCKET.put(key, b); }

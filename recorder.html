@@ -1613,7 +1613,7 @@ function glitchBuf(ctx,k){
   for(var i=0;i<len;i++){
     var t=i/sr,w=rnd()*2-1;
     lp+=0.35*(w-lp);hp=lp-prev;prev=lp;                         // band-limited hiss
-    var crack=rnd()<0.004?(rnd()*2-1)*1.6:0;                      // clicks and crackles
+    var crack=rnd()<0.004?(rnd()*2-1)*0.9:0;                      // clicks and crackles
     var gate=(Math.sin(2*Math.PI*rate*t)>-0.2)?1:0.15;             // stutter
     var tone=0.35*Math.sin(2*Math.PI*(900+500*Math.sin(2*Math.PI*3*t))*t); // whistle
     var env=Math.min(1,t*60)*Math.min(1,(dur-t)*25);
@@ -1622,7 +1622,7 @@ function glitchBuf(ctx,k){
   return GLITCH[key]=b;
 }
 function addWatermark(ctx,N,T,when0,offset){
-  var g=ctx.createGain();g.gain.value=0.7;g.connect(N.master);
+  var g=ctx.createGain();g.gain.value=0.3;g.connect(N.master);
   var fr=function(i){var x=Math.sin(i*12.9898+T.total*0.37)*43758.5453;return x-Math.floor(x)};
   var at=[];
   (T.items||[]).forEach(function(it,i){if(it.d>1.1&&(i%2===0||fr(i)>0.6)) at.push(it.t+it.d*(0.3+0.4*fr(i+7)))}); // on a word

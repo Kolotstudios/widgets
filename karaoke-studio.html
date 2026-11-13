@@ -321,7 +321,7 @@ body.docked{padding-bottom:120px}
         <div id="tRec" class="field" style="gap:14px" hidden>
           <div class="field"><h3>איך שרים?</h3>
             <div class="seg" id="modeSeg"><button data-m="phones" aria-pressed="true">עם אוזניות (מומלץ)</button><button data-m="speaker" aria-pressed="false">בלי אוזניות</button></div>
-            <p class="note" id="modeNote">עם אוזניות שומעים את השיר בלי שהמוזיקה נכנסת להקלטה, וזו האיכות הכי טובה. כדאי אוזניות חוטיות: באוזניות בלוטות' יש עיכוב.</p></div>
+            <p class="note" id="modeNote">עם אוזניות שומעים את השיר בלי שהמוזיקה נכנסת להקלטה, וזו האיכות הכי טובה. הסנכרון מול השיר נעשה אוטומטית אחרי ההקלטה.</p></div>
           <div class="field"><h3>מאיפה מקליטים?</h3>
             <div class="seg" id="fromSeg"><button data-f="start" aria-pressed="true">מתחילת השיר</button><button data-f="here" aria-pressed="false">מהמקום הנוכחי</button></div></div>
           <p class="note">כפתור ההקלטה נמצא בתחתית המסך. בזמן ההקלטה המילים נשארות למעלה.</p>
@@ -337,11 +337,12 @@ body.docked{padding-bottom:120px}
               </div></div>
             <div class="field"><h3>תיקון זיופים</h3>
               <div class="seg" id="tuneSeg"><button data-t="0" aria-pressed="true">כבוי</button><button data-t="1" aria-pressed="false">עדין</button><button data-t="2" aria-pressed="false">בינוני</button><button data-t="3" aria-pressed="false">חזק</button></div>
-              <p class="note">המערכת בונה מפת תווים מהשירה של הזמר המקורי, ומזיזה כל תו שלכם כשלם אל התו שלו, עם הוויברטו והסלסולים שלכם. תווים שכבר מדויקים לא נוגעים בהם. עדין ובינוני נשמעים טבעיים, חזק מיישר את הצליל כמו אוטוטיון.</p>
+              <p class="note">תווי המטרה נלקחים מהשירה של הזמר המקורי, והקול מוזז אליהם בשיטה של Auto-Tune: דגימה מחדש עם חיבורי מחזור, בלי לגעת בגוון. עדין ובינוני מזיזים את התו למקומו ומשאירים את הוויברטו והגלישות שלכם, חזק נועל את הצליל על התו.</p>
               <p class="status" id="tuneMsg"></p><p class="note" id="keyMap"></p></div>
-            <div class="field" id="cleanBox"><h3>ניקוי מוזיקה מההקלטה</h3>
-              <p class="note">כששרים בלי אוזניות, המוזיקה מהרמקול נכנסת להקלטה. הניקוי משאיר רק את הקול שלכם. ההקלטה נשלחת לשרת ההפרדה ונמחקת ממנו מיד אחרי.</p>
-              <div class="row"><button class="btn" id="cleanBtn">ניקוי המוזיקה מההקלטה</button><label class="check" id="useCleanBox" hidden><input type="checkbox" id="useClean" checked> להשתמש בגרסה הנקייה</label></div>
+            <div class="field" id="cleanBox"><h3>סנכרון וניקוי מוזיקה</h3>
+              <p class="status" id="syncMsg"></p>
+              <p class="note">אם נשארת מוזיקה ברקע של הקול, הניקוי העמוק שולח את ההקלטה לשרת ההפרדה (היא נמחקת ממנו מיד אחרי) ומשאיר רק את הקול.</p>
+              <div class="row"><button class="btn" id="cleanBtn">ניקוי עמוק</button><label class="check" id="useCleanBox" hidden><input type="checkbox" id="useClean" checked> להשתמש בגרסה הנקייה</label></div>
               <p class="status" id="cleanMsg"></p></div>
             <details class="adv"><summary>כיוון ידני של העיבוד</summary>
               <div class="knobs" id="knobs"></div>
@@ -378,11 +379,11 @@ body.docked{padding-bottom:120px}
 <div class="dlg" id="dlg" hidden><div class="card" role="dialog" aria-modal="true"><p id="dlgMsg" style="margin:0"></p><div class="row"><button class="btn primary" id="dlgOk">אישור</button><button class="btn ghost" id="dlgNo">ביטול</button></div></div></div>
 <div class="toast" id="toast" hidden></div>
 
-<script src="ks-dsp.js?v=2026-11-07h"></script>
+<script src="ks-dsp.js?v=2026-11-13a"></script>
 <script>
 (function(){
 "use strict";
-var VER="2026-11-07h",TERMS_V="1";
+var VER="2026-11-13a",TERMS_V="1";
 var API="https://kolot-recorder.kolot-studios.workers.dev";
 var $=function(s){return document.getElementById(s)};
 var AC=window.AudioContext||window.webkitAudioContext,OAC=window.OfflineAudioContext||window.webkitOfflineAudioContext;
@@ -542,7 +543,7 @@ $("waitBack").onclick=function(){waitTok++;goHome()};
 /* ---------- open a song ---------- */
 function openSong(id){
   waitTok++;stopAll();
-  S=Object.assign(S,{song:null,lines:[],words:null,stems:{v:null,i:null},keyed:{},semi:0,ref:null,refP:null,refSaved:null,takes:[],sel:-1});
+  S=Object.assign(S,{song:null,lines:[],words:null,stems:{v:null,i:null},keyed:{},semi:0,ref:null,refP:null,refSaved:null,takes:[],sel:-1,instLvl:0});
   view("vWait");$("waitTitle").textContent="פותחים את השיר";$("waitMsg").textContent="טוען…";$("waitBar").style.width="5%";
   api("ks_song",{id:id}).then(function(r){
     if(r.song.status!=="done"){waitSong(id,r.song.title);return}
@@ -570,13 +571,13 @@ var PL={playing:false,when:0,off:0,nodes:null,raf:0,tok:0};
 function pos(){return PL.playing?PL.off+(AX.currentTime-PL.when):PL.off}
 function curKeyed(){return S.keyed[S.semi]||S.keyed[0]}
 // voice processing: offline (noise reduction, tuning, de-ess) + live nodes (EQ, warm compression, saturation, room, long reverb, echo)
-var KDEF=[["nr","ניקוי רעשים",0,100,1,"%",1],["deess","דה-אסר",0,100,1,"%",1],["comp","קומפרסיה",0,100,1,"%"],["warm","חום",0,100,1,"%"],["hicut","הורדת גבוהים",0,8,0.5," dB"],
+var KDEF=[["nr","ניקוי רעשים",0,100,1,"%",1],["gate","חיתוך שקטים",0,100,1,"%",1],["deess","דה-אסר",0,100,1,"%",1],["comp","קומפרסיה",0,100,1,"%"],["warm","חום",0,100,1,"%"],["hicut","הורדת גבוהים",0,8,0.5," dB"],
   ["room","חדר קטן",0,100,1,"%"],["verb","ריוורב ארוך",0,100,1,"%"],["dly","דיליי",0,100,1,"%"],["dtime","זמן דיליי",60,450,5," ms"],["fb","פידבק",0,92,1,"%"],["vol","עוצמת הקול",-12,12,0.5," dB"],["sync","סנכרון מול השיר",-300,300,5," ms"]];
 var PRE={
-  natural:{nr:50,deess:50,comp:45,warm:25,hicut:3,room:22,verb:12,dly:7,dtime:125,fb:72,vol:0},
-  pop:{nr:50,deess:60,comp:60,warm:35,hicut:2,room:14,verb:22,dly:11,dtime:110,fb:70,vol:0},
-  echo:{nr:50,deess:55,comp:50,warm:30,hicut:3,room:10,verb:28,dly:17,dtime:135,fb:86,vol:0},
-  dry:{nr:0,deess:0,comp:0,warm:0,hicut:0,room:0,verb:0,dly:0,dtime:125,fb:0,vol:0}
+  natural:{nr:50,gate:80,deess:50,comp:45,warm:25,hicut:3,room:22,verb:12,dly:7,dtime:125,fb:72,vol:0},
+  pop:{nr:50,gate:80,deess:60,comp:60,warm:35,hicut:2,room:14,verb:22,dly:11,dtime:110,fb:70,vol:0},
+  echo:{nr:50,gate:80,deess:55,comp:50,warm:30,hicut:3,room:10,verb:28,dly:17,dtime:135,fb:86,vol:0},
+  dry:{nr:0,gate:0,deess:0,comp:0,warm:0,hicut:0,room:0,verb:0,dly:0,dtime:125,fb:0,vol:0}
 };
 S.k=Object.assign({sync:0},PRE.natural);
 function vp(k){return {hicut:-k.hicut,thr:-8-k.comp*0.22,ratio:2+k.comp*0.025,makeup:k.comp*0.07,wet:k.warm/100*0.6,drive:1+k.warm*0.05,room:k.room/100*0.35,verb:k.verb/100*0.42,dly:k.dly/100*0.38,dtime:k.dtime/1000,fb:Math.min(0.92,k.fb/100),vol:k.vol}}
@@ -882,7 +883,7 @@ var WL="class R extends AudioWorkletProcessor{constructor(){super();this.t0=1e9;
   "for(let k=s;k<ch.length;k++){this.b[this.n++]=ch[k];if(this.n===4096){this.port.postMessage({pcm:this.b});this.b=new Float32Array(4096);this.n=0}}}return true}}registerProcessor('ks-rec',R);";
 function micOpen(mode){
   var c=ax();setSession("play-and-record");
-  return navigator.mediaDevices.getUserMedia({audio:{echoCancellation:mode==="speaker",noiseSuppression:false,autoGainControl:false,channelCount:1}}).then(function(stream){
+  return navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false,channelCount:1}}).then(function(stream){
     REC.stream=stream;
     return (REC.wl?Promise.resolve():c.audioWorklet.addModule(URL.createObjectURL(new Blob([WL],{type:"application/javascript"}))).then(function(){REC.wl=true})).then(function(){
       REC.src=c.createMediaStreamSource(stream);REC.node=new AudioWorkletNode(c,"ks-rec",{numberOfInputs:1,numberOfOutputs:1,channelCount:1,channelCountMode:"explicit"});
@@ -893,10 +894,10 @@ function micOpen(mode){
 }
 function micClose(){try{REC.src.disconnect();REC.node.disconnect();REC.sink.disconnect()}catch(e){}if(REC.stream)REC.stream.getTracks().forEach(function(t){t.stop()});REC.stream=null;REC.node=null;setSession("playback")}
 function meter(v){if(!REC.on)return;var m=$("meter");m.hidden=false;$("meterI").style.width=Math.min(100,Math.round(Math.sqrt(v)*100))+"%";m.classList.toggle("hot",v>0.95)}
-function autoLat(mode){var saved=+ls("ks_lat_"+mode);if(saved)return saved/1000;var o=(AX.outputLatency||0)+(AX.baseLatency||0),i=0;try{i=REC.stream.getAudioTracks()[0].getSettings().latency||0}catch(e){}return Math.min(0.5,o+i||0.03)}
+function autoLat(mode){var saved=+ls("ks_lat_dev")||+ls("ks_lat_"+mode);if(saved)return saved/1000;var o=(AX.outputLatency||0)+(AX.baseLatency||0),i=0;try{i=REC.stream.getAudioTracks()[0].getSettings().latency||0}catch(e){}return Math.min(0.5,o+i||0.03)}
 $("modeSeg").onclick=function(e){var b=e.target.closest("button");if(!b||REC.on)return;S.mode=b.dataset.m;setPressed($("modeSeg"),"m",S.mode);
-  $("modeNote").textContent=S.mode==="phones"?"עם אוזניות שומעים את השיר בלי שהמוזיקה נכנסת להקלטה, וזו האיכות הכי טובה. כדאי אוזניות חוטיות: באוזניות בלוטות' יש עיכוב.":
-   "בלי אוזניות: השיר מתנגן ברמקול בלי הקול של הזמר, כדי שלא ייכנס להקלטה. אחרי ההקלטה כדאי ללחוץ \"ניקוי המוזיקה מההקלטה\". מומלץ לשים את הטלפון קרוב לפה ואת הרמקול בעוצמה בינונית."};
+  $("modeNote").textContent=S.mode==="phones"?"עם אוזניות שומעים את השיר בלי שהמוזיקה נכנסת להקלטה, וזו האיכות הכי טובה. הסנכרון מול השיר נעשה אוטומטית אחרי ההקלטה.":
+   "בלי אוזניות: השיר מתנגן ברמקול בלי הקול של הזמר. אחרי ההקלטה המערכת מודדת את העיכוב לפי המוזיקה שנכנסה להקלטה, מסנכרנת ומסירה את המוזיקה אוטומטית. מומלץ לשיר קרוב לטלפון ולא להגביר את הרמקול עד הסוף."};
 $("fromSeg").onclick=function(e){var b=e.target.closest("button");if(!b||REC.on)return;S.from=b.dataset.f;setPressed($("fromSeg"),"f",S.from)};
 $("recBtn").onclick=function(){startRec()};
 $("stopBtn").onclick=function(){stopRec()};
@@ -909,7 +910,7 @@ function startRec(){
     try{window.scrollTo({top:Math.max(0,$("stage").getBoundingClientRect().top+window.scrollY-8),behavior:"smooth"})}catch(e){}
     var T0=c.currentTime+3.3;REC.T0=T0;REC.node.port.postMessage({start:T0});
     var big=$("big3");big.hidden=false;[3,2,1].forEach(function(n,i){setTimeout(function(){if(REC.on)big.textContent=n},i*1000)});setTimeout(function(){big.hidden=true;if(REC.on)$("stRec").hidden=false},3200);
-    var g=REC.mode==="speaker"?0:guideGain();
+    var g=REC.mode==="speaker"?0:guideGain();REC.gV=g;REC.gI=S.inst;REC.semi=S.semi;
     play(p0,{when:T0,noTake:true,guide:g});
     REC.timer=setInterval(function(){if(REC.on&&AX.currentTime>T0){$("recMsg").textContent="מקליט… "+fmt(AX.currentTime-T0);$("stopBtn").textContent="■ עצירה · "+fmt(AX.currentTime-T0)}},500);
   }).catch(function(e){$("recBtn").disabled=false;$("recMsg").textContent=/Permission|NotAllowed/i.test(e&&e.name||e)?"✗ אין הרשאה למיקרופון. מאשרים גישה למיקרופון בדפדפן ומנסים שוב.":"✗ "+(e.message||e);micClose()});
@@ -922,13 +923,41 @@ function stopRec(discard){
     var lat=autoLat(REC.mode);micClose();
     if(discard||played<2){$("recMsg").textContent=played<2?"ההקלטה קצרה מדי":"";return}
     var n=REC.chunks.reduce(function(a,c){return a+c.length},0),pcm=new Float32Array(n),o=0;REC.chunks.forEach(function(c){pcm.set(c,o);o+=c.length});REC.chunks=[];
-    var tk={n:(S.takes.length?S.takes[S.takes.length-1].n:0)+1,raw:pcm,sr:AX.sampleRate,p0:REC.p0,lat:lat,adj:0,mode:REC.mode,clean:null,useClean:false,cleanN:null,prepKey:"",at:Date.now()};
+    var tk={n:(S.takes.length?S.takes[S.takes.length-1].n:0)+1,raw:pcm,sr:AX.sampleRate,p0:REC.p0,lat:lat,adj:0,mode:REC.mode,clean:null,useClean:false,cleanN:null,prepKey:"",at:Date.now(),sync:"guess"};
     S.takes.push(tk);if(S.takes.length>6){S.takes.shift()}S.sel=S.takes.length-1;$("withTake").checked=true;
-    renderTakes();$("recMsg").textContent="✓ ההקלטה מוכנה. מנגנים כדי לשמוע אותה עם השיר.";
-    if(tk.mode==="speaker"){$("cleanMsg").textContent="מומלץ: ניקוי המוזיקה מההקלטה."}
-    play(Math.max(0,tk.p0));
+    renderTakes();
+    analyzeTake(tk,{gI:REC.gI,gV:REC.gV,semi:REC.semi}).then(function(){
+      renderTakes();$("recMsg").textContent="✓ ההקלטה מוכנה. מנגנים כדי לשמוע אותה עם השיר.";play(Math.max(0,tk.p0));
+    });
   });
 }
+// after a recording: measure the latency from the playback that leaked into the take (or from the melody with headphones),
+// remove that playback with the known playback as reference, and map the take's pitch - all once, in the background
+function analyzeTake(tk,rec){
+  var msg=$("recMsg"),kb=S.keyed[rec.semi]||curKeyed(),n=tk.raw.length,sr=tk.sr,o0=Math.round(tk.p0*sr),ref=new Float32Array(n);
+  [[kb.i,rec.gI],[kb.v,rec.gV]].forEach(function(x){var b=x[0],g=x[1];if(!b||!g)return;for(var c=0;c<b.numberOfChannels;c++){var d=b.getChannelData(c),gg=g/b.numberOfChannels,m=Math.min(n,d.length-o0);for(var i=0;i<m;i++)ref[i]+=d[o0+i]*gg}});
+  msg.textContent="מנתחים את ההקלטה: סנכרון מול השיר…";
+  var rt=S.ref?Promise.resolve(S.ref):refTrack().catch(function(){return null}),mic=tk.raw.slice(0);
+  return rt.then(function(r){
+    return job(0,{op:"post",mic:mic,ref:ref,sr:sr,p0:tk.p0,lat0:tk.lat,refTrack:r?r.f0.slice(0):null,refHop:r?r.hop:0.01},[mic.buffer,ref.buffer],function(p,note){
+      msg.textContent=note==="model"?"טוענים את מנוע זיהוי התווים (פעם ראשונה במכשיר)…":p<0.7?"מנתחים את ההקלטה: סנכרון והסרת המוזיקה שנכנסה למיקרופון… "+Math.round(p/0.7*100)+"%":"ממפים את התווים ששרתם… "+Math.round((p-0.7)/0.3*100)+"%"});
+  }).then(function(r){
+    tk.dry=r.y;tk.track=r.f0;tk.trackNeural=r.neural;tk.bleed=r.bleed;tk.cutDb=r.cutDb;tk.prepKey="";
+    // playback clearly in the take: its delay is the latency. Only a trace of it (headphones): believe it when the peak is unmistakable
+    var melOk=r.mel&&r.mel.conf>15&&r.mel.n>=20,melEst=melOk?Math.max(0,Math.min(0.5,tk.lat+r.mel.lag)):null;
+    if(r.delay>=0&&r.delay<0.45&&(r.bleed?r.conf>=12:(r.conf>=20&&r.ratio>=2&&(!melOk||Math.abs(r.delay-melEst)<0.1)))){tk.lat=r.delay;tk.sync=r.bleed?"bleed":"leak";ls("ks_lat_dev",String(Math.round(r.delay*1000)))}
+    else if(melOk){var saved=+ls("ks_lat_dev")/1000,est=melEst;
+      // the melody is a good but coarser clock: if it agrees with what this device measured before, keep the measured value
+      if(saved&&Math.abs(est-saved)<0.05){tk.lat=saved;tk.sync="saved"}else{tk.lat=est;tk.sync="melody"}}
+    else tk.sync=+ls("ks_lat_dev")?"saved":"guess";
+  }).catch(function(e){tk.sync="guess";msg.textContent="✗ הניתוח נכשל ("+e.message+"). ממשיכים עם ההקלטה כמו שהיא."});
+}
+function syncText(tk){var ms=Math.round(tk.lat*1000);
+  if(tk.sync==="bleed")return "✓ סנכרון אוטומטי: "+ms+" ms, נמדד מהמוזיקה שנכנסה להקלטה. המוזיקה הוסרה מהקול אוטומטית.";
+  if(tk.sync==="leak")return "✓ סנכרון אוטומטי: "+ms+" ms, נמדד מדליפת האוזניות שבהקלטה.";
+  if(tk.sync==="melody")return "✓ סנכרון אוטומטי: "+ms+" ms, לפי התאמת השירה למלודיה של הזמר המקורי.";
+  if(tk.sync==="saved")return "✓ סנכרון: "+ms+" ms, לפי המדידה האחרונה במכשיר הזה.";
+  return "סנכרון משוער: "+ms+" ms. אם השירה לא יושבת על הפלייבק, מכוונים בכפתור \"סנכרון מול השיר\".";}
 function takeAt(tk){return tk.p0-tk.lat+tk.adj/1000}
 function renderTakes(){
   var box=$("takes");box.innerHTML="";
@@ -939,11 +968,11 @@ function renderTakes(){
     box.appendChild(el)});
   var tk=S.takes[S.sel];$("takeBox").hidden=!tk;$("withTakeBox").hidden=!tk;
   if(tk){drawKnob("sync");$("useCleanBox").hidden=!tk.clean;$("useClean").checked=tk.useClean;$("cleanBtn").hidden=!!tk.clean||tk.cleanN!=null;
-    $("latNote").textContent="עיכוב שנמדד: "+Math.round(tk.lat*1000)+" ms"}
+    $("latNote").textContent="עיכוב: "+Math.round(tk.lat*1000)+" ms";$("syncMsg").textContent=syncText(tk)}
   updOut();
 }
 // noise reduction, tuning and de-ess are rendered once per setting (in the background); the rest are live nodes
-var TUNE=[null,{center:0.6,flat:0,ramp:0.06},{center:1,flat:0.15,ramp:0.04},{center:1,flat:0.7,ramp:0.04}];
+var TUNE=[null,{center:0.6,speed:0.26},{center:1,speed:0.18},{center:1,speed:0.05,grid:true}];
 function encTrack(f){var b=new Uint8Array(f.length*2),dv=new DataView(b.buffer);for(var i=0;i<f.length;i++)dv.setInt16(i*2,f[i]>0?Math.round(1200*Math.log2(f[i]/10)):0,true);var s="";for(i=0;i<b.length;i+=8192)s+=String.fromCharCode.apply(null,b.subarray(i,i+8192));return btoa(s)}
 function decTrack(t){var s=atob(t),n=s.length>>1,f=new Float32Array(n);for(var i=0;i<n;i++){var v=(s.charCodeAt(i*2)|(s.charCodeAt(i*2+1)<<8))<<16>>16;f[i]=v>0?10*Math.pow(2,v/1200):0}return f}
 var KN_HE=["דו","דו#","רה","מי♭","מי","פה","פה#","סול","לה♭","לה","סי♭","סי"];
@@ -965,24 +994,27 @@ function refTrack(){
   return S.refP;
 }
 function prepTake(tk){
-  var k=S.k,src=tk.useClean&&tk.clean?tk.clean:tk.raw,key=[tk.useClean&&tk.clean?"c":"r",S.tune,S.semi,tk.adj,k.nr,k.deess].join("|"),start=takeAt(tk);
+  var useC=tk.useClean&&tk.clean,k=S.k,src=useC?tk.clean:(tk.dry||tk.raw),key=[useC?"c":tk.dry?"d":"r",S.tune,S.semi,tk.adj,Math.round(tk.lat*1000),k.nr,k.deess,k.gate].join("|"),start=takeAt(tk);
   if(tk.prepKey===key&&tk.prep)return Promise.resolve({buf:tk.prep,start:start});
   if(tk.prepP&&tk.prepPKey===key)return tk.prepP;
   var tn=S.tune>0?TUNE[S.tune]:null,msg=$("recMsg");msg.textContent="מעבדים את הקול…";
   tk.prepPKey=key;tk.prepP=(tn?refTrack():Promise.resolve(null)).then(function(ref){var x=src.slice(0);
-    return job(0,{op:"voice",x:x,sr:tk.sr,nr:k.nr/100,deess:k.deess/100,neural:true,tune:tn?Object.assign({semi:S.semi,lag:start,keys:ref&&ref.keys||null},tn):null,ref:ref?ref.f0.slice(0):null,refHop:ref?ref.hop:0.01},[x.buffer],
+    return job(0,{op:"voice",x:x,sr:tk.sr,nr:k.nr/100,deess:k.deess/100,gate:k.gate/100,neural:true,track:!useC&&tk.track?tk.track.slice(0):null,trackNeural:tk.trackNeural,tune:tn?Object.assign({semi:S.semi,lag:start,keys:ref&&ref.keys||null},tn):null,ref:ref?ref.f0.slice(0):null,refHop:ref?ref.hop:0.01},[x.buffer],
       function(p,note){msg.textContent=note==="model"?"טוענים את מנוע זיהוי התווים (פעם ראשונה במכשיר, כמה עשרות MB)…":(tn?"מעבדים את הקול ומתקנים זיופים… ":"מעבדים את הקול… ")+Math.round(p*100)+"%"});
   }).then(function(r){
     // level: active parts to about -18 dBFS before the compressor
     var y=r.y,hop=Math.round(tk.sr*0.05),lv=[],i;for(i=0;i+hop<=y.length;i+=hop){var s2=0;for(var q=i;q<i+hop;q+=4)s2+=y[q]*y[q];lv.push(Math.sqrt(s2/(hop/4)))}
-    lv.sort(function(a,b){return a-b});var act=lv[Math.floor(lv.length*0.85)]||0.05,gain=Math.max(0.3,Math.min(12,0.13/(act||0.13))),pk=0;
+    lv.sort(function(a,b){return a-b});var act=lv[Math.floor(lv.length*0.85)]||0.05,gain=Math.max(0.3,Math.min(12,voiceTarget()/(act||0.13))),pk=0;
     for(i=0;i<y.length;i++){y[i]*=gain;var v=Math.abs(y[i]);if(v>pk)pk=v}if(pk>0.98){var g2=0.98/pk;for(i=0;i<y.length;i++)y[i]*=g2}
     tk.prep=mkBuf([y],tk.sr);tk.prepKey=key;tk.prepP=null;msg.textContent="";
-    $("tuneMsg").textContent=r.stats?"✓ "+r.stats.notes+" תווים זוהו בשירה שלך, "+r.stats.moved+" מהם כוונו לתו של הזמר המקורי"+(r.stats.neural?" (מנוע זיהוי נוירוני).":"."):"";
+    $("tuneMsg").textContent=r.stats&&r.stats.notes!=null?"✓ "+r.stats.notes+" תווים זוהו בשירה שלך, "+r.stats.moved+" מהם כוונו לתו של הזמר המקורי.":"";
     return {buf:tk.prep,start:start};
   },function(e){tk.prepP=null;throw e});
   return tk.prepP;
 }
+// the voice is set against the playback's own level, so quiet and loud songs both get a voice that sits on top
+function voiceTarget(){if(!S.instLvl){var b=S.stems.i,d=b.getChannelData(0),hop=Math.round(b.sampleRate*0.05),lv=[];for(var i=0;i+hop<=d.length;i+=hop*4){var s=0;for(var q=i;q<i+hop;q+=8)s+=d[q]*d[q];lv.push(Math.sqrt(s/(hop/8)))}lv.sort(function(a,b){return a-b});S.instLvl=lv[Math.floor(lv.length*0.85)]||0.15}
+  return Math.max(0.09,Math.min(0.2,S.instLvl*0.8))}
 function retake(){if(PL.playing&&$("withTake").checked&&S.sel>=0)play(pos())}
 // knobs
 var KN={};
@@ -1017,13 +1049,13 @@ function drawKnobs(){Object.keys(KN).forEach(drawKnob)}
 var liveT=0;
 function knobChanged(id,final){
   if(id!=="sync"&&id!=="vol"){var p=PRE[S.fx];if(p&&p[id]!==S.k[id]){S.fx="custom";setPressed($("fxSeg"),"p","custom")}}
-  if(id==="nr"||id==="deess"||id==="sync"){if(final)retake();return}
+  if(id==="nr"||id==="deess"||id==="gate"||id==="sync"){if(final)retake();return}
   liveVoice();
 }
 function liveVoice(){var N=PL.nodes&&PL.nodes.vc;if(!N)return;var P=vp(S.k);N.hc.gain.value=P.hicut;N.comp.threshold.value=P.thr;N.comp.ratio.value=P.ratio;
   setGain(N.g.gain,Math.pow(10,(P.vol+P.makeup)/20)*N.voice);setGain(N.dry.gain,1-P.wet*0.5);setGain(N.wet.gain,P.wet);N.ws.curve=satCurve(P.drive);
   setGain(N.rg.gain,P.room);setGain(N.vg.gain,P.verb);setGain(N.di.gain,P.dly);N.dl.delayTime.setTargetAtTime(P.dtime,AX.currentTime,0.05);setGain(N.fg.gain,P.fb)}
-function applyPreset(name){var p=PRE[name];if(!p)return;var reproc=p.nr!==S.k.nr||p.deess!==S.k.deess;S.fx=name;setPressed($("fxSeg"),"p",name);Object.keys(p).forEach(function(k){S.k[k]=p[k]});drawKnobs();if(reproc)retake();else liveVoice()}
+function applyPreset(name){var p=PRE[name];if(!p)return;var reproc=p.nr!==S.k.nr||p.deess!==S.k.deess||p.gate!==S.k.gate;S.fx=name;setPressed($("fxSeg"),"p",name);Object.keys(p).forEach(function(k){S.k[k]=p[k]});drawKnobs();if(reproc)retake();else liveVoice()}
 $("fxSeg").onclick=function(e){var b=e.target.closest("button");if(b)applyPreset(b.dataset.p)};
 $("tuneSeg").onclick=function(e){var b=e.target.closest("button");if(!b)return;S.tune=+b.dataset.t;setPressed($("tuneSeg"),"t",S.tune);if(!S.tune)$("tuneMsg").textContent="";retake()};
 $("withTake").onchange=function(){if(PL.playing)play(pos())};
@@ -1046,8 +1078,8 @@ $("calBtn").onclick=function(){
       var d=[];times.forEach(function(t){var s0=Math.round((t-t0)*sr);if(s0<0)return;var th=Math.max(floor*3,0.02);for(i=s0;i<Math.min(n,s0+Math.round(sr*0.45));i++)if(Math.abs(hp[i])>th){d.push((i-s0)/sr);break}});
       d.sort(function(a,b){return a-b});
       if(d.length<3){$("latNote").textContent="המדידה לא הצליחה (לא נשמעו הצפצופים). מגבירים את הרמקול ומנסים שוב, או מכוונים ידנית.";$("calBtn").disabled=false;return}
-      var lat=d[Math.floor(d.length/2)];ls("ks_lat_phones",String(Math.round(lat*1000)));ls("ks_lat_speaker",String(Math.round(lat*1000)));
-      var tk=S.takes[S.sel];if(tk){tk.lat=lat;tk.prepKey="";}
+      var lat=d[Math.floor(d.length/2)];ls("ks_lat_dev",String(Math.round(lat*1000)));
+      var tk=S.takes[S.sel];if(tk){tk.lat=lat;tk.sync="saved";tk.prepKey="";$("syncMsg").textContent=syncText(tk)}
       $("latNote").textContent="✓ עיכוב שנמדד: "+Math.round(lat*1000)+" ms. נשמר להקלטות הבאות במכשיר הזה.";$("calBtn").disabled=false;retake();
     },start-c.currentTime+6*0.7+0.8);
   }).catch(function(){$("latNote").textContent="✗ אין הרשאה למיקרופון";$("calBtn").disabled=false});
@@ -1056,14 +1088,14 @@ $("calBtn").onclick=function(){
 /* music removal from a take (MVSEP on the server) */
 $("cleanBtn").onclick=function(){
   var tk=S.takes[S.sel];if(!tk||tk.cleanN!=null)return;var id=S.song.id;$("cleanBtn").disabled=true;$("cleanMsg").textContent="מכינים את ההקלטה…";
-  encMp3([tk.raw],tk.sr,160).then(function(m){var blob=m||wav([tk.raw],tk.sr);$("cleanMsg").textContent="שולחים…";return postBin({ks:"clean",id:id},blob,blob.type,function(p){$("cleanMsg").textContent="שולחים… "+Math.round(p*100)+"%"})})
+  var srcC=tk.dry||tk.raw;encMp3([srcC],tk.sr,160).then(function(m){var blob=m||wav([srcC],tk.sr);$("cleanMsg").textContent="שולחים…";return postBin({ks:"clean",id:id},blob,blob.type,function(p){$("cleanMsg").textContent="שולחים… "+Math.round(p*100)+"%"})})
    .then(function(r){tk.cleanN=r.n;renderTakes();var t0=Date.now();
      return (function poll(){return sleep(5000).then(function(){return api("ks_clean_status",{id:id,n:r.n})}).then(function(s){
        if(s.status==="done")return true;if(s.status==="failed")throw new Error(s.err||"הניקוי נכשל");
        $("cleanMsg").textContent="מנקים את המוזיקה… "+fmt((Date.now()-t0)/1000);return poll()})})();
    }).then(function(){$("cleanMsg").textContent="מורידים את הגרסה הנקייה…";return getBuf(fileUrl(id,"c"+tk.cleanN))})
    .then(function(ab){return ax().decodeAudioData(ab)}).then(function(b){var y=mono(b);if(b.sampleRate!==tk.sr)y=KSDSP.resample(y,b.sampleRate/tk.sr,Math.round(y.length*tk.sr/b.sampleRate));
-     tk.clean=alignTo(tk.raw,y,tk.sr);tk.useClean=true;tk.prepKey="";renderTakes();$("cleanMsg").textContent="✓ המוזיקה נוקתה מההקלטה.";retake()})
+     tk.clean=alignTo(srcC,y,tk.sr);tk.useClean=true;tk.prepKey="";renderTakes();$("cleanMsg").textContent="✓ המוזיקה נוקתה מההקלטה.";retake()})
    .catch(function(e){$("cleanMsg").textContent="✗ "+e.message;tk.cleanN=null;renderTakes()}).then(function(){$("cleanBtn").disabled=false});
 };
 // line the cleaned file up with the original take (codec delays), then trim/pad to the same length
@@ -1185,7 +1217,7 @@ $("lnCreate").onclick=function(){var name=$("lnName").value.trim();if(!name)retu
   api("ks_s_link_new",{name:name,phone:$("lnPhone").value.trim(),quota:+$("lnQuota").value||5,days:+$("lnDays").value||90}).then(function(){$("lnName").value="";$("lnPhone").value="";toast("✓ הקישור נוצר");loadLinks()}).catch(function(e){toast(e.message)}).then(function(){$("lnCreate").disabled=false})};
 
 window.addEventListener("beforeunload",function(e){if(S.takes.length||REC.on||S.dirty){e.preventDefault();e.returnValue=""}});
-window.__ks={S:S,PL:PL,REC:REC,play:play,stopPlay:stopPlay,openSong:openSong,alignWords:alignWords,linesFromWords:linesFromWords,prepTake:prepTake,renderMix:renderMix,drawCanvas:drawCanvas,keyedFor:keyedFor,setApi:function(u){API=u},AUTH:AUTH};
+window.__ks={S:S,PL:PL,REC:REC,analyzeTake:analyzeTake,play:play,stopPlay:stopPlay,openSong:openSong,alignWords:alignWords,linesFromWords:linesFromWords,prepTake:prepTake,renderMix:renderMix,drawCanvas:drawCanvas,keyedFor:keyedFor,setApi:function(u){API=u},AUTH:AUTH};
 boot();
 })();
 </script>

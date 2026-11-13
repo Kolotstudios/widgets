@@ -285,8 +285,8 @@ var KSDSP = (function () {
      to the target, so vibrato and expression stay; `flat` also straightens the pitch inside the note
      (the "autotune" sound). Returns cents per 10 ms frame, smoothed without delay. */
   function plan(user, ref, opts) {
-    var semi = opts.semi || 0, lag = opts.lag || 0, cen = opts.center == null ? 1 : opts.center, flat = opts.flat || 0, ramp = opts.ramp || 0.04;
-    var hop = user.hop, n = user.f0.length, rn = notes(ref, true), un = notes(user, true), f, i;
+    var semi = opts.semi || 0, lag = opts.lag || 0, cen = opts.center == null ? 1 : opts.center, speed = opts.speed || 0.18;
+    var hop = user.hop, n = user.f0.length, rn = notes(ref, true), un = notes(user, true), f, i, j;
     rn.forEach(function (r) { r.m += semi; r.ts = r.s * ref.hop; r.te = r.e * ref.hop; });
     // the song's tuning offset (A=440 or not) and scale, from the original singer's notes
     var offs = [], pc = new Float64Array(12);
@@ -295,55 +295,64 @@ var KSDSP = (function () {
     var scale = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].sort(function (a, b) { return pc[b] - pc[a]; }).slice(0, 7);
     var snap = function (v) { return Math.round(v - tun) + tun; };
     var km = opts.keys, scaleAt = function (t) { if (!km || !km.k || !km.k.length) return scale; var i = Math.max(0, Math.min(km.k.length - 1, Math.floor(t / (km.hop || 1)))); return keyScale(km.k[i], semi); };
-    var want = new Float32Array(n), um = new Float32Array(n), stats = { notes: un.length, matched: 0, moved: 0 };
+    var um = new Float32Array(n), err = new Float32Array(n), has = new Uint8Array(n), tid = new Int32Array(n).fill(-1), uix = 0, stats = { notes: un.length, matched: 0, moved: 0 };
     for (f = 0; f < n; f++) um[f] = user.f0[f] ? midi(user.f0[f]) : 0;
     var rM = new Float32Array(ref.f0.length); for (f = 0; f < rM.length; f++) rM[f] = ref.f0[f] ? midi(ref.f0[f]) + semi : 0;
     var noteAt = new Int32Array(ref.f0.length).fill(-1); rn.forEach(function (r, ix) { for (var q = r.s; q < r.e; q++) noteAt[q] = ix; });
     un.forEach(function (u) {
-      var us = u.s * hop + lag, ue = u.e * hop + lag, best = null, bs = -1e9;
-      for (i = 0; i < rn.length; i++) {
-        var r = rn[i]; if (r.te < us - 0.25 || r.ts > ue + 0.25) continue;
-        var ov = Math.min(ue, r.te + 0.12) - Math.max(us, r.ts - 0.12); if (ov <= 0) continue;
-        var tgt = opts.grid ? snap(r.m) : r.m; tgt += 12 * Math.round((u.m - tgt) / 12); var dist = Math.abs(u.m - tgt);
-        var sc = ov / Math.max(0.05, ue - us) - 0.45 * dist; if (dist <= 2 && sc > bs) { bs = sc; best = tgt; }
-      }
-      // "curve": the original's own pitch at the same moments (median of the differences over the note)
-      if (opts.mode !== "notes") {
-        // singers are never exactly in time: try offsets of +-150 ms and keep the one where the
-        // difference between the two pitch curves is steadiest (the singer follows the same shape)
-        var bestScore = 1e9, bestDm = null, bestDl = 0;
-        for (var dl = -15; dl <= 15; dl++) {
-          var diffs = [];
-          for (f = u.s; f < u.e; f++) {
-            if (!um[f]) continue; var rf = Math.round((f * hop + lag) / ref.hop) + dl; if (rf < 0 || rf >= rM.length || !rM[rf]) continue;
-            var dd = rM[rf] - um[f]; dd -= 12 * Math.round(dd / 12); diffs.push(dd);
-          }
-          if (diffs.length < Math.max(3, (u.e - u.s) * 0.6)) continue;
-          diffs.sort(function (p, q) { return p - q; }); var md = diffs[diffs.length >> 1], mad = 0;
-          for (var q = 0; q < diffs.length; q++) mad += Math.abs(diffs[q] - md); mad /= diffs.length;
-          var score = mad + 0.08 * Math.abs(dl) / 15 + 0.05 * Math.abs(md);
-          if (score < bestScore) { bestScore = score; bestDm = md; bestDl = dl; }
+      // 1. line this sung note up with the original in time: offsets of +-150 ms, keep the one where the
+      //    difference between the two pitch curves is steadiest (the singer follows the same shape)
+      var bestScore = 1e9, bestDm = null, bestDl = 0, best = null;
+      for (var dl = -15; dl <= 15; dl++) {
+        var diffs = [];
+        for (f = u.s; f < u.e; f++) {
+          if (!um[f]) continue; var rf = Math.round((f * hop + lag) / ref.hop) + dl; if (rf < 0 || rf >= rM.length || !rM[rf]) continue;
+          var dd = rM[rf] - um[f]; dd -= 12 * Math.round(dd / 12); diffs.push(dd);
         }
-        if (bestDm != null && bestScore < 0.6 && Math.abs(bestDm) <= 1.6) { best = u.m + bestDm; u.dl = bestDl; }
+        if (diffs.length < Math.max(3, (u.e - u.s) * 0.6)) continue;
+        diffs.sort(function (p, q) { return p - q; }); var md = diffs[diffs.length >> 1], mad = 0;
+        for (var q = 0; q < diffs.length; q++) mad += Math.abs(diffs[q] - md); mad /= diffs.length;
+        var score = mad + 0.08 * Math.abs(dl) / 15 + 0.05 * Math.abs(md);
+        if (score < bestScore) { bestScore = score; bestDm = md; bestDl = dl; }
       }
-      if (best == null) { var lsc = scaleAt((u.s + u.e) / 2 * hop + lag), bb = 99; for (var o = -2; o <= 2; o++) { var cand = Math.round(u.m - tun) + o, p = ((cand % 12) + 12) % 12; if (lsc.indexOf(p) >= 0 && Math.abs(u.m - (cand + tun)) < bb) { bb = Math.abs(u.m - (cand + tun)); best = cand + tun; } } }
-      else stats.matched++;
-      if (best == null) return;
-      var dev = best - u.m; if (Math.abs(dev) > 1.6) return; // far off: another note on purpose
-      if (Math.abs(dev) > 0.08) stats.moved++;
+      if (bestDm != null && bestScore < 0.6 && Math.abs(bestDm) <= 1.6) { best = u.m + bestDm; if (opts.grid) best = snap(best); stats.matched++; }
+      else { // the original gives no clear note here: the nearest note of the key at this point of the song
+        bestDl = 0; var lsc = scaleAt((u.s + u.e) / 2 * hop + lag), bb = 99;
+        for (var o = -2; o <= 2; o++) { var cand = Math.round(u.m - tun) + o, p = ((cand % 12) + 12) % 12; if (lsc.indexOf(p) >= 0 && Math.abs(u.m - (cand + tun)) < bb) { bb = Math.abs(u.m - (cand + tun)); best = cand + tun; } }
+      }
+      // 2. the target at every moment: the original singer's note at that (aligned) moment - like Auto-Tune fed with target notes
+      var mv = 0, cnt = 0;
       for (f = u.s; f < u.e; f++) {
         if (!um[f]) continue;
-        var lock = best; // strong: lock each moment to the original singer's note at that moment (keeps the melody steps)
-        if (flat > 0) {
-          var rf2 = Math.round((f * hop + lag) / ref.hop) + (u.dl || 0), ni = rf2 >= 0 && rf2 < noteAt.length ? noteAt[rf2] : -1;
-          if (ni >= 0) { var tg = rn[ni].m; tg += 12 * Math.round((um[f] - tg) / 12); if (Math.abs(tg - um[f]) <= 2) lock = tg; }
+        var rf2 = Math.round((f * hop + lag) / ref.hop) + bestDl, tg = null, bd = 9, id = -1;
+        for (j = rf2 - 4; j <= rf2 + 4; j++) {
+          var ni = j >= 0 && j < noteAt.length ? noteAt[j] : -1; if (ni < 0) continue;
+          var c = opts.grid ? snap(rn[ni].m) : rn[ni].m; c += 12 * Math.round((um[f] - c) / 12);
+          var d = Math.abs(c - um[f]) + 0.1 * Math.abs(j - rf2); if (d < bd) { bd = d; tg = c; id = ni; }
         }
-        want[f] = ((1 - flat) * dev * cen + flat * (lock - um[f])) * 100;
+        if (tg == null || Math.abs(tg - um[f]) > 1.3) { tg = best; id = 1e6 + uix; }
+        if (tg == null || Math.abs(tg - um[f]) > 1.6) continue; // far off: sung on purpose, leave it
+        err[f] = tg - um[f]; has[f] = 1; tid[f] = id; mv += Math.abs(err[f]); cnt++;
       }
+      if (cnt && mv / cnt > 0.08) stats.moved++; uix++;
     });
-    // ramps between notes: centred moving average (no timing shift); short notes keep their full correction
-    var W = Math.max(0, Math.round(ramp / hop / 2)), y = new Float32Array(n);
-    for (f = 0; f < n; f++) { if (!um[f]) continue; var acc = 0, c = 0; for (var j = f - W; j <= f + W; j++) if (j >= 0 && j < n && um[j]) { acc += want[j]; c++; } y[f] = c ? acc / c : 0; }
+    // 3. retune speed: the correction is the error smoothed over `speed` seconds (no delay). Slow = the note is carried to
+    //    its place with vibrato and slides intact; fast = the pitch is held on the note. Spikes at note changes are removed first.
+    //    Each target note is smoothed on its own (a short note is not diluted by its neighbours - Auto-Tune's "humanize" idea:
+    //    short notes snap, long notes breathe), and the steps between notes are then rounded over 50 ms.
+    var raw = new Float32Array(n), W = Math.max(1, Math.round(speed / hop / 2)), md5 = new Float32Array(n), win = [];
+    for (f = 0; f < n; f++) { if (!has[f]) continue; win.length = 0; for (j = f - 3; j <= f + 3; j++) if (j >= 0 && j < n && has[j] && tid[j] === tid[f]) win.push(err[j]); win.sort(function (p, q) { return p - q; }); md5[f] = win[win.length >> 1]; }
+    for (f = 0; f < n; f++) {
+      if (!has[f]) continue; var acc = 0, ws = 0;
+      for (j = f - W; j <= f + W; j++) { if (j < 0 || j >= n || !has[j] || tid[j] !== tid[f]) continue; var wg = 0.5 + 0.5 * Math.cos(Math.PI * (j - f) / (W + 1)); ws += wg; acc += md5[j] * wg; }
+      raw[f] = ws ? acc / ws : 0;
+    }
+    var y = new Float32Array(n), E = Math.max(1, Math.round((opts.edge || 0.05) / hop / 2));
+    for (f = 0; f < n; f++) {
+      if (!um[f]) continue; var a2 = 0, w2 = 0;
+      for (j = f - E; j <= f + E; j++) { if (j < 0 || j >= n || !um[j]) continue; var wg2 = 0.5 + 0.5 * Math.cos(Math.PI * (j - f) / (E + 1)); w2 += wg2; a2 += raw[j] * wg2; }
+      y[f] = w2 ? a2 / w2 * cen * 100 : 0;
+    }
     stats.tuning = Math.round(tun * 100);
     return { cents: y, stats: stats };
   }
@@ -389,8 +398,8 @@ var KSDSP = (function () {
   function tune(x, sr, ref, opts, onp, track) {
     var tr = track || f0(x, sr, onp && function (p) { onp(p * 0.6); });
     var pl = plan(tr, ref, opts); if (onp) onp(0.7);
-    var y = psola(x, sr, tr, pl.cents); if (onp) onp(1);
-    return { y: y, stats: pl.stats };
+    var y = opts.engine === "psola" ? psola(x, sr, tr, pl.cents) : slip(x, sr, tr, pl.cents); if (onp) onp(1);
+    return { y: y, stats: pl.stats, track: tr };
   }
   /* ---------- noise reduction: spectral, decision-directed (keeps the voice natural, no "underwater") ---------- */
   function denoise(x, sr, amount) {
@@ -427,11 +436,244 @@ var KSDSP = (function () {
     var out = new Float32Array(n); for (i = 0; i < n; i++) { var g2 = ws[i + N]; out[i] = g2 > 1e-3 ? y[i + N] / g2 : 0; }
     return out;
   }
+  /* ---------- where the playback sits inside the recording (GCC-PHAT): the round-trip latency, measured from the take itself ---------- */
+  function decim(x, sr, D) {
+    if (D <= 1) return x;
+    var c = coef("lp", sr / D * 0.42, 0.7071, 0, sr), lp = filtfilt(filtfilt(x, c), c), n = Math.floor(lp.length / D), y = new Float32Array(n);
+    for (var i = 0; i < n; i++) y[i] = lp[i * D]; return y;
+  }
+  function gccDelay(mic, ref, sr, maxLag) {
+    var D = Math.max(1, Math.round(sr / 16000)), fs = sr / D, a = decim(mic, sr, D), b = decim(ref, sr, D), n = Math.min(a.length, b.length);
+    var N = 32768; while (N > n && N > 2048) N >>= 1; if (n < N) return { delay: 0, conf: 0 };
+    var T = tables(N), w = T.win, re = new Float64Array(N), im = new Float64Array(N), cr = new Float64Array(N), ci = new Float64Array(N), i, k;
+    var starts = [], H = N >> 1; for (var s = 0; s + N <= n; s += H) starts.push(s);
+    var step = Math.max(1, Math.ceil(starts.length / 40)), k0 = Math.round(150 / fs * N), k1 = Math.round(Math.min(7000, fs * 0.45) / fs * N), used = 0;
+    for (var q = 0; q < starts.length; q += step) {
+      var s0 = starts[q], eb = 0; for (i = 0; i < N; i++) { re[i] = a[s0 + i] * w[i]; im[i] = b[s0 + i] * w[i]; eb += im[i] * im[i]; }
+      if (eb / N < 1e-9) continue;
+      fft(re, im, T, false);
+      for (k = k0; k <= k1; k++) {
+        var nk = N - k, zr = re[k], zi = im[k], c2 = re[nk], d2 = -im[nk];
+        var ar = (zr + c2) / 2, ai = (zi + d2) / 2, br = (zi - d2) / 2, bi = -(zr - c2) / 2; // A = mic, B = ref
+        var xr = ar * br + ai * bi, xi = ai * br - ar * bi, mg = Math.sqrt(xr * xr + xi * xi) + 1e-20; // A * conj(B), whitened
+        cr[k] += xr / mg; ci[k] += xi / mg;
+      }
+      used++;
+    }
+    if (!used) return { delay: 0, conf: 0 };
+    for (k = k0; k <= k1; k++) { cr[N - k] = cr[k]; ci[N - k] = -ci[k]; }
+    fft(cr, ci, T, true);
+    var lo = -Math.round(0.03 * fs), hi = Math.min(H - 1, Math.round((maxLag || 0.6) * fs)), best = 0, bv = 0, sum = 0, sq = 0, cnt = 0;
+    for (var l = lo; l <= hi; l++) { var v = Math.abs(cr[(l + N) % N]); sum += v; sq += v * v; cnt++; if (v > bv) { bv = v; best = l; } }
+    var mean = sum / cnt, sd = Math.sqrt(Math.max(1e-30, sq / cnt - mean * mean));
+    var y0 = Math.abs(cr[(best - 1 + N) % N]), y2 = Math.abs(cr[(best + 1 + N) % N]), den = y0 - 2 * bv + y2, fr = den ? 0.5 * (y0 - y2) / den : 0;
+    // a real acoustic path gives one sharp peak; tonal music against an unrelated voice gives many similar ones, or one at the edge
+    var second = 0, guard = Math.round(0.003 * fs); for (l = lo; l <= hi; l++) { if (Math.abs(l - best) <= guard) continue; var v2 = Math.abs(cr[(l + N) % N]); if (v2 > second) second = v2; }
+    var conf = (bv - mean) / sd; if (best <= lo + 1 || best >= hi - 1 || bv < second * 1.35) conf = Math.min(conf, 1);
+    return { delay: (best + Math.max(-1, Math.min(1, fr))) / fs, conf: conf, ratio: bv / (second + 1e-20) };
+  }
+  /* ---------- playback removal with the known playback as reference ----------
+     Each frequency band gets its own short filter (6 taps over ~60 ms, re-fitted every ~2.7 s by least squares) that
+     turns the playback into what the microphone heard of it; that estimate is subtracted, and what is left of the
+     music (reverb tail, speaker distortion) is pushed down by a Wiener gain driven by the same estimate. */
+  function aec(mic, ref, sr, d0, onp, dbg, cfg) {
+    cfg = cfg || {};
+    var N = 2048, H = 512, T = tables(N), w = T.win, K = N / 2 + 1, n = mic.length, i, k, f, a, b2;
+    var TD = [-1, 0, 1, 2, 3, 4], KLO = Math.round(8000 / sr * N), PADL = 4, PADR = 1, B = 512, A = 256, BW = B + PADL + PADR, M = Math.ceil(n / H) + 3;
+    var Yr = new Float32Array(BW * K), Yi = new Float32Array(BW * K), Xr = new Float32Array(BW * K), Xi = new Float32Array(BW * K);
+    var re = new Float64Array(N), im = new Float64Array(N);
+    function analyze(m, idx) {
+      var s0 = m * H - N, o = idx * K;
+      if (m < 0 || m >= M) { Yr.fill(0, o, o + K); Yi.fill(0, o, o + K); Xr.fill(0, o, o + K); Xi.fill(0, o, o + K); return; }
+      for (i = 0; i < N; i++) { var q = s0 + i, r = q - d0; re[i] = q >= 0 && q < n ? mic[q] * w[i] : 0; im[i] = r >= 0 && r < ref.length ? ref[r] * w[i] : 0; }
+      fft(re, im, T, false);
+      for (k = 0; k < K; k++) { var nk = (N - k) % N, zr = re[k], zi = im[k], c2 = re[nk], d2 = -im[nk]; Yr[o + k] = (zr + c2) / 2; Yi[o + k] = (zi + d2) / 2; Xr[o + k] = (zi - d2) / 2; Xi[o + k] = -(zr - c2) / 2; }
+    }
+    var BETA = cfg.beta || 2, ALPHA = cfg.alpha == null ? 0.85 : cfg.alpha, GMIN = cfg.gmin || 0.1, HOLD = cfg.hold || 0.5, PCT = cfg.pct || 0.25;
+    var out = new Float32Array(n + 2 * N), ws = new Float32Array(n + 2 * N);
+    var prevR = new Float32Array(A * K), prevI = new Float32Array(A * K), curR = new Float32Array(B * K), curI = new Float32Array(B * K), havePrev = false;
+    var gam = new Float32Array(K).fill(0.1), gamInit = false, hold = new Float64Array(K), pG = new Float64Array(K).fill(1), pPost = new Float64Array(K).fill(1), G = new Float64Array(K);
+    var ratio = new Float32Array(B), Ar = new Float64Array(36), Ai = new Float64Array(36), pr = new Float64Array(6), pi = new Float64Array(6), hr = new Float64Array(6), hi = new Float64Array(6);
+    var sY = 0, sE = 0, sO = 0, sEst = 0, pend = null, er = new Float64Array(N), ei = new Float64Array(N), W0;
+    function solve(L) { // complex Gaussian elimination, L <= 6
+      var c, r, j;
+      for (c = 0; c < L; c++) {
+        var pv = c, pm = 0; for (r = c; r < L; r++) { var mg = Ar[r * 6 + c] * Ar[r * 6 + c] + Ai[r * 6 + c] * Ai[r * 6 + c]; if (mg > pm) { pm = mg; pv = r; } }
+        if (pm < 1e-30) { for (j = 0; j < L; j++) { hr[j] = 0; hi[j] = 0; } return; }
+        if (pv !== c) { for (j = 0; j < L; j++) { var t = Ar[c * 6 + j]; Ar[c * 6 + j] = Ar[pv * 6 + j]; Ar[pv * 6 + j] = t; t = Ai[c * 6 + j]; Ai[c * 6 + j] = Ai[pv * 6 + j]; Ai[pv * 6 + j] = t; } t = pr[c]; pr[c] = pr[pv]; pr[pv] = t; t = pi[c]; pi[c] = pi[pv]; pi[pv] = t; }
+        var dr = Ar[c * 6 + c], di = Ai[c * 6 + c], dm = dr * dr + di * di;
+        for (r = c + 1; r < L; r++) {
+          var fr = (Ar[r * 6 + c] * dr + Ai[r * 6 + c] * di) / dm, fi = (Ai[r * 6 + c] * dr - Ar[r * 6 + c] * di) / dm;
+          for (j = c; j < L; j++) { Ar[r * 6 + j] -= fr * Ar[c * 6 + j] - fi * Ai[c * 6 + j]; Ai[r * 6 + j] -= fr * Ai[c * 6 + j] + fi * Ar[c * 6 + j]; }
+          pr[r] -= fr * pr[c] - fi * pi[c]; pi[r] -= fr * pi[c] + fi * pr[c];
+        }
+      }
+      for (c = L - 1; c >= 0; c--) {
+        var sr2 = pr[c], si = pi[c]; for (j = c + 1; j < L; j++) { sr2 -= Ar[c * 6 + j] * hr[j] - Ai[c * 6 + j] * hi[j]; si -= Ar[c * 6 + j] * hi[j] + Ai[c * 6 + j] * hr[j]; }
+        var d3 = Ar[c * 6 + c], d4 = Ai[c * 6 + c], dn = d3 * d3 + d4 * d4; hr[c] = (sr2 * d3 + si * d4) / dn; hi[c] = (si * d3 - sr2 * d4) / dn;
+      }
+    }
+    function emit(m, sR, sI) { // one finished frame (spectrum of the cleaned signal): two frames share one inverse FFT
+      if (!pend) { pend = { m: m, r: Float64Array.from(sR), i: Float64Array.from(sI) }; return; }
+      for (k = 0; k < K; k++) { er[k] = pend.r[k] - sI[k]; ei[k] = pend.i[k] + sR[k]; if (k > 0 && k < N / 2) { er[N - k] = pend.r[k] + sI[k]; ei[N - k] = -pend.i[k] + sR[k]; } }
+      fft(er, ei, T, true);
+      var o1 = pend.m * H, o2 = m * H; // frame m starts at m*H - N, plus the N offset of `out`
+      for (i = 0; i < N; i++) { out[o1 + i] += er[i] * w[i]; ws[o1 + i] += w[i] * w[i]; if (m >= 0) { out[o2 + i] += ei[i] * w[i]; ws[o2 + i] += w[i] * w[i]; } }
+      pend = null;
+    }
+    var fR = new Float64Array(K), fI = new Float64Array(K), Gs = new Float64Array(K);
+    function finish(m, yo, eR, eI, eo) { // residual suppression for frame m: Y at Yr[yo..], echo estimate at eR[eo..]
+      for (k = 0; k < K; k++) {
+        var yr = Yr[yo + k], yi = Yi[yo + k], qr = eR[eo + k], qi = eI[eo + k], e1 = yr - qr, e2 = yi - qi, pe = e1 * e1 + e2 * e2, pq = qr * qr + qi * qi;
+        hold[k] = Math.max(pq, hold[k] * HOLD); // the music rings on a little after each frame (room)
+        var res = BETA * gam[k] * hold[k] + 1e-14, post = pe / res, prio = ALPHA * pG[k] * pG[k] * pPost[k] + (1 - ALPHA) * Math.max(post - 1, 0), g = prio / (1 + prio);
+        pG[k] = g; pPost[k] = post; G[k] = g < GMIN ? GMIN : g; fR[k] = e1; fI[k] = e2; sY += yr * yr + yi * yi; sE += pe; sEst += pq;
+      }
+      Gs[0] = G[0]; Gs[K - 1] = G[K - 1]; for (k = 1; k < K - 1; k++) Gs[k] = 0.25 * G[k - 1] + 0.5 * G[k] + 0.25 * G[k + 1];
+      for (k = 0; k < K; k++) { fR[k] *= Gs[k]; fI[k] *= Gs[k]; sO += fR[k] * fR[k] + fI[k] * fI[k]; }
+      if (dbg) dbg(m, Gs, eR, eI, eo);
+      emit(m, fR, fI);
+    }
+    for (var b = 0, first = true; b < M; b += A, first = false) {
+      W0 = b - PADL;
+      if (first) { for (f = 0; f < BW; f++) analyze(W0 + f, f); }
+      else { Yr.copyWithin(0, A * K); Yi.copyWithin(0, A * K); Xr.copyWithin(0, A * K); Xi.copyWithin(0, A * K); for (f = BW - A; f < BW; f++) analyze(W0 + f, f); }
+      for (k = 0; k < K; k++) {
+        var L = k <= KLO ? 6 : 2, t0 = k <= KLO ? 0 : 1, tr = 0;
+        for (a = 0; a < L; a++) { pr[a] = 0; pi[a] = 0; for (b2 = 0; b2 < L; b2++) { Ar[a * 6 + b2] = 0; Ai[a * 6 + b2] = 0; } }
+        for (f = 0; f < B; f++) {
+          var fo = (f + PADL) * K + k, yr0 = Yr[fo], yi0 = Yi[fo];
+          for (a = 0; a < L; a++) {
+            var xa = fo - TD[t0 + a] * K, xar = Xr[xa], xai = Xi[xa];
+            pr[a] += yr0 * xar + yi0 * xai; pi[a] += yi0 * xar - yr0 * xai; // Y * conj(x_a)
+            for (b2 = a; b2 < L; b2++) { var xb = fo - TD[t0 + b2] * K, xbr = Xr[xb], xbi = Xi[xb]; Ar[a * 6 + b2] += xbr * xar + xbi * xai; Ai[a * 6 + b2] += xbi * xar - xbr * xai; } // x_b * conj(x_a)
+          }
+        }
+        for (a = 0; a < L; a++) { tr += Ar[a * 6 + a]; for (b2 = 0; b2 < a; b2++) { Ar[a * 6 + b2] = Ar[b2 * 6 + a]; Ai[a * 6 + b2] = -Ai[b2 * 6 + a]; } }
+        var reg = tr / L * 1e-3 + 1e-12; for (a = 0; a < L; a++) Ar[a * 6 + a] += reg;
+        solve(L);
+        for (f = 0; f < B; f++) {
+          var fo2 = (f + PADL) * K + k, qr2 = 0, qi2 = 0;
+          for (a = 0; a < L; a++) { var xo = fo2 - TD[t0 + a] * K; qr2 += hr[a] * Xr[xo] - hi[a] * Xi[xo]; qi2 += hr[a] * Xi[xo] + hi[a] * Xr[xo]; }
+          curR[f * K + k] = qr2; curI[f * K + k] = qi2;
+          var e3 = Yr[fo2] - qr2, e4 = Yi[fo2] - qi2, pq2 = qr2 * qr2 + qi2 * qi2;
+          ratio[f] = pq2 > 1e-13 ? (e3 * e3 + e4 * e4) / pq2 : 1e9;
+        }
+        // how much of the estimate is typically left over in this band when nobody sings: a low percentile
+        ratio.sort(); var g25 = ratio[Math.floor(B * PCT)]; if (g25 > 1e8) g25 = gam[k]; g25 = Math.max(0.002, Math.min(1, g25));
+        gam[k] = gamInit ? 0.5 * gam[k] + 0.5 * g25 : g25;
+      }
+      gamInit = true;
+      for (f = 0; f < A; f++) { // the first half of the block is final: blend with the previous block's estimate
+        var m = b + f; if (m >= M) break;
+        if (havePrev) { var wc = (f + 0.5) / A, po = f * K, co = f * K; for (k = 0; k < K; k++) { prevR[po + k] = prevR[po + k] * (1 - wc) + curR[co + k] * wc; prevI[po + k] = prevI[po + k] * (1 - wc) + curI[co + k] * wc; } finish(m, (f + PADL) * K, prevR, prevI, po); }
+        else finish(m, (f + PADL) * K, curR, curI, f * K);
+      }
+      prevR.set(curR.subarray(A * K, 2 * A * K)); prevI.set(curI.subarray(A * K, 2 * A * K)); havePrev = true;
+      if (onp) onp(Math.min(1, (b + A) / M));
+    }
+    if (pend) emit(-1, new Float64Array(K), new Float64Array(K));
+    var y = new Float32Array(n); for (i = 0; i < n; i++) { var g2 = ws[i + N]; y[i] = g2 > 1e-3 ? out[i + N] / g2 : 0; }
+    return { y: y, share: sEst / (sY + 1e-20), linDb: 10 * Math.log10((sY + 1e-20) / (sE + 1e-20)), totDb: 10 * Math.log10((sY + 1e-20) / (sO + 1e-20)) };
+  }
+  // after a recording: find the playback in it, take it out, report the latency
+  function post(mic, ref, sr, onp) {
+    var g = gccDelay(mic, ref, sr, 0.6), r = { delay: g.delay, conf: g.conf, ratio: g.ratio, bleed: false, y: mic, share: 0, cutDb: 0 };
+    if (g.conf < 12 || g.delay < -0.01) return r;
+    var d0 = Math.round(g.delay * sr) - Math.round(0.004 * sr), n = mic.length, P = Math.round(8 * sr);
+    if (n > 2 * P) { // a quick look at 8 seconds first: with headphones only a trace of the playback leaks in, and the full pass is not needed
+      var s0 = Math.floor((n - P) / 2), pm = mic.subarray(s0, s0 + P), pr = new Float32Array(P), i; for (i = 0; i < P; i++) { var q = s0 + i - d0; pr[i] = q >= 0 && q < ref.length ? ref[q] : 0; }
+      var pre = aec(pm, pr, sr, 0); r.share = pre.share; if (pre.share < 0.012) return r;
+    }
+    var a = aec(mic, ref, sr, d0, onp);
+    r.share = a.share; r.cutDb = a.totDb; r.linDb = a.linDb;
+    if (a.share > 0.02) { r.bleed = true; r.y = a.y; }
+    return r;
+  }
+  // no playback in the take (headphones): how late is the singing against the original singer's melody? (note starts, +-0.4 s)
+  function melLag(user, ref, lag0) {
+    var un = notes(user, true), rn = notes(ref, true), ro = rn.map(function (r) { return r.s * ref.hop; }), d = [], i, j;
+    for (i = 0; i < un.length; i++) {
+      if (un[i].e - un[i].s < 10) continue; var t = un[i].s * user.hop + lag0, best = 9, bd = 0;
+      for (j = 0; j < rn.length; j++) { var dt = t - ro[j]; if (Math.abs(dt) > 0.4) continue; var pd = un[i].m - rn[j].m; pd -= 12 * Math.round(pd / 12); if (Math.abs(pd) > 1.2) continue; if (Math.abs(dt) < best) { best = Math.abs(dt); bd = dt; } }
+      if (best < 9) d.push(bd);
+    }
+    if (d.length < 8) return { lag: 0, conf: 0, n: d.length };
+    d.sort(function (p, q) { return p - q; }); var med = d[d.length >> 1], mad = 0; for (i = 0; i < d.length; i++) mad += Math.abs(d[i] - med); mad /= d.length;
+    return { lag: med, conf: d.length / (1 + mad * 40), n: d.length, mad: mad };
+  }
+  /* ---------- automatic trim: silence before, after and between sung parts, with fades ---------- */
+  function gate(x, sr, track, amount) {
+    if (!amount) return { y: x, kept: 1 };
+    var hop = Math.round(sr * track.hop), nf = Math.ceil(x.length / hop), e = new Float32Array(nf), F = track.f0, f, i, j;
+    for (f = 0; f < nf; f++) { var s = 0, a = Math.max(0, f * hop - hop), b = Math.min(x.length, f * hop + hop); for (i = a; i < b; i += 2) s += x[i] * x[i]; e[f] = Math.sqrt(s / Math.max(1, (b - a) / 2)); }
+    var srt = Float32Array.from(e).sort(), lvl = srt[Math.floor(nf * 0.9)] || 1e-4, nz = srt[Math.floor(nf * 0.1)] || 0, thr = Math.max(nz * 3.2, lvl * 0.04);
+    var v = new Uint8Array(nf), act = new Uint8Array(nf); for (f = 0; f < nf; f++) { v[f] = f < F.length && F[f] > 0 ? 1 : 0; act[f] = v[f] || e[f] > thr ? 1 : 0; }
+    // distance to the nearest voiced frame; loud but unvoiced stretches far from any singing (bumps, clicks, rustle) are dropped
+    var dist = new Int32Array(nf).fill(1e6), last = -1e6; for (f = 0; f < nf; f++) { if (v[f]) last = f; dist[f] = f - last; } last = 1e6; for (f = nf - 1; f >= 0; f--) { if (v[f]) last = f; dist[f] = Math.min(dist[f], last - f); }
+    for (f = 0; f < nf; f++) if (act[f] && !v[f] && dist[f] > 30) act[f] = 0;
+    for (f = 0; f < nf;) { if (!act[f]) { f++; continue; } var en = f, vc = 0; while (en < nf && act[en]) { vc += v[en]; en++; } if (vc < 4 && en - f < 60) { var near = false; for (j = Math.max(0, f - 30); j < Math.min(nf, en + 30); j++) if (v[j] && (j < f || j >= en)) near = true; if (!near) for (j = f; j < en; j++) act[j] = 0; } f = en; }
+    // before the first sung note and after the last one nothing is kept but a short lead-in and tail (handling noises live there)
+    var fv = -1, lv = -1, run = 0; for (f = 0; f < nf; f++) { run = v[f] ? run + 1 : 0; if (run >= 8) { if (fv < 0) fv = f - 7; lv = f; } }
+    if (fv >= 0) for (f = 0; f < nf; f++) if (f < fv - 10 || f > lv + 40) act[f] = 0;
+    // open 120 ms early, stay 250 ms after, bridge pauses shorter than 0.45 s
+    var tg = new Float32Array(nf), firstA = -1, lastA = -1; for (f = 0; f < nf; f++) if (act[f]) { if (firstA < 0) firstA = f; lastA = f; for (j = Math.max(0, f - 12); j <= Math.min(nf - 1, f + 25); j++) tg[j] = 1; }
+    if (firstA < 0) return { y: x, kept: 1 };
+    for (f = 0; f < nf;) { if (tg[f]) { f++; continue; } var g0 = f; while (f < nf && !tg[f]) f++; if (g0 > 0 && f < nf && f - g0 < 45) for (j = g0; j < f; j++) tg[j] = 1; }
+    var floor = Math.pow(10, -amount * 40 / 20), kept = 0; for (f = 0; f < nf; f++) { kept += tg[f]; if (!tg[f]) tg[f] = f < firstA || f > lastA + 25 ? 0 : floor; }
+    // fades: 80 ms in, 220 ms out (raised cosine), applied per sample
+    var gs = new Float32Array(nf), up = 8, dn = 22;
+    for (f = 0; f < nf; f++) {
+      var mx = tg[f], c;
+      for (j = 1; j <= up && f + j < nf; j++) if (tg[f + j] > tg[f]) { c = tg[f] + (tg[f + j] - tg[f]) * (0.5 + 0.5 * Math.cos(Math.PI * j / (up + 1))); if (c > mx) mx = c; }
+      for (j = 1; j <= dn && f - j >= 0; j++) if (tg[f - j] > tg[f]) { c = tg[f] + (tg[f - j] - tg[f]) * (0.5 + 0.5 * Math.cos(Math.PI * j / (dn + 1))); if (c > mx) mx = c; }
+      gs[f] = mx;
+    }
+    var y = new Float32Array(x.length); for (i = 0; i < x.length; i++) { var p = i / hop, fi = Math.min(nf - 1, Math.floor(p)), fj = Math.min(nf - 1, fi + 1), fr = p - fi; y[i] = x[i] * (gs[fi] + (gs[fj] - gs[fi]) * fr); }
+    return { y: y, kept: kept / nf };
+  }
+  /* ---------- the Auto-Tune way of moving pitch: resample, and now and then repeat or drop one cycle ----------
+     The voice is read slightly faster or slower (that is the pitch change, exact and clean). Reading faster runs ahead
+     of time, so when the lead reaches half a cycle the reader steps back exactly one cycle of the voice, at the lag where
+     the two cycles match best, cross-faded over one cycle. Small corrections mean a splice only every few dozen cycles. */
+  var SNC = (function () { var TP = 8, PH = 512, t = new Float32Array(TP * (PH + 1)); for (var p = 0; p <= PH; p++) { var fr = p / PH, s = 0, j; for (j = 0; j < TP; j++) { var u = j - 3 - fr, v = Math.abs(u) < 1e-9 ? 1 : Math.sin(Math.PI * u) / (Math.PI * u), wn = 0.5 + 0.5 * Math.cos(Math.PI * u / 4); if (Math.abs(u) >= 4) wn = 0; t[p * TP + j] = v * wn; s += v * wn; } for (j = 0; j < TP; j++) t[p * TP + j] /= s; } return t; })();
+  function slip(x, sr, track, cents) {
+    var n = x.length, y = new Float32Array(n), hop = track.hop * sr, F = track.f0, nf = F.length, rr = new Float32Array(nf + 2).fill(1), f, any = false;
+    for (f = 0; f < nf; f++) if (F[f] && Math.abs(cents[f]) > 0.5) { rr[f] = Math.pow(2, cents[f] / 1200); any = true; }
+    if (!any) return new Float32Array(x);
+    function rd(pos) { var ip = Math.floor(pos), o = Math.round((pos - ip) * 512) * 8, b = ip - 3; if (b < 0 || b + 8 > n) return ip >= 0 && ip < n ? x[ip] : 0; return x[b] * SNC[o] + x[b + 1] * SNC[o + 1] + x[b + 2] * SNC[o + 2] + x[b + 3] * SNC[o + 3] + x[b + 4] * SNC[o + 4] + x[b + 5] * SNC[o + 5] + x[b + 6] * SNC[o + 6] + x[b + 7] * SNC[o + 7]; }
+    var pos = 0, posB = 0, xf = 0, xfLen = 1, wait = 0, splices = 0;
+    for (var t = 0; t < n; t++) {
+      var fp = pos / hop, f0i = Math.floor(fp); if (f0i < 0) f0i = 0; if (f0i >= nf) f0i = nf - 1; var r = rr[f0i] + (rr[f0i + 1] - rr[f0i]) * (fp - f0i);
+      if (xf > 0) {
+        var a = 0.5 - 0.5 * Math.cos(Math.PI * (1 - xf / xfLen)); y[t] = (1 - a) * rd(pos) + a * rd(posB); pos += r; posB += r;
+        if (--xf === 0) pos = posB; continue;
+      }
+      y[t] = rd(pos); pos += r;
+      var drift = pos - (t + 1); if (wait > 0) { wait--; continue; }
+      if (drift > -1 && drift < 1) continue;
+      var fc = Math.round(pos / hop); if (fc >= nf) fc = nf - 1; var hz = F[fc];
+      if (hz > 0) {
+        var P = sr / hz, ad = drift < 0 ? -drift : drift; if (ad < P * 0.5) continue;
+        var sg = drift > 0 ? 1 : -1, base = Math.floor(pos), W = Math.round(P), L0 = Math.round(P * 0.88), L1 = Math.round(P * 1.12), bestL = Math.round(P), bc = -2;
+        if (base - L1 - 4 < 0 || base + L1 + W + 4 >= n) { continue; }
+        var ea = 0, i; for (i = 0; i < W; i++) ea += x[base + i] * x[base + i];
+        for (var L = L0; L <= L1; L++) { var o2 = base - sg * L, cr = 0, eb = 0; for (i = 0; i < W; i += 2) { cr += x[base + i] * x[o2 + i]; eb += x[o2 + i] * x[o2 + i]; } var nc = cr / Math.sqrt(ea * eb * 0.5 + 1e-20); if (nc > bc) { bc = nc; bestL = L; } }
+        if (bc < 0.5 && ad < P) { wait = Math.round(P * 0.25); continue; } // not a steady cycle here: try again a little later
+        posB = pos - sg * bestL; xfLen = Math.max(16, Math.min(W, Math.round(0.012 * sr))); xf = xfLen; splices++;
+      } else if (fc > 0 && fc + 2 < nf && !F[fc - 1] && !F[fc + 1] && !F[fc + 2]) { // between sung sounds: step back onto the exact time
+        posB = t + 1; xfLen = Math.round(0.004 * sr); xf = xfLen;
+      }
+    }
+    return y;
+  }
   /* the whole offline voice chain for a take */
   function voice(x, sr, o, onp) {
-    var y = highpass(removeDC(x), 75, sr), st = null;
+    var y = highpass(removeDC(x), 75, sr), st = null, tr = o.track || null;
     if (o.nr) y = denoise(y, sr, o.nr); if (onp) onp(0.25);
-    if (o.tune && o.ref) { var r = tune(y, sr, o.ref, o.tune, onp && function (p) { onp(0.25 + p * 0.6); }, o.track); y = r.y; st = r.stats; if (st) st.neural = !!(o.track && o.track.neural); }
+    if (o.tune && o.ref) { var r = tune(y, sr, o.ref, o.tune, onp && function (p) { onp(0.25 + p * 0.55); }, tr); y = r.y; st = r.stats; tr = r.track; if (st) st.neural = !!(o.track && o.track.neural); }
+    if (o.gate) { if (!tr) tr = f0(y, sr); var g = gate(y, sr, tr, o.gate); y = g.y; if (st) st.kept = g.kept; else st = { kept: g.kept }; }
+    if (onp) onp(0.9);
     if (o.deess) y = deess(y, sr, o.deess); if (onp) onp(1);
     return { y: y, stats: st };
   }
@@ -481,7 +723,7 @@ var KSDSP = (function () {
       });
     });
   }
-  return { shift: shift, stretch: stretch, resample: resample, f0: f0, nf0: nf0, keymap: keymap, keyScale: keyScale, clean: clean, notes: notes, plan: plan, psola: psola, tune: tune, denoise: denoise, voice: voice, deess: deess, coef: coef, filt: filt, filtfilt: filtfilt, highpass: highpass, removeDC: removeDC, follower: follower, fft: fft, tables: tables, midi: midi };
+  return { gccDelay: gccDelay, aec: aec, post: post, melLag: melLag, gate: gate, slip: slip, shift: shift, stretch: stretch, resample: resample, f0: f0, nf0: nf0, keymap: keymap, keyScale: keyScale, clean: clean, notes: notes, plan: plan, psola: psola, tune: tune, denoise: denoise, voice: voice, deess: deess, coef: coef, filt: filt, filtfilt: filtfilt, highpass: highpass, removeDC: removeDC, follower: follower, fft: fft, tables: tables, midi: midi };
 })();
 
 /* ---------- worker protocol: {id, op, ...} -> {id, ok, ...} ---------- */
@@ -503,10 +745,21 @@ if (typeof window === "undefined" && typeof self !== "undefined" && typeof self.
           .catch(function () { var t = KSDSP.f0(m.x, m.sr, prog); self.postMessage({ id: m.id, ok: true, f0: t.f0, hop: t.hop, neural: false }); });
       } else if (m.op === "keymap") {
         var km = KSDSP.keymap({ f0: m.ref, hop: m.refHop }, m.inst, m.sr); self.postMessage({ id: m.id, ok: true, k: km.k, hop: km.hop });
+      } else if (m.op === "post") {
+        // right after a recording: latency + playback removal, then the take's pitch map (and, with headphones, timing against the melody)
+        var pr = KSDSP.post(m.mic, m.ref, m.sr, function (p) { prog(p * 0.7); });
+        var done = function (t, neural) {
+          var mel = null; if (!pr.bleed && m.refTrack) { mel = KSDSP.melLag(t, { f0: m.refTrack, hop: m.refHop }, m.p0 - m.lat0); if (mel.conf > 15 && Math.abs(mel.lag) > 0.1) { var m2 = KSDSP.melLag(t, { f0: m.refTrack, hop: m.refHop }, m.p0 - m.lat0 + mel.lag); if (m2.conf > 15) mel = { lag: mel.lag + m2.lag, conf: m2.conf, n: m2.n }; } }
+          var y = pr.y === m.mic ? new Float32Array(m.mic) : pr.y;
+          self.postMessage({ id: m.id, ok: true, y: y, delay: pr.delay, conf: pr.conf, ratio: pr.ratio, bleed: pr.bleed, share: pr.share, cutDb: pr.cutDb, f0: t.f0, hop: t.hop, neural: neural, mel: mel }, [y.buffer]);
+        };
+        KSDSP.nf0(pr.y, m.sr, function (p) { prog(0.7 + p * 0.3); }, function () { self.postMessage({ id: m.id, progress: 0.7, note: "model" }); })
+          .then(function (t) { done(t, true); }, function () { done(KSDSP.f0(pr.y, m.sr), false); });
       } else if (m.op === "voice") {
-        var vo = { nr: m.nr, deess: m.deess, tune: m.tune, ref: m.ref ? { f0: m.ref, hop: m.refHop } : null };
+        var vo = { nr: m.nr, deess: m.deess, gate: m.gate, tune: m.tune, ref: m.ref ? { f0: m.ref, hop: m.refHop } : null };
         var finish = function (track) { try { var v = KSDSP.voice(m.x, m.sr, Object.assign(vo, { track: track }), prog); self.postMessage({ id: m.id, ok: true, y: v.y, stats: v.stats }, [v.y.buffer]); } catch (err) { self.postMessage({ id: m.id, ok: false, error: String(err && err.message || err) }); } };
-        if (m.tune && m.neural) KSDSP.nf0(m.x, m.sr, function (p) { prog(p * 0.2); }, function () { self.postMessage({ id: m.id, progress: 0, note: "model" }); }).then(finish, function () { finish(null); });
+        if (m.track) finish({ f0: m.track, hop: 0.01, neural: !!m.trackNeural });
+        else if ((m.tune || m.gate) && m.neural) KSDSP.nf0(m.x, m.sr, function (p) { prog(p * 0.2); }, function () { self.postMessage({ id: m.id, progress: 0, note: "model" }); }).then(finish, function () { finish(null); });
         else finish(null);
       } else if (m.op === "deess") {
         var d = KSDSP.deess(m.x, m.sr, m.amount); self.postMessage({ id: m.id, ok: true, y: d }, [d.buffer]);

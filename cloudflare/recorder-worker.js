@@ -1275,6 +1275,15 @@ async function ksAction(d, env, ip) {
   try { await ksSweep(env); } catch (e) {}
   if (/^ks_s_/.test(d.action)) {
     if (!who.staff) throw new Error('רק לצוות');
+    if (d.action === 'ks_s_logs') { // problems reported by users' devices: the newest 60 of the last 14 days; older days are removed
+      const items = [], day = 86400000, now = Date.now();
+      for (let i = 0; i < 14 && items.length < 60; i++) {
+        const l = await env.BUCKET.list({ prefix: 'ks/log/' + new Date(now - i * day).toISOString().slice(0, 10) + '/', limit: 1000 });
+        for (const o of l.objects.map(o => o.key).sort().reverse()) { if (items.length >= 60) break; const j = await getJ(env, o); if (j) items.push(j); }
+      }
+      try { const old = await env.BUCKET.list({ prefix: 'ks/log/', limit: 200 }); const cut = new Date(now - 30 * day).toISOString().slice(0, 10); for (const o of old.objects) if (o.key.slice(7, 17) < cut) await env.BUCKET.delete(o.key); } catch (e) {}
+      return { ok: true, items };
+    }
     if (d.action === 'ks_s_links') {
       const items = []; let cursor;
       do { const l = await env.BUCKET.list({ prefix: 'ks/a/', cursor }); for (const o of l.objects) { const a = await getJ(env, o.key); if (a) items.push(Object.assign({ key: o.key.slice(5, -5) }, a, { songs: (a.songs || []).length })); } cursor = l.truncated ? l.cursor : null; } while (cursor);
@@ -1308,6 +1317,12 @@ async function ksAction(d, env, ip) {
     await ksPut(env, s);
     if (!who.staff) { const k = 'ks/a/' + who.owner + '.json'; const a = await getJ(env, k); a.used = (a.used | 0) + 1; a.songs = (a.songs || []).concat([id]); await putJ(env, k, a); }
     return { ok: true, id, song: ksPub(s) };
+  }
+  if (d.action === 'ks_log') { // a problem on a user's device (the page sends a few per visit at most)
+    const t = Date.now(), cut = (v, n) => String(v == null ? '' : v).slice(0, n);
+    await putJ(env, 'ks/log/' + new Date(t).toISOString().slice(0, 10) + '/' + t + '-' + Math.random().toString(36).slice(2, 8) + '.json',
+      { t, who: cut(who.name, 60), owner: who.staff ? 'staff' : who.owner.slice(0, 6), kind: cut(d.kind, 30), msg: cut(d.msg, 400), ver: cut(d.ver, 20), ua: cut(d.ua, 220), song: cut(d.song, 40), stage: cut(d.stage, 60), sr: d.sr | 0, mem: +d.mem || 0, cores: d.cores | 0 });
+    return { ok: true };
   }
   if (d.action === 'ks_hello') {
     let ids = [];

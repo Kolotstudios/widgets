@@ -399,7 +399,34 @@ var KSDSP = (function () {
     var tr = track || f0(x, sr, onp && function (p) { onp(p * 0.6); });
     var pl = plan(tr, ref, opts); if (onp) onp(0.7);
     var y = opts.engine === "psola" ? psola(x, sr, tr, pl.cents) : slip(x, sr, tr, pl.cents); if (onp) onp(1);
-    return { y: y, stats: pl.stats, track: tr };
+    return { y: y, stats: pl.stats, track: tr, cents: pl.cents };
+  }
+  /* ---------- second voice: every sung note moved a third up (or down) inside the song's key at that moment.
+     TD-PSOLA here, because it keeps the singer's own timbre over 3-4 semitones (a resampled voice would sound small). ---------- */
+  function harmony(x, sr, track, cents0, o) {
+    var hop = track.hop, n = track.f0.length, um = new Float32Array(n), f, dir = o.dir < 0 ? -1 : 1, semi = o.semi || 0, lag = o.lag || 0, km = o.keys;
+    for (f = 0; f < n; f++) um[f] = track.f0[f] ? midi(track.f0[f]) + (cents0 ? cents0[f] / 100 : 0) : 0;
+    var pc = new Float64Array(12), un = notes(track, false);
+    un.forEach(function (u) { var w = []; for (var q = u.s; q < u.e; q++) if (um[q]) w.push(um[q]); w.sort(function (a, b) { return a - b; }); u.pm = w.length ? w[w.length >> 1] : u.m; pc[((Math.round(u.pm) % 12) + 12) % 12] += u.e - u.s; });
+    var own = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].sort(function (a, b) { return pc[b] - pc[a]; }).slice(0, 7).sort(function (a, b) { return a - b; });
+    var scaleAt = function (t) { if (!km || !km.k || !km.k.length) return own; var i = Math.max(0, Math.min(km.k.length - 1, Math.floor(t / (km.hop || 1)))); return keyScale(km.k[i], semi).slice(0, 7); };
+    var cents = new Float32Array(n);
+    un.forEach(function (u) {
+      if (u.e - u.s < 6) return;
+      var sc = scaleAt((u.s + u.e) / 2 * hop + lag), b = Math.round(u.pm), bp = ((b % 12) + 12) % 12, d = sc.indexOf(bp), iv;
+      if (d >= 0) { var hp = sc[(d + (dir > 0 ? 2 : 5)) % 7]; iv = dir > 0 ? (hp - bp + 12) % 12 : -((bp - hp + 12) % 12); }
+      else iv = dir * (sc.indexOf((bp + dir * 4 + 12) % 12) >= 0 ? 4 : 3);
+      if (Math.abs(iv) < 3 || Math.abs(iv) > 4) iv = dir * 3;
+      var c = (b + iv - u.pm) * 100; for (var q = u.s; q < u.e; q++) cents[q] = c;
+    });
+    // steps between notes rounded over 40 ms
+    var sm = new Float32Array(n); for (f = 0; f < n; f++) { if (!cents[f]) continue; var a = 0, w2 = 0; for (var j = f - 2; j <= f + 2; j++) if (j >= 0 && j < n && cents[j]) { a += cents[j]; w2++; } sm[f] = a / w2; }
+    var y = psola(x, sr, { f0: track.f0, hop: hop }, sm);
+    // only the moved notes are kept (an unmoved copy would just double the lead), with short fades; a softer top end keeps it behind the lead
+    var g = new Float32Array(n), i; for (f = 0; f < n; f++) g[f] = sm[f] && track.f0[f] ? 1 : 0;
+    var out = new Float32Array(x.length), gs = 0, k = 1 - Math.exp(-1 / (0.012 * sr));
+    for (i = 0; i < x.length; i++) { var fi = Math.min(n - 1, Math.floor(i / sr / hop)); gs += (g[fi] - gs) * k; out[i] = y[i] * gs; }
+    return filt(out, coef("lp", 6500, 0.7071, 0, sr));
   }
   /* ---------- noise reduction: spectral, decision-directed (keeps the voice natural, no "underwater") ---------- */
   function denoise(x, sr, amount) {
@@ -678,13 +705,16 @@ var KSDSP = (function () {
   }
   /* the whole offline voice chain for a take */
   function voice(x, sr, o, onp) {
-    var y = highpass(removeDC(x), 75, sr), st = null, tr = o.track || null;
+    var y = highpass(removeDC(x), 75, sr), st = null, tr = o.track || null, cz = null;
     if (o.nr) y = denoise(y, sr, o.nr); if (onp) onp(0.25);
-    if (o.tune && o.ref) { var r = tune(y, sr, o.ref, o.tune, onp && function (p) { onp(0.25 + p * 0.55); }, tr); y = r.y; st = r.stats; tr = r.track; if (st) st.neural = !!(o.track && o.track.neural); }
-    if (o.gate) { if (!tr) tr = f0(y, sr); var g = gate(y, sr, tr, o.gate); y = g.y; if (st) st.kept = g.kept; else st = { kept: g.kept }; }
+    if (o.tune && o.ref) { var r = tune(y, sr, o.ref, o.tune, onp && function (p) { onp(0.25 + p * 0.55); }, tr); y = r.y; st = r.stats; tr = r.track; cz = r.cents; if (st) st.neural = !!(o.track && o.track.neural); }
+    if ((o.gate || o.harm) && !tr) tr = f0(y, sr);
+    if (o.gate) { var g = gate(y, sr, tr, o.gate); y = g.y; if (st) st.kept = g.kept; else st = { kept: g.kept }; }
     if (onp) onp(0.9);
-    if (o.deess) y = deess(y, sr, o.deess); if (onp) onp(1);
-    return { y: y, stats: st };
+    if (o.deess) y = deess(y, sr, o.deess);
+    var yh = null; if (o.harm && tr) yh = harmony(y, sr, tr, cz, { dir: o.harm.dir, semi: o.harm.semi, lag: o.harm.lag, keys: o.harm.keys });
+    if (onp) onp(1);
+    return { y: y, yh: yh, stats: st };
   }
   /* ---------- neural pitch track: FCPE (MIT, CNChTu) in onnxruntime-web; YIN stays as the fallback ---------- */
   var ORT = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/", NN = { p: null };
@@ -732,7 +762,7 @@ var KSDSP = (function () {
       });
     });
   }
-  return { gccDelay: gccDelay, aec: aec, post: post, melLag: melLag, gate: gate, slip: slip, shift: shift, stretch: stretch, resample: resample, f0: f0, nf0: nf0, keymap: keymap, keyScale: keyScale, clean: clean, notes: notes, plan: plan, psola: psola, tune: tune, denoise: denoise, voice: voice, deess: deess, coef: coef, filt: filt, filtfilt: filtfilt, highpass: highpass, removeDC: removeDC, follower: follower, fft: fft, tables: tables, midi: midi };
+  return { gccDelay: gccDelay, aec: aec, post: post, melLag: melLag, gate: gate, slip: slip, shift: shift, stretch: stretch, resample: resample, f0: f0, nf0: nf0, keymap: keymap, keyScale: keyScale, clean: clean, notes: notes, plan: plan, psola: psola, tune: tune, harmony: harmony, denoise: denoise, voice: voice, deess: deess, coef: coef, filt: filt, filtfilt: filtfilt, highpass: highpass, removeDC: removeDC, follower: follower, fft: fft, tables: tables, midi: midi };
 })();
 
 /* ---------- worker protocol: {id, op, ...} -> {id, ok, ...} ---------- */
@@ -765,10 +795,10 @@ if (typeof window === "undefined" && typeof self !== "undefined" && typeof self.
         KSDSP.nf0(pr.y, m.sr, function (p) { prog(0.7 + p * 0.3); }, function () { self.postMessage({ id: m.id, progress: 0.7, note: "model" }); })
           .then(function (t) { done(t, true); }, function () { done(KSDSP.f0(pr.y, m.sr), false); });
       } else if (m.op === "voice") {
-        var vo = { nr: m.nr, deess: m.deess, gate: m.gate, tune: m.tune, ref: m.ref ? { f0: m.ref, hop: m.refHop } : null };
-        var finish = function (track) { try { var v = KSDSP.voice(m.x, m.sr, Object.assign(vo, { track: track }), prog); self.postMessage({ id: m.id, ok: true, y: v.y, stats: v.stats }, [v.y.buffer]); } catch (err) { self.postMessage({ id: m.id, ok: false, error: String(err && err.message || err) }); } };
+        var vo = { nr: m.nr, deess: m.deess, gate: m.gate, tune: m.tune, harm: m.harm || null, ref: m.ref ? { f0: m.ref, hop: m.refHop } : null };
+        var finish = function (track) { try { var v = KSDSP.voice(m.x, m.sr, Object.assign(vo, { track: track }), prog); self.postMessage({ id: m.id, ok: true, y: v.y, yh: v.yh, stats: v.stats }, v.yh ? [v.y.buffer, v.yh.buffer] : [v.y.buffer]); } catch (err) { self.postMessage({ id: m.id, ok: false, error: String(err && err.message || err) }); } };
         if (m.track) finish({ f0: m.track, hop: 0.01, neural: !!m.trackNeural });
-        else if ((m.tune || m.gate) && m.neural) KSDSP.nf0(m.x, m.sr, function (p) { prog(p * 0.2); }, function () { self.postMessage({ id: m.id, progress: 0, note: "model" }); }).then(finish, function () { finish(null); });
+        else if ((m.tune || m.gate || m.harm) && m.neural) KSDSP.nf0(m.x, m.sr, function (p) { prog(p * 0.2); }, function () { self.postMessage({ id: m.id, progress: 0, note: "model" }); }).then(finish, function () { finish(null); });
         else finish(null);
       } else if (m.op === "deess") {
         var d = KSDSP.deess(m.x, m.sr, m.amount); self.postMessage({ id: m.id, ok: true, y: d }, [d.buffer]);

@@ -87,7 +87,7 @@ details.adv[open]>summary{margin-bottom:12px}
 .check{display:flex;gap:10px;align-items:flex-start;font-weight:500;font-size:14px;cursor:pointer}
 .check input{width:20px;height:20px;margin-top:2px;accent-color:var(--accent);flex:none}
 /* stage */
-.stage{position:relative;background:radial-gradient(120% 90% at 50% 0%,var(--stage2),var(--stage));color:var(--stage-ink);border-radius:18px;min-height:clamp(260px,46vh,440px);display:grid;grid-template-rows:auto 1fr auto auto;overflow:hidden;user-select:none}
+.stage{position:relative;background:radial-gradient(120% 90% at 50% 0%,var(--stage2),var(--stage));color:var(--stage-ink);border-radius:18px;min-height:clamp(340px,60vh,560px);display:grid;grid-template-rows:auto 1fr auto auto;overflow:hidden;user-select:none}
 .stage .hd{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px;font-size:13px;color:var(--stage-dim)}
 .stage .hd b{color:var(--stage-ink);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .stage .hd button{background:rgba(255,255,255,.08);border:0;color:var(--stage-ink);border-radius:10px;padding:6px 10px;font:500 13px var(--f);cursor:pointer}
@@ -102,8 +102,15 @@ details.adv[open]>summary{margin-bottom:12px}
 .cd{display:flex;gap:10px;justify-content:center;min-height:16px}
 .cd i{width:14px;height:14px;border-radius:50%;background:var(--sung);opacity:.9;transition:opacity .2s}
 .cd i.off{opacity:.12}
-.lane{display:block;width:100%;height:72px}
-.stage.full .lane{height:120px}
+.lane{display:block;width:100%;height:clamp(120px,19vh,170px)}
+.stage.full .lane{height:clamp(160px,26vh,260px)}
+.presets.three{grid-template-columns:repeat(3,1fr)}
+body.simple #fxSeg{grid-template-columns:repeat(3,1fr)}
+.nudge{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center}
+.nudge output{font:700 14px var(--f);color:var(--accent);min-width:74px;text-align:center;direction:ltr}
+.modelink{background:none;border:0;color:var(--accent);font:600 13px var(--f);cursor:pointer;text-decoration:underline;padding:6px}
+.foot{display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap}
+.iconbtn{min-width:52px;padding-inline:12px}
 .scorebox{position:absolute;inset:0;display:grid;place-items:center;background:rgba(14,10,19,.72);text-align:center;padding:20px;cursor:pointer}
 .scorebox b{display:block;font-size:clamp(56px,14vw,120px);font-weight:800;color:var(--sung);line-height:1}
 .scorebox span{display:block;font-size:clamp(15px,3vw,20px);color:var(--stage-ink);margin-top:8px}
@@ -192,7 +199,7 @@ body.docked{padding-bottom:120px}
     <div class="brand">אולפני קולות</div>
     <h1>סטודיו קריוקי</h1>
   </div>
-  <div class="row"><button class="btn small ghost" id="modeBtn">מצב מתקדם</button><span id="who" class="pill" hidden></span><button class="btn small ghost" id="homeBtn" hidden>השירים שלי</button></div>
+  <div class="row"><span id="who" class="pill" hidden></span><button class="btn small ghost" id="homeBtn" hidden>השירים שלי</button></div>
 </header>
 
 <main class="wrap">
@@ -285,10 +292,10 @@ body.docked{padding-bottom:120px}
           <button class="playbtn" id="playBtn" aria-label="ניגון"><svg viewBox="0 0 24 24" id="playIco"><path d="M8 5v14l11-7z"/></svg></button>
           <div class="seek">
             <input type="range" id="seek" min="0" max="1000" value="0" aria-label="מיקום בשיר">
-            <div class="row between"><span class="num ltr" id="tNow">0:00</span><span class="row" style="gap:6px"><button class="btn small ghost" id="back5">5- שנ'</button><button class="btn small ghost" id="fwd5">5+ שנ'</button></span><span class="num ltr" id="tDur">0:00</span></div>
+            <div class="row between"><span class="num ltr" id="tNow">0:00</span><span class="row" style="gap:6px"><button class="btn small ghost advOnly" id="back5">5- שנ'</button><button class="btn small ghost advOnly" id="fwd5">5+ שנ'</button></span><span class="num ltr" id="tDur">0:00</span></div>
           </div>
         </div>
-        <label class="check" id="withTakeBox" hidden><input type="checkbox" id="withTake" checked> לנגן עם ההקלטה שלי</label>
+        <div hidden><label class="check" id="withTakeBox" hidden><input type="checkbox" id="withTake" checked> לנגן עם ההקלטה שלי</label></div>
         <div class="ctl">
           <div class="field"><h3>קול הזמר</h3>
             <div class="seg" id="guideSeg"><button data-g="1" aria-pressed="false">100%</button><button data-g="0.5" aria-pressed="true">50%</button><button data-g="0" aria-pressed="false">בלי (פלייבק)</button></div></div>
@@ -337,37 +344,44 @@ body.docked{padding-bottom:120px}
         <!-- recording -->
         <div id="tRec" class="field" style="gap:14px" hidden>
           <div class="field"><h3>איך שרים?</h3>
-            <div class="seg" id="modeSeg"><button data-m="phones" aria-pressed="true">עם אוזניות (מומלץ)</button><button data-m="speaker" aria-pressed="false">בלי אוזניות</button></div>
-            <p class="note" id="modeNote">עם אוזניות שומעים את השיר בלי שהמוזיקה נכנסת להקלטה, וזו האיכות הכי טובה. הסנכרון מול השיר נעשה אוטומטית אחרי ההקלטה.</p></div>
-          <div class="field"><h3>מאיפה מקליטים?</h3>
-            <div class="seg" id="fromSeg"><button data-f="start" aria-pressed="true">מתחילת השיר</button><button data-f="here" aria-pressed="false">מהמקום הנוכחי</button></div></div>
-          <p class="note">כפתור ההקלטה נמצא בתחתית המסך. בזמן ההקלטה המילים נשארות למעלה.</p>
+            <div class="seg" id="modeSeg"><button data-m="phones" aria-pressed="true">עם אוזניות</button><button data-m="speaker" aria-pressed="false">בלי אוזניות (רמקול)</button></div>
+            <p class="note" id="modeNote">עם אוזניות האיכות הכי טובה, ורואים את הקול שלכם על התווים בזמן השירה.</p></div>
+          <div hidden><div class="seg" id="fromSeg"></div></div>
           <p class="status" id="recMsg"></p>
           <div class="takes" id="takes"></div>
           <div id="takeBox" class="field" style="gap:14px" hidden>
             <p class="status" id="scoreMsg"></p>
             <p class="status warnmsg" id="lvlMsg"></p>
-            <div class="field"><h3>לשמוע את ההבדל</h3>
-              <div class="seg" id="abSeg"><button data-ab="after" aria-pressed="true">אחרי העיבוד</button><button data-ab="before" aria-pressed="false">לפני (כמו שהוקלט)</button></div></div>
-            <div class="field"><h3>עיבוד הקול</h3>
+            <div class="field"><h3>מה שומעים</h3>
+              <div class="seg" id="listenSeg"><button data-l="after" aria-pressed="true">ההקלטה מעובדת</button><button data-l="before" aria-pressed="false">כמו שהוקלטה</button><button data-l="none" aria-pressed="false">בלי ההקלטה</button></div></div>
+            <div class="field" id="cleanBox"><h3>תזמון הקול מול המוזיקה</h3>
+              <p class="status" id="syncMsg"></p>
+              <div class="nudge"><button class="btn small" id="syncEarly">להקדים את הקול</button><output id="adjOut">0 ms</output><button class="btn small" id="syncLate">לאחר את הקול</button></div>
+              <p class="note advOnly" id="diagMsg"></p></div>
+            <div class="field"><h3>צליל</h3>
               <div class="presets" id="fxSeg">
-                <button class="preset" data-p="natural" aria-pressed="true">טבעי<small>נקי, חם, חדר קטן</small></button>
+                <button class="preset" data-p="natural" aria-pressed="true">טבעי<small>נקי וחם</small></button>
                 <button class="preset" data-p="pop" aria-pressed="false">פופ<small>נוכח, ריוורב</small></button>
-                <button class="preset" data-p="echo" aria-pressed="false">הד ארוך<small>דיליי עם פידבק ארוך</small></button>
-                <button class="preset" data-p="dry" aria-pressed="false">בלי עיבוד<small>כמו שהוקלט</small></button>
+                <button class="preset" data-p="echo" aria-pressed="false">הד ארוך<small>דיליי רך</small></button>
+                <button class="preset advOnly" data-p="dry" aria-pressed="false">בלי עיבוד<small>כמו שהוקלט</small></button>
               </div></div>
             <div class="field"><h3>תיקון זיופים</h3>
-              <div class="seg" id="tuneSeg"><button data-t="0" aria-pressed="true">כבוי</button><button data-t="1" aria-pressed="false">עדין</button><button data-t="2" aria-pressed="false">בינוני</button><button data-t="3" aria-pressed="false">חזק</button></div>
-              <p class="note advOnly">תווי המטרה נלקחים מהשירה של הזמר המקורי, והקול מוזז אליהם בשיטה של Auto-Tune: דגימה מחדש עם חיבורי מחזור, בלי לגעת בגוון. עדין ובינוני מזיזים את התו למקומו ומשאירים את הוויברטו והגלישות שלכם, חזק נועל את הצליל על התו.</p>
+              <div class="seg" id="tuneSeg"><button data-t="0" aria-pressed="true">כבוי</button><button class="advOnly" data-t="1" aria-pressed="false">עדין</button><button data-t="2" aria-pressed="false">טבעי</button><button data-t="3" aria-pressed="false">חזק</button></div>
+              <p class="note advOnly">תווי המטרה נלקחים מהשירה של הזמר המקורי, והקול מוזז אליהם בשיטה של Auto-Tune: דגימה מחדש עם חיבורי מחזור, בלי לגעת בגוון. עדין וטבעי מזיזים את התו למקומו ומשאירים את הוויברטו והגלישות שלכם, חזק נועל את הצליל על התו.</p>
               <p class="status" id="tuneMsg"></p><p class="note advOnly" id="keyMap"></p></div>
-            <div class="field"><h3>קול שני (הרמוניה)</h3>
-              <div class="seg" id="harmSeg"><button data-h="0" aria-pressed="true">כבוי</button><button data-h="1" aria-pressed="false">קול מעל</button><button data-h="-1" aria-pressed="false">קול מתחת</button></div>
-              <p class="note advOnly">הקול השני נבנה מההקלטה שלכם: כל תו מוזז טרצה למעלה או למטה בתוך הסולם של השיר באותו רגע, ומושמע חלש מאחורי הקול הראשי.</p></div>
-            <div class="field" id="cleanBox"><h3>סנכרון וניקוי מוזיקה</h3>
-              <p class="status" id="syncMsg"></p>
-              <p class="note advOnly">אם נשארת מוזיקה ברקע של הקול, הניקוי העמוק שולח את ההקלטה לשרת ההפרדה (היא נמחקת ממנו מיד אחרי) ומשאיר רק את הקול.</p>
-              <div class="row advOnly"><button class="btn" id="cleanBtn">ניקוי עמוק</button><label class="check" id="useCleanBox" hidden><input type="checkbox" id="useClean" checked> להשתמש בגרסה הנקייה</label></div>
-              <p class="status" id="cleanMsg"></p></div>
+            <details class="adv" id="extras"><summary>תוספות: קול שני, תיקון קטע, ניקוי מוזיקה עמוק</summary>
+              <div class="field" style="gap:14px">
+                <div class="field"><h3>קול שני (הרמוניה)</h3>
+                  <div class="seg" id="harmSeg"><button data-h="0" aria-pressed="true">כבוי</button><button data-h="1" aria-pressed="false">קול מעל</button><button data-h="-1" aria-pressed="false">קול מתחת</button></div></div>
+                <div class="field"><h3>תיקון קטע</h3>
+                  <p class="note">עומדים בנגן על השורה שרוצים לתקן, לוחצים, שרים רק אותה ועוצרים. הקטע משתלב בהקלטה.</p>
+                  <div class="row"><button class="btn" id="punchBtn">הקלטה מחדש של הקטע מהשורה הנוכחית</button></div></div>
+                <div class="field"><h3>ניקוי מוזיקה עמוק</h3>
+                  <p class="note">אם עדיין שומעים מוזיקה מאחורי הקול: ההקלטה נשלחת לשרת ההפרדה (ונמחקת ממנו מיד אחרי) וחוזרת עם הקול בלבד. לוקח כדקה.</p>
+                  <div class="row"><button class="btn" id="cleanBtn">ניקוי עמוק</button><label class="check" id="useCleanBox" hidden><input type="checkbox" id="useClean" checked> להשתמש בגרסה הנקייה</label></div>
+                  <p class="status" id="cleanMsg"></p></div>
+              </div>
+            </details>
             <details class="adv advOnly"><summary>כיוון ידני של העיבוד</summary>
               <div class="knobs" id="knobs"></div>
               <p class="note">גוררים כל כפתור למעלה או למטה (או גלגלת). לחיצה כפולה מחזירה לערך של הפריסט.</p>
@@ -381,7 +395,7 @@ body.docked{padding-bottom:120px}
           <p class="sub">הקבצים נוצרים בסולם ובעוצמות שבחרתם. לשימוש פרטי בלבד.</p>
           <div class="row">
             <button class="btn primary" id="dlMix" disabled>השיר עם ההקלטה שלי (MP3)</button>
-            <button class="btn" id="dlVoice" disabled>רק הקול שלי (WAV)</button>
+            <button class="btn advOnly" id="dlVoice" disabled>רק הקול שלי (WAV)</button><button class="btn advOnly" id="dlRaw" disabled>ההקלטה הגולמית לבדיקה (WAV)</button>
           </div>
           <div class="row">
             <button class="btn" id="dlInst">פלייבק לקריוקי (MP3)</button>
@@ -397,21 +411,21 @@ body.docked{padding-bottom:120px}
       </div>
     </div>
   </section>
-  <p class="ver" id="ver"></p>
+  <div class="foot"><button class="modelink" id="modeBtn">מצב מתקדם</button><p class="ver" id="ver"></p></div>
 </main>
 
 <div class="dock" id="dock" hidden><div class="dock-in">
   <div class="meter" id="meter" hidden><i id="meterI"></i></div>
-  <div class="row"><button class="btn rec big grow" id="recBtn">● התחלת הקלטה</button><button class="btn big" id="punchBtn" hidden>תיקון קטע מכאן</button><button class="btn big grow" id="stopBtn" hidden>■ עצירה</button></div>
+  <div class="row"><button class="btn rec big grow" id="recBtn">● התחלת הקלטה</button><button class="btn big iconbtn" id="fromStartBtn" hidden aria-label="חזרה לתחילת השיר">⏮</button><button class="btn big grow" id="stopBtn" hidden>■ עצירה</button></div>
 </div></div>
 <div class="dlg" id="dlg" hidden><div class="card" role="dialog" aria-modal="true"><p id="dlgMsg" style="margin:0"></p><div class="row"><button class="btn primary" id="dlgOk">אישור</button><button class="btn ghost" id="dlgNo">ביטול</button></div></div></div>
 <div class="toast" id="toast" hidden></div>
 
-<script src="ks-dsp.js?v=2026-11-13c"></script>
+<script src="ks-dsp.js?v=2026-11-13d"></script>
 <script>
 (function(){
 "use strict";
-var VER="2026-11-13c",TERMS_V="1";
+var VER="2026-11-13d",TERMS_V="1";
 var API="https://kolot-recorder.kolot-studios.workers.dev";
 var $=function(s){return document.getElementById(s)};
 var AC=window.AudioContext||window.webkitAudioContext,OAC=window.OfflineAudioContext||window.webkitOfflineAudioContext;
@@ -483,7 +497,7 @@ function mono(buf){var n=buf.length,o=new Float32Array(n),c=buf.numberOfChannels
 function mkBuf(chs,sr){var b=ax().createBuffer(chs.length,chs[0].length,sr);chs.forEach(function(d,k){b.copyToChannel?b.copyToChannel(d,k):b.getChannelData(k).set(d)});return b}
 
 /* ---------- state ---------- */
-var S={song:null,lines:[],words:null,lang:"",stems:{v:null,i:null},keyed:{},semi:0,guide:0.5,inst:1,ref:null,refP:null,takes:[],sel:-1,mode:"phones",from:"start",fx:"natural",tune:0,dirty:false,ab:"after",harm:0,duo:null,refNotes:null,refLoud:false};
+var S={song:null,lines:[],words:null,lang:"",stems:{v:null,i:null},keyed:{},semi:0,guide:0.5,inst:1,ref:null,refP:null,takes:[],sel:-1,mode:"phones",from:"start",fx:"natural",tune:0,dirty:false,ab:"after",listen:"after",harm:0,duo:null,refNotes:null,refLoud:false};
 
 /* ---------- start: link / staff ---------- */
 function boot(){
@@ -601,7 +615,16 @@ function openSong(id){
 }
 // the original singer's note map: read at once when the server has it; otherwise built when the user turns to recording
 function warmRef(force){if(!S.song||S.ref||S.refP)return;if(!force&&!S.refSaved)return;var id=S.song.id;refTrack().then(function(){if(S.song&&S.song.id===id){buildNotes();drawStage(pos())}}).catch(function(){})}
-function buildNotes(){if(!S.ref||S.refNotes)return;try{var h=S.ref.hop;S.refNotes=KSDSP.notes({f0:S.ref.f0,hop:h},false).filter(function(n){return n.e-n.s>=8}).map(function(n){return {t0:n.s*h,t1:n.e*h,m:n.m}})}catch(e){S.refNotes=[]}}
+// the notes shown on the lane: whole semitones in the song's own tuning; ornaments (under 0.14 s) join the note they lean on,
+// and the same note carried over a tiny gap is one note - what is left is the melody a singer follows
+function buildNotes(){if(!S.ref||S.refNotes)return;try{
+  var h=S.ref.hop,N=KSDSP.notes({f0:S.ref.f0,hop:h},false).map(function(n){return {t0:n.s*h,t1:n.e*h,m:n.m}});
+  var offs=N.filter(function(n){return n.t1-n.t0>=0.15}).map(function(n){return n.m-Math.round(n.m)}).sort(function(a,b){return a-b}),tun=offs.length?offs[offs.length>>1]:0,out=[],i;
+  N.forEach(function(n){n.k=Math.round(n.m-tun);n.m=n.k+tun;var p=out[out.length-1],short=n.t1-n.t0<0.14;
+    if(p&&n.t0-p.t1<0.12&&(p.k===n.k||short)){p.t1=n.t1;return}
+    n.orn=short;out.push(n)});
+  for(i=out.length-2;i>=0;i--){if(out[i].orn&&out[i+1].t0-out[i].t1<0.12){out[i+1].t0=out[i].t0;out.splice(i,1)}}
+  S.refNotes=out.filter(function(n){return n.t1-n.t0>=0.14})}catch(e){S.refNotes=[]}}
 function showSong(){
   view("vSong");$("stTitle").textContent=S.song.title;$("tDur").textContent=fmt(S.dur);
   PEND=S.semi;setGuide(S.guide,true);updKey();renderLines();renderTakes();tab("tLyrics");PL.off=0;drawStage(0);
@@ -685,13 +708,13 @@ function stopPlay(keep){
   if(!keep)PL.tok++;
   if(PL.nodes){PL.nodes.src.forEach(function(s){try{s.stop()}catch(e){}});try{PL.nodes.master.disconnect()}catch(e){}PL.nodes=null}
   if(PL.playing){PL.off=Math.min(S.dur||0,pos());PL.playing=false}
-  cancelAnimationFrame(PL.raf);setPlayIco();if(!keep)drawStage(PL.off);
+  cancelAnimationFrame(PL.raf);setPlayIco();if(!keep){drawStage(PL.off);updRecBtn()}
 }
 function stopAll(){if(REC.on)stopRec(true);stopPlay();if(VID.on)VID.cancel=true}
 function setPlayIco(){$("playIco").innerHTML=PL.playing?'<path d="M7 5h4v14H7zM13 5h4v14h-4z"/>':'<path d="M8 5v14l11-7z"/>';$("playBtn").setAttribute("aria-label",PL.playing?"עצירה":"ניגון")}
 function loop(){cancelAnimationFrame(PL.raf);(function f(){var p=pos();if(p>=S.dur){if(REC.on)stopRec();else{stopPlay();PL.off=0;drawStage(0)}return}drawStage(p);PL.raf=requestAnimationFrame(f)})()}
 $("playBtn").onclick=function(){if(REC.on){stopRec();return}if(PL.playing)stopPlay();else play()};
-$("seek").oninput=function(){if(REC.on){this.value=Math.round(pos()/S.dur*1000);return}var t=this.value/1000*S.dur;if(PL.playing&&!REC.on)play(t);else{PL.off=t;drawStage(t)}};
+$("seek").oninput=function(){if(REC.on){this.value=Math.round(pos()/S.dur*1000);return}var t=this.value/1000*S.dur;if(PL.playing&&!REC.on)play(t);else{PL.off=t;drawStage(t);updRecBtn()}};
 $("back5").onclick=function(){if(REC.on)return;var t=Math.max(0,pos()-5);PL.playing?play(t):(PL.off=t,drawStage(t))};
 $("fwd5").onclick=function(){if(REC.on)return;var t=Math.min(S.dur-1,pos()+5);PL.playing?play(t):(PL.off=t,drawStage(t))};
 function setGain(param,v){if(!AX)return;param.setTargetAtTime(v,AX.currentTime,0.03)}
@@ -897,24 +920,35 @@ function lanePts(ta,tb){
   var tk=$("withTake").checked&&S.sel>=0?S.takes[S.sel]:null;if(!tk||!tk.track)return null;
   var st=takeAt(tk),F=tk.track,f0=Math.max(0,Math.floor((ta-st)/0.01)),f1=Math.min(F.length,Math.ceil((tb-st)/0.01)),out=[];
   for(var f=f0;f<f1;f++)if(F[f])out.push({t:st+f*0.01,m:69+12*Math.log2(F[f]/440)});return out}
+function noteName(k){return KN_HE[(((Math.round(k)+S.semi)%12)+12)%12]}
 function laneDraw(g,W,H,p,d,L){
   var N=S.refNotes,SPAN=5,BACK=1.5,t0=p-BACK,t1=p+SPAN-BACK,cl=S.lines.length?S.lines[Math.max(0,lineAt(p))]:null,rtl=cl?hasHeb(cl.text):true;
   var X=function(t){var f=(t-t0)/SPAN;return (rtl?1-f:f)*W},i=Math.min(L.i0||0,N.length-1),j,n;
   while(i>0&&N[i].t1>t0-3)i--;while(i<N.length-1&&N[i].t1<t0-3)i++;L.i0=i;
   var lo=1e9,hi=-1e9;for(j=i;j<N.length&&N[j].t0<t1+3;j++){var m=N[j].m+S.semi;if(m<lo)lo=m;if(m>hi)hi=m}
-  if(lo>hi){lo=L.lo==null?55:L.lo+2.5;hi=L.hi==null?67:L.hi-2.5}
-  lo-=2.5;hi+=2.5;if(hi-lo<12){var mid=(hi+lo)/2;lo=mid-6;hi=mid+6}
+  if(lo>hi){lo=L.lo==null?55:L.lo+3;hi=L.hi==null?67:L.hi-3}
+  lo-=3;hi+=3;if(hi-lo<11){var mid=(hi+lo)/2;lo=mid-5.5;hi=mid+5.5}
   if(L.lo==null||Math.abs(p-(L.p||0))>1){L.lo=lo;L.hi=hi}else{L.lo+=(lo-L.lo)*0.06;L.hi+=(hi-L.hi)*0.06}L.p=p;
-  var Y=function(m){return H-(m-L.lo)/(L.hi-L.lo)*H},bh=Math.max(5*d,H/14);
-  for(j=i;j<N.length&&N[j].t0<t1;j++){n=N[j];if(n.t1<t0)continue;var xa=X(n.t0),xb=X(n.t1),y=Y(n.m+S.semi);
-    g.fillStyle=n.t1<=p?"rgba(255,209,102,.34)":n.t0<=p?"#ffd166":"rgba(245,239,250,.32)";rrect(g,Math.min(xa,xb),y-bh/2,Math.max(3*d,Math.abs(xb-xa)-d),bh,bh/2)}
-  g.fillStyle="rgba(245,239,250,.55)";g.fillRect(X(p)-d/2,0,d,H);
-  var P=lanePts(t0,Math.min(t1,p+0.05));if(!P||!P.length)return;
-  var prev=null;g.lineWidth=2.4*d;g.lineCap="round";
-  for(j=0;j<P.length;j++){var q=P[j];if(q.t<t0||q.t>p+0.05){prev=null;continue}
-    var rn=refNoteAt(q.t,i),tg=rn?rn.m+S.semi:(L.lo+L.hi)/2,mm=q.m+12*Math.round((tg-q.m)/12),ok=rn&&Math.abs(mm-tg)<=0.6,x=X(q.t),yy=Math.max(2*d,Math.min(H-2*d,Y(mm)));
-    g.strokeStyle=ok?"#5cd68a":rn?"#ff8a5c":"rgba(245,239,250,.6)";g.beginPath();
-    if(prev&&q.t-prev.t<0.05&&Math.abs(yy-prev.y)<H/3){g.moveTo(prev.x,prev.y);g.lineTo(x,yy)}else{g.moveTo(x-0.5,yy);g.lineTo(x+0.5,yy)}g.stroke();prev={t:q.t,x:x,y:yy}}
+  var top=16*d,bot=6*d,Y=function(m){return H-bot-(m-L.lo)/(L.hi-L.lo)*(H-top-bot)},bh=Math.max(7*d,(H-top-bot)/(L.hi-L.lo)*0.9),fs=Math.round(12*d),lastLbl=-9,lastK=null,cur=null;
+  g.font="600 "+fs+"px Rubik, Arial";g.textAlign="center";g.textBaseline="alphabetic";g.direction="rtl";
+  // the notes to sing: the one sounding now is bright, the ones already sung fade
+  for(j=i;j<N.length&&N[j].t0<t1;j++){n=N[j];if(n.t1<t0)continue;var xa=X(n.t0),xb=X(n.t1),y=Y(n.m+S.semi),x=Math.min(xa,xb),w=Math.max(4*d,Math.abs(xb-xa)-1.5*d),now=n.t0<=p&&n.t1>p,past=n.t1<=p;
+    if(now)cur=n;g.fillStyle=now?"rgba(255,209,102,.95)":past?"rgba(255,209,102,.22)":"rgba(245,239,250,.26)";rrect(g,x,y-bh/2,w,bh,Math.min(bh/2,5*d));
+    if(!past&&w>=fs*1.3&&(n.k!==lastK||n.t0-lastLbl>1.2)){g.fillStyle=now?"#ffd166":"rgba(245,239,250,.62)";g.fillText(noteName(n.k),x+w/2,y-bh/2-3*d);lastLbl=n.t0;lastK=n.k}}
+  var xn=X(p);g.fillStyle="rgba(245,239,250,.5)";g.fillRect(xn-d/2,0,d,H);
+  // the singer: a thick line over the notes, green on the note and orange off it
+  var P=lanePts(t0,Math.min(t1,p+0.05)),prev=null,head=null;
+  if(P&&P.length){g.lineWidth=4.2*d;g.lineCap="round";g.lineJoin="round";g.shadowBlur=6*d;
+    for(j=0;j<P.length;j++){var q=P[j];if(q.t<t0||q.t>p+0.05){prev=null;continue}
+      var rn=refNoteAt(q.t,i),tg=rn?rn.m+S.semi:(L.lo+L.hi)/2,mm=q.m+12*Math.round((tg-q.m)/12),ok=rn&&Math.abs(mm-tg)<=0.6,xx=X(q.t),yy=Math.max(3*d,Math.min(H-3*d,Y(mm))),col=ok?"#5cd68a":rn?"#ff8a5c":"rgba(245,239,250,.75)";
+      g.strokeStyle=col;g.shadowColor=col;g.beginPath();
+      if(prev&&q.t-prev.t<0.06&&Math.abs(yy-prev.y)<H/3){g.moveTo(prev.x,prev.y);g.lineTo(xx,yy)}else{g.moveTo(xx-0.5,yy);g.lineTo(xx+0.5,yy)}g.stroke();prev={t:q.t,x:xx,y:yy};
+      if(p-q.t<0.2)head={x:xx,y:yy,m:mm,ok:ok,rn:rn}}
+    g.shadowBlur=0}
+  // at the now-line: the note to sing, and (while a voice is there) the note being sung
+  g.font="700 "+Math.round(14*d)+"px Rubik, Arial";g.textAlign=rtl?"right":"left";var off=(rtl?-1:1)*7*d;
+  if(cur){g.fillStyle="#ffd166";g.fillText(noteName(cur.k),xn+off,13*d)}
+  if(head){g.textAlign=rtl?"left":"right";g.fillStyle=head.ok?"#5cd68a":head.rn?"#ff8a5c":"rgba(245,239,250,.8)";g.fillText(KN_HE[((Math.round(head.m)%12)+12)%12]+(head.ok?" ✓":""),xn-off,13*d)}
 }
 function drawLane(p){
   var c=$("lane"),N=S.refNotes;if(!N||!N.length){if(!c.hidden)c.hidden=true;return}if(c.hidden)c.hidden=false;
@@ -934,8 +968,9 @@ function liveTick(p){if(!REC.on||REC.mode!=="phones"||!S.refNotes)return;var f=l
 function lineAt(p){var L=S.lines,k=-1;for(var i=0;i<L.length;i++){if(L[i].t<=p+0.02)k=i;else break}return k}
 function wordsHtml(el,l){el.innerHTML="";el.className="ln cur"+(hasHeb(l.text)?"":" ltr");el.dir=hasHeb(l.text)?"rtl":"ltr";
   tokens(l.text).forEach(function(w,i){if(i)el.appendChild(document.createTextNode(" "));var s=document.createElement("span");s.className="w";s.textContent=w;el.appendChild(s)})}
+var recSec=-1;
 function drawStage(p){
-  liveTick(p);drawLane(p);
+  liveTick(p);drawLane(p);if((p|0)!==recSec){recSec=p|0;updRecBtn()}
   $("stTime").textContent=fmt(p);$("tNow").textContent=fmt(p);if(S.dur)$("seek").value=Math.round(p/S.dur*1000);
   var L=S.lines,k=lineAt(p),cur=L[k],nx=L[k+1];
   var showCur=cur&&(p<=cur.e+1.2||(nx&&nx.t-p<2.5));
@@ -965,7 +1000,12 @@ $("fullBtn").onclick=toggleFull;
 $("stage").addEventListener("dblclick",toggleFull);
 
 /* ---------- tabs ---------- */
-function updDock(){var on=!$("vSong").hidden&&(!$("tRec").hidden||REC.on);$("dock").hidden=!on;document.body.classList.toggle("docked",on);$("punchBtn").hidden=REC.on||S.sel<0||!S.takes[S.sel]}
+function updDock(){var on=!$("vSong").hidden&&(!$("tRec").hidden||REC.on);$("dock").hidden=!on;document.body.classList.toggle("docked",on);updRecBtn()}
+// the record button says where the recording will start: the beginning, or the line the player stands on
+var recLbl="";
+function recFrom(){var p=REC.on?0:pos();if(p<=3)return 0;var k=lineAt(p);return Math.max(0,k>=0?S.lines[k].t-2:p)}
+function updRecBtn(){if(REC.on||$("dock").hidden)return;var f=recFrom(),t=f>0?"● הקלטה מ-"+fmt(f):"● התחלת הקלטה";if(t!==recLbl){recLbl=t;$("recBtn").textContent=t;$("fromStartBtn").hidden=!(f>0)}}
+$("fromStartBtn").onclick=function(){if(REC.on)return;stopPlay();PL.off=0;drawStage(0);updRecBtn()};
 function tab(id){document.querySelectorAll(".tabs button").forEach(function(b){b.setAttribute("aria-selected",String(b.dataset.tab===id))});["tLyrics","tRec","tOut"].forEach(function(x){$(x).hidden=x!==id});updDock();if(id==="tLyrics"){curLine=-1;drawStage(pos())}if(id==="tOut")updOut();if(id==="tRec")warmRef(true)}
 document.querySelector(".tabs").onclick=function(e){var b=e.target.closest("button");if(b)tab(b.dataset.tab)};
 
@@ -992,21 +1032,22 @@ function micClose(){REC.an=null;try{REC.src.disconnect();REC.node.disconnect();R
 function meter(v){if(!REC.on)return;if(v>0.97)REC.hot=(REC.hot||0)+1;var m=$("meter");m.hidden=false;$("meterI").style.width=Math.min(100,Math.round(Math.sqrt(v)*100))+"%";m.classList.toggle("hot",v>0.95)}
 function autoLat(mode){var saved=+ls("ks_lat_dev")||+ls("ks_lat_"+mode);if(saved)return saved/1000;var o=(AX.outputLatency||0)+(AX.baseLatency||0),i=0;try{i=REC.stream.getAudioTracks()[0].getSettings().latency||0}catch(e){}return Math.min(0.5,o+i||0.03)}
 $("modeSeg").onclick=function(e){var b=e.target.closest("button");if(!b||REC.on)return;S.mode=b.dataset.m;setPressed($("modeSeg"),"m",S.mode);
-  $("modeNote").textContent=S.mode==="phones"?"עם אוזניות שומעים את השיר בלי שהמוזיקה נכנסת להקלטה, וזו האיכות הכי טובה. הסנכרון מול השיר נעשה אוטומטית אחרי ההקלטה.":
-   "בלי אוזניות: השיר מתנגן ברמקול בלי הקול של הזמר. אחרי ההקלטה המערכת מודדת את העיכוב לפי המוזיקה שנכנסה להקלטה, מסנכרנת ומסירה את המוזיקה אוטומטית. מומלץ לשיר קרוב לטלפון ולא להגביר את הרמקול עד הסוף."};
-$("fromSeg").onclick=function(e){var b=e.target.closest("button");if(!b||REC.on)return;S.from=b.dataset.f;setPressed($("fromSeg"),"f",S.from)};
+  $("modeNote").textContent=S.mode==="phones"?"עם אוזניות האיכות הכי טובה, ורואים את הקול שלכם על התווים בזמן השירה.":
+   "השיר מתנגן ברמקול בלי קול הזמר. אחרי ההקלטה המערכת מסנכרנת את הקול לפי המוזיקה שנכנסה למיקרופון ומסירה אותה. שרים קרוב לטלפון, והרמקול לא בעוצמה מלאה.";ls("ks_mode",S.mode)};
+(function(){var m=ls("ks_mode");if(m==="speaker"){S.mode=m;setPressed($("modeSeg"),"m",m);$("modeNote").textContent="השיר מתנגן ברמקול בלי קול הזמר. אחרי ההקלטה המערכת מסנכרנת את הקול לפי המוזיקה שנכנסה למיקרופון ומסירה אותה. שרים קרוב לטלפון, והרמקול לא בעוצמה מלאה."}})();
+
 $("recBtn").onclick=function(){startRec()};
 // re-record one part: sing from the line the player stands on, stop after it; the part is spliced into the selected take
 $("punchBtn").onclick=function(){var tk=S.takes[S.sel];if(!tk||REC.on)return;
-  if(pos()<takeAt(tk)-1||pos()>takeAt(tk)+tk.raw.length/tk.sr){toast("זזים קודם לשורה שרוצים לתקן (לוחצים על הזמן שלה בלשונית המילים)");return}
+  if(pos()<takeAt(tk)-1||pos()>takeAt(tk)+tk.raw.length/tk.sr){toast("זזים קודם בנגן לשורה שרוצים לתקן, בתוך ההקלטה");return}
   startRec(tk)};
 $("stopBtn").onclick=function(){stopRec()};
 function startRec(punch){
   if(REC.on)return;if(!navigator.mediaDevices||!window.AudioWorkletNode){toast("הדפדפן הזה לא מאפשר הקלטה. פותחים ב-Chrome או ב-Safari מעודכן");return}
-  var c=ax(),p0=(punch||S.from==="here")?Math.max(0,(function(){var k=lineAt(pos());return k>=0?S.lines[k].t-2:pos()})()):0;
+  var c=ax(),p0=punch?Math.max(0,(function(){var k=lineAt(pos());return k>=0?S.lines[k].t-2:pos()})()):recFrom();
   stopPlay(true);$("recBtn").disabled=true;$("recMsg").textContent="פותחים את המיקרופון…";
   micOpen(S.mode).then(function(){
-    REC.on=true;REC.mode=punch?punch.mode:S.mode;REC.p0=p0;REC.punch=punch||null;REC.hot=0;REC.lat0=(+ls("ks_lat_dev")||120)/1000;LANE.live=[];$("scoreBox").hidden=true;wake(true);$("recBtn").hidden=true;$("stopBtn").hidden=false;$("stopBtn").textContent="■ עצירה";$("recBtn").disabled=false;$("recMsg").textContent="";updDock();
+    REC.on=true;REC.mode=punch?punch.mode:S.mode;REC.p0=p0;REC.punch=punch||null;REC.hot=0;$("fromStartBtn").hidden=true;recLbl="";REC.lat0=(+ls("ks_lat_dev")||120)/1000;LANE.live=[];$("scoreBox").hidden=true;wake(true);$("recBtn").hidden=true;$("stopBtn").hidden=false;$("stopBtn").textContent="■ עצירה";$("recBtn").disabled=false;$("recMsg").textContent="";updDock();
     try{window.scrollTo({top:Math.max(0,$("stage").getBoundingClientRect().top+window.scrollY-8),behavior:"smooth"})}catch(e){}
     var T0=c.currentTime+3.3;REC.T0=T0;REC.node.port.postMessage({start:T0});
     var big=$("big3");big.hidden=false;[3,2,1].forEach(function(n,i){setTimeout(function(){if(REC.on)big.textContent=n},i*1000)});setTimeout(function(){big.hidden=true;if(REC.on)$("stRec").hidden=false},3200);
@@ -1024,13 +1065,13 @@ function stopRec(discard){
     if(discard||played<2){$("recMsg").textContent=played<2?"ההקלטה קצרה מדי":"";return}
     var n=REC.chunks.reduce(function(a,c){return a+c.length},0),pcm=new Float32Array(n),o=0;REC.chunks.forEach(function(c){pcm.set(c,o);o+=c.length});REC.chunks=[];
     var pk=0,clip=0,i;for(i=0;i<n;i++){var av=Math.abs(pcm[i]);if(av>pk)pk=av;if(av>0.985)clip++}
-    var tk={n:(S.takes.length?S.takes[S.takes.length-1].n:0)+1,raw:pcm,sr:AX.sampleRate,p0:REC.p0,lat:lat,adj:0,mode:REC.mode,semi:REC.semi,clean:null,useClean:false,cleanN:null,prepKey:"",at:Date.now(),sync:"guess",peak:pk,clip:clip/Math.max(1,n)};
+    var tk={n:(S.takes.length?S.takes[S.takes.length-1].n:0)+1,raw:pcm,sr:AX.sampleRate,p0:REC.p0,lat:lat,adj:0,mode:REC.mode,semi:REC.semi,clean:null,useClean:false,cleanN:null,prepKey:"",at:Date.now(),sync:"guess",peak:pk,clip:clip/Math.max(1,n),gI:REC.gI,gV:REC.gV};
     var punch=REC.punch&&S.takes.indexOf(REC.punch)>=0?REC.punch:null;REC.punch=null;
     if(punch){tk.adj=punch.adj}
-    else{S.takes.push(tk);if(S.takes.length>8){S.takes.shift()}S.sel=S.takes.length-1;$("withTake").checked=true;S.ab="after";setPressed($("abSeg"),"ab","after");renderTakes()}
+    else{S.takes.push(tk);if(S.takes.length>8){S.takes.shift()}S.sel=S.takes.length-1;setListen("after");renderTakes()}
     analyzeTake(tk,{gI:REC.gI,gV:REC.gV,semi:REC.semi}).then(function(){
       if(punch){var m=spliceTake(punch,tk);if(!m){$("recMsg").textContent="הקטע קצר מדי לשילוב. שרים לפחות שורה אחת.";return}
-        S.takes.push(m);if(S.takes.length>8)S.takes.shift();S.sel=S.takes.indexOf(m);$("withTake").checked=true;renderTakes();
+        S.takes.push(m);if(S.takes.length>8)S.takes.shift();S.sel=S.takes.indexOf(m);setListen("after");renderTakes();
         $("recMsg").textContent="✓ הקטע שולב בהקלטה חדשה (הקלטה "+m.n+"). ההקלטה הקודמת נשארה ברשימה.";play(Math.max(0,m.cut0-3));return}
       tk.score=scoreTake(tk);renderTakes();showScore(tk);var ready=function(){$("recMsg").textContent="✓ ההקלטה מוכנה. מנגנים כדי לשמוע אותה עם השיר."};
       if(!tk.score)play(Math.max(0,tk.p0)).then(ready,ready);else ready();
@@ -1052,12 +1093,15 @@ function analyzeTake(tk,rec){
   }).then(function(r){
     tk.dry=r.y;tk.track=r.f0;tk.trackNeural=r.neural;tk.bleed=r.bleed;tk.stereo=r.stereo;tk.cutDb=r.cutDb;tk.share=r.share;tk.prepKey="";buildNotes();
     // playback clearly in the take: its delay is the latency. Only a trace of it (headphones): believe it when the peak is unmistakable
-    var melOk=r.mel&&r.mel.conf>15&&r.mel.n>=20,melEst=melOk?Math.max(0,Math.min(0.5,tk.lat+r.mel.lag)):null;
-    if(r.delay>=0&&r.delay<0.45&&(r.bleed?r.conf>=12:(r.conf>=20&&r.ratio>=2&&(!melOk||Math.abs(r.delay-melEst)<0.1)))){tk.lat=r.delay;tk.sync=r.bleed?"bleed":"leak";ls("ks_lat_dev",String(Math.round(r.delay*1000)))}
+    tk.diag={found:!!r.found,delay:Math.round(r.delay*1000),votes:+(r.votes||0).toFixed(2),ppm:Math.round(r.ppm||0),steps:r.steps||0,share:+(r.share||0).toFixed(2),cut:+(r.cutDb||0).toFixed(1),stereo:!!r.stereo,mel:r.mel?Math.round(r.mel.lag*1000)+"/"+Math.round(r.mel.conf):""};
+    var melOk=r.mel&&r.mel.conf>15&&r.mel.n>=20,melEst=melOk?Math.max(0,Math.min(0.9,tk.lat+r.mel.lag)):null;
+    if(r.delay>=0&&r.delay<0.9&&(r.bleed?r.conf>=12:(r.conf>=20&&r.ratio>=2&&r.delay<0.45&&(!melOk||Math.abs(r.delay-melEst)<0.1)))){tk.lat=r.delay;tk.sync=r.bleed?"bleed":"leak";ls("ks_lat_dev",String(Math.round(r.delay*1000)))}
     else if(melOk){var saved=+ls("ks_lat_dev")/1000,est=melEst;
       // the melody is a good but coarser clock: if it agrees with what this device measured before, keep the measured value
       if(saved&&Math.abs(est-saved)<0.05){tk.lat=saved;tk.sync="saved"}else{tk.lat=est;tk.sync="melody"}}
     else tk.sync=+ls("ks_lat_dev")?"saved":"guess";
+    if(!tk.adj){var sa=+ls("ks_adj_"+(tk.sync==="bleed"?"bleed":tk.mode));if(sa)tk.adj=Math.max(-300,Math.min(300,sa))}
+    report("take",diagText(tk),{stage:tk.mode+" "+Math.round(n/sr)+"s"});RPT--;
   }).catch(function(e){tk.sync="guess";msg.textContent="✗ הניתוח נכשל ("+e.message+"). ממשיכים עם ההקלטה כמו שהיא.";report("analyze",e.message,{stage:"len "+Math.round(n/sr)+"s"})});
 }
 // what the take itself tells about the recording conditions
@@ -1091,25 +1135,26 @@ function spliceTake(A,B){
   var tr=null;if(A.track&&B.track){tr=new Float32Array(A.track);var f0=Math.round((s0-aS)/0.01),f1=Math.round((s1-aS)/0.01),fs=Math.round((aS-bS)/0.01);for(var f=Math.max(0,f0);f<Math.min(tr.length,f1);f++){var q=f+fs;tr[f]=q>=0&&q<B.track.length?B.track[q]:0}}
   var m={n:(S.takes.length?S.takes[S.takes.length-1].n:0)+1,raw:mix(A.raw,B.raw),dry:mix(ad,bd),track:tr,trackNeural:!!(A.trackNeural&&B.trackNeural),sr:sr,p0:A.p0,lat:A.lat,adj:A.adj,mode:A.mode,semi:A.semi,clean:null,useClean:false,cleanN:null,prepKey:"",at:Date.now(),sync:A.sync,bleed:A.bleed,stereo:A.stereo,cutDb:A.cutDb,share:A.share,peak:A.peak,clip:A.clip,merged:true,cut0:s0,cut1:s1};
   m.score=scoreTake(m);return m}
+function diagText(tk){var d=tk.diag;if(!d)return "";return "sync "+tk.sync+" · "+(d.found?"playback found":"no playback")+" · delay "+d.delay+" ms · votes "+d.votes+" · drift "+d.ppm+" ppm · steps "+d.steps+" · music share "+d.share+" · cut "+d.cut+" dB"+(d.stereo?" · stereo":"")+(d.mel?" · melody "+d.mel:"")}
 function syncText(tk){var ms=Math.round(tk.lat*1000);
   if(tk.sync==="bleed")return "✓ סנכרון אוטומטי: "+ms+" ms, נמדד מהמוזיקה שנכנסה להקלטה. המוזיקה הוסרה מהקול אוטומטית.";
   if(tk.sync==="leak")return "✓ סנכרון אוטומטי: "+ms+" ms, נמדד מדליפת האוזניות שבהקלטה.";
   if(tk.sync==="melody")return "✓ סנכרון אוטומטי: "+ms+" ms, לפי התאמת השירה למלודיה של הזמר המקורי.";
   if(tk.sync==="saved")return "✓ סנכרון: "+ms+" ms, לפי המדידה האחרונה במכשיר הזה.";
-  return "סנכרון משוער: "+ms+" ms. אם השירה לא יושבת על הפלייבק, מכוונים בכפתור \"סנכרון מול השיר\".";}
+  return "סנכרון משוער: "+ms+" ms. אם הקול לא יושב בדיוק על המוזיקה, מקדימים או מאחרים אותו בכפתורים שכאן.";}
 function takeAt(tk){return tk.p0-tk.lat+tk.adj/1000}
 function renderTakes(){
   var box=$("takes");box.innerHTML="";
   S.takes.forEach(function(tk,i){var el=document.createElement("div");el.className="take"+(i===S.sel?" sel":"");
-    el.innerHTML='<div><b>הקלטה '+tk.n+'</b><div class="meta">'+fmt(tk.raw.length/tk.sr)+" · "+(tk.mode==="speaker"?"בלי אוזניות":"עם אוזניות")+(tk.clean?" · נוקתה":"")+(tk.p0>0?" · מ-"+fmt(tk.p0):"")+(tk.merged?" · משולבת":"")+(tk.score?" · ציון "+tk.score.score:"")+'</div></div><div class="row" style="gap:6px"><button class="btn small" data-p>▶ עם השיר</button>'+(i!==S.sel&&S.takes.length>1?'<button class="btn small duo" data-u aria-pressed="'+(S.duo===tk)+'">'+(S.duo===tk?"✓ דואט":"+ דואט")+"</button>":"")+'<button class="btn small ghost" data-d>מחיקה</button></div>';
+    el.innerHTML='<div><b>הקלטה '+tk.n+'</b><div class="meta">'+fmt(tk.raw.length/tk.sr)+" · "+(tk.mode==="speaker"?"בלי אוזניות":"עם אוזניות")+(tk.clean?" · נוקתה":"")+(tk.p0>0?" · מ-"+fmt(tk.p0):"")+(tk.merged?" · משולבת":"")+(tk.score?" · ציון "+tk.score.score:"")+'</div></div><div class="row" style="gap:6px"><button class="btn small" data-p>▶ עם השיר</button>'+(i!==S.sel&&S.takes.length>1?'<button class="btn small duo advOnly" data-u aria-pressed="'+(S.duo===tk)+'">'+(S.duo===tk?"✓ דואט":"+ דואט")+"</button>":"")+'<button class="btn small ghost" data-d>מחיקה</button></div>';
     el.onclick=function(e){if(e.target.closest("[data-d]")){ask("למחוק את הקלטה "+tk.n+"?","מחיקה").then(function(y){if(!y)return;if(S.duo===tk)S.duo=null;S.takes.splice(i,1);if(S.sel>=S.takes.length)S.sel=S.takes.length-1;renderTakes()});return}
-      if(e.target.closest("[data-u]")){S.duo=S.duo===tk?null:tk;renderTakes();if(PL.playing)retake();else{$("withTake").checked=true;play(Math.max(0,Math.max(tk.p0,S.takes[S.sel].p0)))}return}
-      S.sel=i;if(S.duo===tk)S.duo=null;renderTakes();if(e.target.closest("[data-p]")){$("withTake").checked=true;play(Math.max(0,tk.p0))}};
+      if(e.target.closest("[data-u]")){S.duo=S.duo===tk?null:tk;renderTakes();if(PL.playing)retake();else{listenOn();play(Math.max(0,Math.max(tk.p0,S.takes[S.sel].p0)))}return}
+      S.sel=i;if(S.duo===tk)S.duo=null;renderTakes();if(e.target.closest("[data-p]")){listenOn();play(Math.max(0,tk.p0))}};
     box.appendChild(el)});
   var tk=S.takes[S.sel];$("takeBox").hidden=!tk;$("withTakeBox").hidden=!tk;
   if(tk){drawKnob("sync");$("useCleanBox").hidden=!tk.clean;$("useClean").checked=tk.useClean;$("cleanBtn").hidden=!!tk.clean||tk.cleanN!=null;
     $("latNote").textContent="עיכוב: "+Math.round(tk.lat*1000)+" ms";$("syncMsg").textContent=syncText(tk);
-    $("scoreMsg").textContent=tk.score?"★ "+scoreText(tk.score):"";$("lvlMsg").textContent=takeWarn(tk)}
+    $("scoreMsg").textContent=tk.score?"★ "+scoreText(tk.score):"";$("lvlMsg").textContent=takeWarn(tk);showAdj(tk);$("diagMsg").textContent=diagText(tk)}
   updOut();updDock();
 }
 // noise reduction, tuning and de-ess are rendered once per setting (in the background); the rest are live nodes
@@ -1210,9 +1255,16 @@ function applyPreset(name){var p=PRE[name];if(!p)return;var reproc=p.nr!==S.k.nr
 $("fxSeg").onclick=function(e){var b=e.target.closest("button");if(b)applyPreset(b.dataset.p)};
 $("tuneSeg").onclick=function(e){var b=e.target.closest("button");if(!b)return;S.tune=+b.dataset.t;setPressed($("tuneSeg"),"t",S.tune);if(!S.tune)$("tuneMsg").textContent="";retake()};
 $("withTake").onchange=function(){if(PL.playing)play(pos())};
-$("abSeg").onclick=function(e){var b=e.target.closest("button");if(!b)return;S.ab=b.dataset.ab;setPressed($("abSeg"),"ab",S.ab);$("withTake").checked=true;var tk=S.takes[S.sel];
-  if(PL.playing)play(pos());else if(tk)play(Math.max(0,Math.max(tk.p0,pos())))};
-$("harmSeg").onclick=function(e){var b=e.target.closest("button");if(!b)return;S.harm=+b.dataset.h;setPressed($("harmSeg"),"h",S.harm);if(S.ab==="before"){S.ab="after";setPressed($("abSeg"),"ab","after")}retake()};
+// what plays with the song: the processed take, the take as recorded, or the song alone
+function setListen(v){S.listen=v;setPressed($("listenSeg"),"l",v);$("withTake").checked=v!=="none";S.ab=v==="before"?"before":"after"}
+function listenOn(){if(S.listen!=="after"&&S.listen!=="before")setListen("after");else $("withTake").checked=true}
+$("listenSeg").onclick=function(e){var b=e.target.closest("button");if(!b)return;setListen(b.dataset.l);var tk=S.takes[S.sel];
+  if(PL.playing)play(pos());else if(tk&&b.dataset.l!=="none")play(Math.max(0,Math.max(tk.p0,pos())))};
+// timing by ear: 10 ms a press; what the user settles on is remembered for the next takes made the same way
+function nudgeSync(d){var tk=S.takes[S.sel];if(!tk)return;tk.adj=Math.max(-300,Math.min(300,tk.adj+d));drawKnob("sync");showAdj(tk);ls("ks_adj_"+(tk.sync==="bleed"?"bleed":tk.mode),String(tk.adj));retake()}
+function showAdj(tk){$("adjOut").textContent=(tk.adj>0?"+":"")+tk.adj+" ms"}
+$("syncEarly").onclick=function(){nudgeSync(-10)};$("syncLate").onclick=function(){nudgeSync(10)};
+$("harmSeg").onclick=function(e){var b=e.target.closest("button");if(!b)return;S.harm=+b.dataset.h;setPressed($("harmSeg"),"h",S.harm);if(S.listen!=="after")setListen("after");retake()};
 $("useClean").onchange=function(){var tk=S.takes[S.sel];if(tk){tk.useClean=this.checked;retake()}};
 buildKnobs();
 window.updDockRef=function(){updDock()};
@@ -1262,7 +1314,9 @@ function alignTo(a,b,sr){
 }
 
 /* ---------- downloads ---------- */
-function updOut(){var tk=S.takes[S.sel];$("dlMix").disabled=!tk;$("dlVoice").disabled=!tk}
+function updOut(){var tk=S.takes[S.sel];$("dlMix").disabled=!tk;$("dlVoice").disabled=!tk;$("dlRaw").disabled=!tk}
+// the untouched microphone recording, with what is needed to reproduce the analysis in its name
+$("dlRaw").onclick=function(){var tk=S.takes[S.sel];if(!tk)return;download(wav([tk.raw],tk.sr),"raw_"+S.song.id+"_p"+tk.p0.toFixed(2)+"_k"+(tk.semi||0)+"_i"+(tk.gI==null?1:tk.gI)+"_v"+(tk.gV||0)+"_"+tk.mode+".wav")};
 function safeName(s){return String(s||"karaoke").replace(/[\\/:*?"<>|]+/g," ").trim().slice(0,60)}
 function renderMix(withTake,guideG,onp){
   var kb=curKeyed(),sr=44100,len=Math.ceil(S.dur*sr),oc=new OAC(2,len,sr);
@@ -1273,7 +1327,7 @@ function renderMix(withTake,guideG,onp){
   });
 }
 function download(blob,name){var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},60000)}
-function busyOut(on,msg){["dlMix","dlVoice","dlInst","dlVideo","dlShare"].forEach(function(id){$(id).disabled=on||((id==="dlMix"||id==="dlVoice")&&S.sel<0)});$("outMsg").textContent=msg||""}
+function busyOut(on,msg){["dlMix","dlVoice","dlRaw","dlInst","dlVideo","dlShare"].forEach(function(id){$(id).disabled=on||((id==="dlMix"||id==="dlVoice"||id==="dlRaw")&&S.sel<0)});$("outMsg").textContent=msg||""}
 var keyTag=function(){return S.semi?" ("+(S.semi>0?"+":"")+S.semi+")":""};
 $("dlMix").onclick=function(){busyOut(true,"מכינים את השיר עם ההקלטה…");renderMix(true,guideGain()).then(function(b){$("outMsg").textContent="מקודדים MP3…";return mp3OrWav(b)})
   .then(function(m){download(m.blob,safeName(S.song.title)+" - ההקלטה שלי"+keyTag()+m.ext);busyOut(false,"✓ הקובץ ירד")}).catch(function(e){busyOut(false,"✗ "+e.message)})};

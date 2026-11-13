@@ -499,6 +499,118 @@ var KSDSP = (function () {
     var conf = (bv - mean) / sd; if (best <= lo + 1 || best >= hi - 1 || bv < second * 1.35) conf = Math.min(conf, 1);
     return { delay: (best + Math.max(-1, Math.min(1, fr))) / fs, conf: conf, ratio: bv / (second + 1e-20) };
   }
+  /* ---------- where is the playback inside the recording, moment by moment ----------
+     The speaker and the microphone do not have to share a clock (Bluetooth speakers, some phones), streams drop a few
+     milliseconds now and then, and two speakers give two arrivals. So the delay is not one number: it is found per
+     second (PHAT correlation of 1 s frames), the frames vote for the coarse value, one smooth path is followed through
+     the per-frame peaks, and the result is a few straight segments: a start delay, a drift, and steps between them. */
+  function phat(a, b, s0, ob, N, T, k0, k1, re, im, cr, ci) {
+    var w = T.win, i, k, ea = 0, eb = 0, q;
+    for (i = 0; i < N; i++) { q = s0 + i; re[i] = q < a.length ? a[q] * w[i] : 0; q -= ob; im[i] = q >= 0 && q < b.length ? b[q] * w[i] : 0; ea += re[i] * re[i]; eb += im[i] * im[i]; }
+    if (eb / N < 1e-9 || ea / N < 1e-10) return false;
+    fft(re, im, T, false); cr.fill(0); ci.fill(0);
+    for (k = k0; k <= k1; k++) {
+      var nk = N - k, zr = re[k], zi = im[k], c2 = re[nk], d2 = -im[nk];
+      var ar = (zr + c2) / 2, ai = (zi + d2) / 2, br = (zi - d2) / 2, bi = -(zr - c2) / 2; // A = mic, B = ref
+      var xr = ar * br + ai * bi, xi = ai * br - ar * bi, mg = Math.sqrt(xr * xr + xi * xi) + 1e-20; // A * conj(B), whitened
+      cr[k] = xr / mg; ci[k] = xi / mg; cr[nk] = cr[k]; ci[nk] = -ci[k];
+    }
+    fft(cr, ci, T, true); return true;
+  }
+  function delayTrack(mic, ref, sr, maxLag) {
+    var none = { found: false, delay: 0, conf: 0, ratio: 1, votes: 0, segs: [], ppm: 0, steps: 0, varies: false };
+    var D = Math.max(1, Math.round(sr / 16000)), fs = sr / D, a = decim(mic, sr, D), b = decim(ref, sr, D), n = Math.min(a.length, b.length), i, l, f;
+    var N = 32768; while (N > n && N > 4096) N >>= 1; if (n < N) return none;
+    var T = tables(N), re = new Float64Array(N), im = new Float64Array(N), cr = new Float64Array(N), ci = new Float64Array(N), H = N >> 1;
+    var k0 = Math.round(150 / fs * N), k1 = Math.round(Math.min(7000, fs * 0.45) / fs * N), lo = -Math.round(0.03 * fs), hi = Math.min(H - 1, Math.round((maxLag || 0.9) * fs));
+    // 1. coarse: every frame names its strongest lag; the lag most frames agree on (within a few ms) is the playback
+    var starts = []; for (var s = 0; s + N <= n; s += H) starts.push(s);
+    var step = Math.max(1, Math.ceil(starts.length / 60)), votes = [], zs2 = [], nf = 0, hist = new Float32Array(hi - lo + 1), mg = new Float32Array(hi - lo + 1);
+    for (var q = 0; q < starts.length; q += step) {
+      if (!phat(a, b, starts[q], 0, N, T, k0, k1, re, im, cr, ci)) continue; nf++;
+      var sum = 0, sq = 0, bv = 0, best = 0;
+      for (l = lo; l <= hi; l++) { var v = 0; for (i = -2; i <= 2; i++) v += Math.abs(cr[(l + i + N) % N]); mg[l - lo] = v; sum += v; sq += v * v; if (v > bv) { bv = v; best = l; } }
+      var mean = sum / mg.length, sd = Math.sqrt(Math.max(1e-30, sq / mg.length - mean * mean)), z = (bv - mean) / sd;
+      if (z >= 6 && best > lo + 2 && best < hi - 2) { votes.push(best); zs2.push(z); }
+    }
+    if (!nf || !votes.length) return none;
+    var R = Math.round(0.006 * fs); votes.forEach(function (v) { for (var d = -R; d <= R; d++) { var x = v + d - lo; if (x >= 0 && x < hist.length) hist[x] += 1 - Math.abs(d) / (R + 1); } });
+    var Dc = 0, hb = 0; for (i = 0; i < hist.length; i++) if (hist[i] > hb) { hb = hist[i]; Dc = i + lo; }
+    var near = Math.round(0.012 * fs), nMode = 0, zm = []; votes.forEach(function (v, ix) { if (Math.abs(v - Dc) <= near) { nMode++; zm.push(zs2[ix]); } });
+    zm.sort(function (x, y) { return x - y; }); var share = nMode / nf;
+    var res = { found: nMode >= Math.min(3, nf) && share >= 0.3, delay: Dc / fs, votes: share, z: zm.length ? zm[zm.length >> 1] : 0, segs: [], ppm: 0, steps: 0, varies: false };
+    res.conf = res.found ? 20 + 10 * share : 5 * share; res.ratio = 1 + 2 * share;
+    if (!res.found) return res;
+    // 2. fine: 1 s frames against the playback shifted by the coarse delay; candidates are the peaks within +-60 ms
+    var N2 = Math.min(N, 16384), T2 = tables(N2), H2 = N2 >> 1, W = Math.min(H2 - 2, Math.round(0.06 * fs)), k20 = Math.round(150 / fs * N2), k21 = Math.round(Math.min(7000, fs * 0.45) / fs * N2);
+    var re2 = new Float64Array(N2), im2 = new Float64Array(N2), cr2 = new Float64Array(N2), ci2 = new Float64Array(N2), fr = [];
+    for (s = 0; s + N2 <= n; s += H2) {
+      if (!phat(a, b, s, Dc, N2, T2, k20, k21, re2, im2, cr2, ci2)) continue;
+      var sm = 0, s2 = 0, pk = 0, c = [];
+      for (l = -W; l <= W; l++) { var av = Math.abs(cr2[(l + N2) % N2]); sm += av; s2 += av * av; if (av > pk) pk = av; }
+      var mn = sm / (2 * W + 1), sdv = Math.sqrt(Math.max(1e-30, s2 / (2 * W + 1) - mn * mn)); if ((pk - mn) / sdv < 5) continue;
+      for (l = -W + 1; l < W; l++) {
+        var y1 = Math.abs(cr2[(l + N2) % N2]); if (y1 < 0.3 * pk) continue; var y0 = Math.abs(cr2[(l - 1 + N2) % N2]), y2 = Math.abs(cr2[(l + 1 + N2) % N2]); if (y1 < y0 || y1 < y2) continue;
+        var den = y0 - 2 * y1 + y2; c.push({ d: (Dc + l + (den ? Math.max(-1, Math.min(1, 0.5 * (y0 - y2) / den)) : 0)) / fs, v: y1 / pk, cost: 0, from: -1 });
+      }
+      c.sort(function (x, y) { return y.v - x.v; }); if (c.length > 5) c.length = 5;
+      if (c.length) fr.push({ t: (s + H2) / fs, c: c });
+    }
+    if (!fr.length) { res.segs = [{ t0: 0, t1: 1e9, a: res.delay, b: 0 }]; return res; }
+    // one smooth path through the candidates: staying costs nothing, a jump costs up to 3 - a few frames' worth of a stronger peak -
+    // so the path does not hop between two speakers' arrivals, but a real step (the old peak is gone) is still followed
+    for (f = 0; f < fr.length; f++) fr[f].c.forEach(function (x) {
+      if (!f) { x.cost = -x.v; return; }
+      var bc = 1e9, bf = -1; fr[f - 1].c.forEach(function (p, ix) { var tc = p.cost + Math.min(3, Math.abs(x.d - p.d) * 1000); if (tc < bc) { bc = tc; bf = ix; } });
+      x.cost = bc - x.v; x.from = bf;
+    });
+    var last = fr[fr.length - 1].c, bi2 = 0; last.forEach(function (x, ix) { if (x.cost < last[bi2].cost) bi2 = ix; });
+    var pts = []; for (f = fr.length - 1; f >= 0; f--) { var cc = fr[f].c[bi2]; pts.unshift({ t: fr[f].t, d: cc.d }); bi2 = cc.from; }
+    // 3. straight segments: split where the delay steps by more than 1.5 ms and stays there; a line (start + drift) per segment
+    var md = pts.map(function (p, ix) { var w3 = [pts[Math.max(0, ix - 1)].d, p.d, pts[Math.min(pts.length - 1, ix + 1)].d].sort(function (x, y) { return x - y; }); return w3[1]; });
+    var segs = [], st = 0;
+    var fit = function (i0, i1) {
+      var xs = [], ys = [], j; for (j = i0; j < i1; j++) if (md[j] === md[j]) { xs.push(pts[j].t); ys.push(md[j]); }
+      var line = function () { var m = xs.length, sx = 0, sy = 0, sxx = 0, sxy = 0; for (var u = 0; u < m; u++) { sx += xs[u]; sy += ys[u]; sxx += xs[u] * xs[u]; sxy += xs[u] * ys[u]; } var dn = m * sxx - sx * sx; if (m < 4 || Math.abs(dn) < 1e-9) { var srt = ys.slice().sort(function (x, y) { return x - y; }); return { a: srt[srt.length >> 1], b: 0 }; } var bb = (m * sxy - sx * sy) / dn; return { a: (sy - bb * sx) / m, b: bb }; };
+      var L1 = line(), kx = [], ky = []; for (j = 0; j < xs.length; j++) if (Math.abs(ys[j] - L1.a - L1.b * xs[j]) < 0.0006) { kx.push(xs[j]); ky.push(ys[j]); }
+      if (kx.length >= 4 && kx.length < xs.length) { xs = kx; ys = ky; L1 = line(); }
+      if (Math.abs(L1.b) > 250e-6 || xs.length < 40) { var s3 = ys.slice().sort(function (x, y) { return x - y; }); L1 = { a: s3[s3.length >> 1], b: 0 }; } // no clock is that far off, and under 20 s a drift cannot be told from noise
+      return L1;
+    };
+    for (i = 1; i <= pts.length; i++) {
+      if (i < pts.length && Math.abs(md[i] - md[i - 1]) <= 0.0015) continue;
+      segs.push({ i0: st, i1: i }); st = i;
+    }
+    // a segment of one or two frames is noise: it joins its longer neighbour
+    for (i = 0; i < segs.length && segs.length > 1;) { if (segs[i].i1 - segs[i].i0 >= 3) { i++; continue; } if (i > 0) { segs[i - 1].i1 = segs[i].i1; segs.splice(i, 1); } else { segs[1].i0 = segs[0].i0; segs.splice(0, 1); } }
+    // a few seconds at either end that sit on another arrival: same thing, seen once
+    if (segs.length > 1 && segs[0].i1 - segs[0].i0 <= 8) { for (i = segs[0].i0; i < segs[0].i1; i++) md[i] = NaN; segs[1].i0 = segs[0].i0; segs.splice(0, 1); }
+    if (segs.length > 1 && segs[segs.length - 1].i1 - segs[segs.length - 1].i0 <= 8) { var lg0 = segs.pop(); for (i = lg0.i0; i < lg0.i1; i++) md[i] = NaN; segs[segs.length - 1].i1 = lg0.i1; }
+    // away and back again (A, B, A) is the path visiting another arrival of the same playback, not a change of delay: B joins A
+    var lvl = function (g) { var w = md.slice(g.i0, g.i1).sort(function (x, y) { return x - y; }); return w[w.length >> 1]; };
+    for (i = 1; i < segs.length - 1;) { if (Math.abs(lvl(segs[i - 1]) - lvl(segs[i + 1])) < 0.001) { for (var j2 = segs[i].i0; j2 < segs[i].i1; j2++) md[j2] = NaN; segs[i - 1].i1 = segs[i + 1].i1; segs.splice(i, 2); if (i > 1) i--; } else i++; }
+    res.segs = segs.map(function (g, ix) { var L2 = fit(g.i0, g.i1); return { t0: ix ? (pts[g.i0 - 1].t + pts[g.i0].t) / 2 : 0, t1: ix < segs.length - 1 ? (pts[g.i1 - 1].t + pts[g.i1].t) / 2 : 1e9, a: L2.a, b: L2.b, n: g.i1 - g.i0 }; });
+    var all = [], dur = n / fs; for (var t = 0.25; t < dur; t += 0.5) all.push(dAt(res.segs, t)); all.sort(function (x, y) { return x - y; });
+    res.delay = all.length ? all[all.length >> 1] : res.delay; res.steps = res.segs.length - 1;
+    var lg = res.segs.reduce(function (x, y) { return y.n > x.n ? y : x; }); res.ppm = lg.b * 1e6;
+    res.varies = all.length > 1 && (all[all.length - 1] - all[0] > 0.0004 || res.steps > 0);
+    return res;
+  }
+  function dAt(segs, t) { for (var i = 0; i < segs.length; i++) if (t < segs[i].t1 || i === segs.length - 1) return segs[i].a + segs[i].b * t; return 0; }
+  // 8-tap windowed-sinc read of x at a fractional position
+  function sincAt(x, pos) { var n = x.length, ip = Math.floor(pos), o = Math.round((pos - ip) * 512) * 8, b = ip - 3; if (b < 0 || b + 8 > n) return ip >= 0 && ip < n ? x[ip] : 0; return x[b] * SNC[o] + x[b + 1] * SNC[o + 1] + x[b + 2] * SNC[o + 2] + x[b + 3] * SNC[o + 3] + x[b + 4] * SNC[o + 4] + x[b + 5] * SNC[o + 5] + x[b + 6] * SNC[o + 6] + x[b + 7] * SNC[o + 7]; }
+  // the playback as the microphone's clock heard it: out[i] = ref(i - (delay(i) - lead)); done inside `ref` itself when the shift allows (saves memory on phones)
+  function warpRef(ref, sr, segs, lead, n) {
+    var minSh = 1e9, i, t; for (t = 0; t <= n / sr; t += 0.5) minSh = Math.min(minSh, (dAt(segs, t) - lead) * sr);
+    var out = ref.length === n && minSh >= 12 ? ref : new Float32Array(n), flat = segs.length === 1 && Math.abs(segs[0].b) < 1e-9, sh0 = Math.round((segs[0].a - lead) * sr);
+    for (i = n - 1; i >= 0; i--) {
+      if (flat) { var q = i - sh0; out[i] = q >= 0 && q < ref.length ? ref[q] : 0; continue; }
+      out[i] = sincAt(ref, i - (dAt(segs, i / sr) - lead) * sr);
+    }
+    return out;
+  }
+  // the cleaned take with one constant delay (the median): out[j] = y(j + delay(j) - median)
+  function retime(y, sr, segs, dmed) { var n = y.length, out = new Float32Array(n); for (var j = 0; j < n; j++) out[j] = sincAt(y, j + (dAt(segs, j / sr) - dmed) * sr); return out; }
   /* ---------- playback removal with the known playback as reference ----------
      Each frequency band gets its own short filter (6 taps over ~60 ms, re-fitted every ~2.7 s by least squares) that
      turns the playback into what the microphone heard of it; that estimate is subtracted, and what is left of the
@@ -606,24 +718,20 @@ var KSDSP = (function () {
     return { y: y, share: sEst / (sY + 1e-20), linDb: 10 * Math.log10((sY + 1e-20) / (sE + 1e-20)), totDb: 10 * Math.log10((sY + 1e-20) / (sO + 1e-20)) };
   }
   // after a recording: find the playback in it, take it out, report the latency
-  function post(mic, ref, sr, onp, refS) {
-    var g = gccDelay(mic, ref, sr, 0.6), r = { delay: g.delay, conf: g.conf, ratio: g.ratio, bleed: false, y: mic, share: 0, cutDb: 0 };
-    if (g.conf < 12 || g.delay < -0.01) return r;
-    if (refS) { var es = 0, em = 0, i; for (i = 0; i < ref.length; i += 16) { es += refS[i] * refS[i]; em += ref[i] * ref[i]; } if (es < em * 1e-4) refS = null; } // a mono song has no difference channel
-    var d0 = Math.round(g.delay * sr) - Math.round(0.004 * sr), n = mic.length, P = Math.round(8 * sr);
+  function post(mic, ref, sr, onp, refS, keep) {
+    var g = delayTrack(mic, ref, sr, 0.9), r = { delay: g.delay, conf: g.conf, ratio: g.ratio, found: g.found, votes: g.votes, ppm: g.ppm, steps: g.steps, bleed: false, y: mic, share: 0, cutDb: 0 }, i;
+    if (!g.found || g.delay < -0.01) return r;
+    if (refS) { var es = 0, em = 0; for (i = 0; i < ref.length; i += 16) { es += refS[i] * refS[i]; em += ref[i] * ref[i]; } if (es < em * 1e-4) refS = null; } // a mono song has no difference channel
+    var n = mic.length, P = Math.round(8 * sr), ra = warpRef(ref, sr, g.segs, 0.004, n), rs = null;
     if (n > 2 * P) { // a quick look at 8 seconds first: with headphones only a trace of the playback leaks in, and the full pass is not needed
-      var probe = function (s0, st) {
-        var pm = mic.subarray(s0, s0 + P), pr = new Float32Array(P), ps = st ? new Float32Array(P) : null, i2, q;
-        for (i2 = 0; i2 < P; i2++) { q = s0 + i2 - d0; if (q >= 0 && q < ref.length) { pr[i2] = ref[q]; if (ps) ps[i2] = refS[q]; } }
-        return aec(pm, pr, sr, 0, null, null, null, ps);
-      };
+      var probe = function (s0, st) { return aec(mic.subarray(s0, s0 + P), ra.subarray(s0, s0 + P), sr, 0, null, null, null, st ? rs.subarray(s0, s0 + P) : null); };
       var sA = Math.floor((n - P) / 2), sB = Math.floor((n - P) / 5), pre = probe(sA, false); r.share = pre.share; if (pre.share < 0.012) return r;
       // one speaker (or two that sound the same at the mic) needs only the mono sum; the second reference is used when it clearly explains more
-      if (refS && Math.max(probe(sA, true).linDb - pre.linDb, probe(sB, true).linDb - probe(sB, false).linDb) < 0.3) refS = null;
-    }
-    var a = aec(mic, ref, sr, d0, onp, null, null, refS);
-    r.share = a.share; r.cutDb = a.totDb; r.linDb = a.linDb; r.stereo = !!refS;
-    if (a.share > 0.02) { r.bleed = true; r.y = a.y; }
+      if (refS) { rs = warpRef(refS, sr, g.segs, 0.004, n); if (Math.max(probe(sA, true).linDb - pre.linDb, probe(sB, true).linDb - probe(sB, false).linDb) < 0.3) rs = null; }
+    } else if (refS) rs = warpRef(refS, sr, g.segs, 0.004, n);
+    var a = aec(mic, ra, sr, 0, onp, null, null, rs);
+    r.share = a.share; r.cutDb = a.totDb; r.linDb = a.linDb; r.stereo = !!rs;
+    if (a.share > 0.02) { r.bleed = true; if (keep) r.yMic = a.y; r.y = g.varies ? retime(a.y, sr, g.segs, g.delay) : a.y; }
     return r;
   }
   // no playback in the take (headphones): how late is the singing against the original singer's melody? (note starts, +-0.4 s)
@@ -762,7 +870,7 @@ var KSDSP = (function () {
       });
     });
   }
-  return { gccDelay: gccDelay, aec: aec, post: post, melLag: melLag, gate: gate, slip: slip, shift: shift, stretch: stretch, resample: resample, f0: f0, nf0: nf0, keymap: keymap, keyScale: keyScale, clean: clean, notes: notes, plan: plan, psola: psola, tune: tune, harmony: harmony, denoise: denoise, voice: voice, deess: deess, coef: coef, filt: filt, filtfilt: filtfilt, highpass: highpass, removeDC: removeDC, follower: follower, fft: fft, tables: tables, midi: midi };
+  return { gccDelay: gccDelay, delayTrack: delayTrack, dAt: dAt, warpRef: warpRef, retime: retime, aec: aec, post: post, melLag: melLag, gate: gate, slip: slip, shift: shift, stretch: stretch, resample: resample, f0: f0, nf0: nf0, keymap: keymap, keyScale: keyScale, clean: clean, notes: notes, plan: plan, psola: psola, tune: tune, harmony: harmony, denoise: denoise, voice: voice, deess: deess, coef: coef, filt: filt, filtfilt: filtfilt, highpass: highpass, removeDC: removeDC, follower: follower, fft: fft, tables: tables, midi: midi };
 })();
 
 /* ---------- worker protocol: {id, op, ...} -> {id, ok, ...} ---------- */
@@ -790,7 +898,7 @@ if (typeof window === "undefined" && typeof self !== "undefined" && typeof self.
         var done = function (t, neural) {
           var mel = null; if (!pr.bleed && m.refTrack) { mel = KSDSP.melLag(t, { f0: m.refTrack, hop: m.refHop }, m.p0 - m.lat0); if (mel.conf > 15 && Math.abs(mel.lag) > 0.1) { var m2 = KSDSP.melLag(t, { f0: m.refTrack, hop: m.refHop }, m.p0 - m.lat0 + mel.lag); if (m2.conf > 15) mel = { lag: mel.lag + m2.lag, conf: m2.conf, n: m2.n }; } }
           var y = pr.y === m.mic ? new Float32Array(m.mic) : pr.y;
-          self.postMessage({ id: m.id, ok: true, y: y, delay: pr.delay, conf: pr.conf, ratio: pr.ratio, bleed: pr.bleed, stereo: !!pr.stereo, share: pr.share, cutDb: pr.cutDb, f0: t.f0, hop: t.hop, neural: neural, mel: mel }, [y.buffer]);
+          self.postMessage({ id: m.id, ok: true, y: y, delay: pr.delay, conf: pr.conf, ratio: pr.ratio, bleed: pr.bleed, found: !!pr.found, votes: pr.votes || 0, ppm: pr.ppm || 0, steps: pr.steps || 0, stereo: !!pr.stereo, share: pr.share, cutDb: pr.cutDb, f0: t.f0, hop: t.hop, neural: neural, mel: mel }, [y.buffer]);
         };
         KSDSP.nf0(pr.y, m.sr, function (p) { prog(0.7 + p * 0.3); }, function () { self.postMessage({ id: m.id, progress: 0.7, note: "model" }); })
           .then(function (t) { done(t, true); }, function () { done(KSDSP.f0(pr.y, m.sr), false); });

@@ -413,6 +413,7 @@ var KSDSP = (function () {
     var cents = new Float32Array(n);
     un.forEach(function (u) {
       if (u.e - u.s < 6) return;
+      if (o.oct) { for (var q0 = u.s; q0 < u.e; q0++) cents[q0] = o.oct * 1200; return; } // an octave double: the same notes, 12 semitones away
       var sc = scaleAt((u.s + u.e) / 2 * hop + lag), b = Math.round(u.pm), bp = ((b % 12) + 12) % 12, d = sc.indexOf(bp), iv;
       if (d >= 0) { var hp = sc[(d + (dir > 0 ? 2 : 5)) % 7]; iv = dir > 0 ? (hp - bp + 12) % 12 : -((bp - hp + 12) % 12); }
       else iv = dir * (sc.indexOf((bp + dir * 4 + 12) % 12) >= 0 ? 4 : 3);
@@ -820,9 +821,9 @@ var KSDSP = (function () {
     if (o.gate) { var g = gate(y, sr, tr, o.gate); y = g.y; if (st) st.kept = g.kept; else st = { kept: g.kept }; }
     if (onp) onp(0.9);
     if (o.deess) y = deess(y, sr, o.deess);
-    var yh = null; if (o.harm && tr) yh = harmony(y, sr, tr, cz, { dir: o.harm.dir, semi: o.harm.semi, lag: o.harm.lag, keys: o.harm.keys });
+    var yv = null; if (o.harm && tr) { yv = {}; (o.harm.voices || []).forEach(function (id) { yv[id] = harmony(y, sr, tr, cz, { dir: id === "hd" ? -1 : 1, oct: id === "ou" ? 1 : id === "od" ? -1 : 0, semi: o.harm.semi, lag: o.harm.lag, keys: o.harm.keys }); }); }
     if (onp) onp(1);
-    return { y: y, yh: yh, stats: st };
+    return { y: y, yv: yv, stats: st };
   }
   /* ---------- neural pitch track: FCPE (MIT, CNChTu) in onnxruntime-web; YIN stays as the fallback ---------- */
   var ORT = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/", NN = { p: null };
@@ -904,7 +905,7 @@ if (typeof window === "undefined" && typeof self !== "undefined" && typeof self.
           .then(function (t) { done(t, true); }, function () { done(KSDSP.f0(pr.y, m.sr), false); });
       } else if (m.op === "voice") {
         var vo = { nr: m.nr, deess: m.deess, gate: m.gate, tune: m.tune, harm: m.harm || null, ref: m.ref ? { f0: m.ref, hop: m.refHop } : null };
-        var finish = function (track) { try { var v = KSDSP.voice(m.x, m.sr, Object.assign(vo, { track: track }), prog); self.postMessage({ id: m.id, ok: true, y: v.y, yh: v.yh, stats: v.stats }, v.yh ? [v.y.buffer, v.yh.buffer] : [v.y.buffer]); } catch (err) { self.postMessage({ id: m.id, ok: false, error: String(err && err.message || err) }); } };
+        var finish = function (track) { try { var v = KSDSP.voice(m.x, m.sr, Object.assign(vo, { track: track }), prog); var tf = [v.y.buffer]; if (v.yv) for (var vk in v.yv) tf.push(v.yv[vk].buffer); self.postMessage({ id: m.id, ok: true, y: v.y, yv: v.yv, stats: v.stats }, tf); } catch (err) { self.postMessage({ id: m.id, ok: false, error: String(err && err.message || err) }); } };
         if (m.track) finish({ f0: m.track, hop: 0.01, neural: !!m.trackNeural });
         else if ((m.tune || m.gate || m.harm) && m.neural) KSDSP.nf0(m.x, m.sr, function (p) { prog(p * 0.2); }, function () { self.postMessage({ id: m.id, progress: 0, note: "model" }); }).then(finish, function () { finish(null); });
         else finish(null);

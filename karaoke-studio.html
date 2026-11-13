@@ -116,6 +116,13 @@ body.simple #fxSeg{grid-template-columns:repeat(3,1fr)}
 .scorebox span{display:block;font-size:clamp(15px,3vw,20px);color:var(--stage-ink);margin-top:8px}
 .scorebox .stars{font-size:clamp(26px,6vw,44px);color:var(--sung);letter-spacing:4px;margin-top:6px}
 body.simple .advOnly{display:none!important}
+.tlwrap{position:relative;direction:ltr;overflow-x:auto;overflow-y:hidden;border:1px solid var(--line);border-radius:12px;background:var(--card);-webkit-overflow-scrolling:touch}
+.tlwrap canvas{display:block;height:150px}
+.tlhead{position:absolute;top:0;bottom:0;width:2px;background:var(--accent);pointer-events:none;left:0}
+.mixrow{display:grid;grid-template-columns:118px 1fr 44px;gap:10px;align-items:center}
+.mixrow label{font:600 14px var(--f)}
+.mixrow output{font:600 13px var(--f);color:var(--muted);text-align:left;direction:ltr}
+.mixrow input[type=range]{width:100%;accent-color:var(--accent)}
 .status:empty,.note:empty{display:none}
 .warnmsg{color:var(--warn)}
 .take .duo[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
@@ -354,6 +361,10 @@ body.docked{padding-bottom:120px}
             <p class="status warnmsg" id="lvlMsg"></p>
             <div class="field"><h3>מה שומעים</h3>
               <div class="seg" id="listenSeg"><button data-l="after" aria-pressed="true">ההקלטה מעובדת</button><button data-l="before" aria-pressed="false">כמו שהוקלטה</button><button data-l="none" aria-pressed="false">בלי ההקלטה</button></div></div>
+            <div class="field"><h3>ההקלטה על ציר הזמן</h3>
+              <div class="tlwrap" id="tlWrap"><canvas id="tl"></canvas><div class="tlhead" id="tlHead"></div></div>
+              <div class="row" id="tlBar" hidden><span class="pill" id="tlSel"></span><button class="btn small" id="tlPlay">▶ השמעה</button><button class="btn small" id="tlDel">מחיקת הקטע</button><button class="btn small" id="tlRec" hidden>הקלטה מחדש של השורה</button></div>
+              <p class="note" id="tlNote">למעלה שורות השיר, למטה מה שהוקלט: סגול שירה, כתום רעש (שיעול, דיבור). נוגעים בקטע כדי למחוק אותו, או בשורה כדי להקליט אותה מחדש. מקום ריק מזיז את הנגן.</p></div>
             <div class="field" id="cleanBox"><h3>תזמון הקול מול המוזיקה</h3>
               <p class="status" id="syncMsg"></p>
               <div class="nudge"><button class="btn small" id="syncEarly">להקדים את הקול</button><output id="adjOut">0 ms</output><button class="btn small" id="syncLate">לאחר את הקול</button></div>
@@ -369,10 +380,12 @@ body.docked{padding-bottom:120px}
               <div class="seg" id="tuneSeg"><button data-t="0" aria-pressed="true">כבוי</button><button class="advOnly" data-t="1" aria-pressed="false">עדין</button><button data-t="2" aria-pressed="false">טבעי</button><button data-t="3" aria-pressed="false">חזק</button></div>
               <p class="note advOnly">תווי המטרה נלקחים מהשירה של הזמר המקורי, והקול מוזז אליהם בשיטה של Auto-Tune: דגימה מחדש עם חיבורי מחזור, בלי לגעת בגוון. עדין וטבעי מזיזים את התו למקומו ומשאירים את הוויברטו והגלישות שלכם, חזק נועל את הצליל על התו.</p>
               <p class="status" id="tuneMsg"></p><p class="note advOnly" id="keyMap"></p></div>
-            <details class="adv" id="extras"><summary>תוספות: קול שני, תיקון קטע, ניקוי מוזיקה עמוק</summary>
+            <details class="adv" id="voxBox"><summary>מיקס קולות: קול שני ואוקטבות</summary>
+              <div class="field" id="voxMix" style="gap:10px"></div>
+              <p class="note">הקולות הנוספים נבנים מהשירה שלכם: קול שני בטרצה בתוך הסולם של השיר, ואוקטבה מעל או מתחת. כל מחוון הוא העוצמה של אותו קול במיקס.</p>
+            </details>
+            <details class="adv" id="extras"><summary>תוספות: תיקון קטע, ניקוי מוזיקה עמוק</summary>
               <div class="field" style="gap:14px">
-                <div class="field"><h3>קול שני (הרמוניה)</h3>
-                  <div class="seg" id="harmSeg"><button data-h="0" aria-pressed="true">כבוי</button><button data-h="1" aria-pressed="false">קול מעל</button><button data-h="-1" aria-pressed="false">קול מתחת</button></div></div>
                 <div class="field"><h3>תיקון קטע</h3>
                   <p class="note">עומדים בנגן על השורה שרוצים לתקן, לוחצים, שרים רק אותה ועוצרים. הקטע משתלב בהקלטה.</p>
                   <div class="row"><button class="btn" id="punchBtn">הקלטה מחדש של הקטע מהשורה הנוכחית</button></div></div>
@@ -421,11 +434,11 @@ body.docked{padding-bottom:120px}
 <div class="dlg" id="dlg" hidden><div class="card" role="dialog" aria-modal="true"><p id="dlgMsg" style="margin:0"></p><div class="row"><button class="btn primary" id="dlgOk">אישור</button><button class="btn ghost" id="dlgNo">ביטול</button></div></div></div>
 <div class="toast" id="toast" hidden></div>
 
-<script src="ks-dsp.js?v=2026-11-13d"></script>
+<script src="ks-dsp.js?v=2026-11-14a"></script>
 <script>
 (function(){
 "use strict";
-var VER="2026-11-13d",TERMS_V="1";
+var VER="2026-11-14a",TERMS_V="1";
 var API="https://kolot-recorder.kolot-studios.workers.dev";
 var $=function(s){return document.getElementById(s)};
 var AC=window.AudioContext||window.webkitAudioContext,OAC=window.OfflineAudioContext||window.webkitOfflineAudioContext;
@@ -497,7 +510,7 @@ function mono(buf){var n=buf.length,o=new Float32Array(n),c=buf.numberOfChannels
 function mkBuf(chs,sr){var b=ax().createBuffer(chs.length,chs[0].length,sr);chs.forEach(function(d,k){b.copyToChannel?b.copyToChannel(d,k):b.getChannelData(k).set(d)});return b}
 
 /* ---------- state ---------- */
-var S={song:null,lines:[],words:null,lang:"",stems:{v:null,i:null},keyed:{},semi:0,guide:0.5,inst:1,ref:null,refP:null,takes:[],sel:-1,mode:"phones",from:"start",fx:"natural",tune:0,dirty:false,ab:"after",listen:"after",harm:0,duo:null,refNotes:null,refLoud:false};
+var S={song:null,lines:[],words:null,lang:"",stems:{v:null,i:null},keyed:{},semi:0,guide:0.5,inst:1,ref:null,refP:null,takes:[],sel:-1,mode:"phones",from:"start",fx:"natural",tune:0,dirty:false,ab:"after",listen:"after",vox:{lead:100,hu:0,hd:0,ou:0,od:0},duo:null,refNotes:null,refLoud:false};
 
 /* ---------- start: link / staff ---------- */
 function boot(){
@@ -683,8 +696,9 @@ function graph(c,dest,kb,take,when,off,opt){
     N.vc={hc:hc,comp:comp,dry:dry,wet:wet,ws:ws,g:g,rg:rg,vg:vg,di:di,dl:dl,fg:fg,voice:opt.voice==null?1:opt.voice};
     var ts=take.start;
     var add=function(buf,at,gain){if(!buf||at+buf.duration<=off)return;var s2=c.createBufferSource(),g2=c.createGain();g2.gain.value=gain;s2.buffer=buf;s2.connect(g2);g2.connect(hp);if(at>=off)s2.start(when+(at-off));else s2.start(when,off-at);N.src.push(s2)};
-    add(take.buf,ts,1);
-    if(take.harm)add(take.harm,ts+0.018,0.5); // the second voice: a touch late and well under the lead
+    N.vg={};var add0=add;add=function(buf,at,gain,id){if(!buf||at+buf.duration<=off)return;var s2=c.createBufferSource(),g2=c.createGain();g2.gain.value=gain;s2.buffer=buf;s2.connect(g2);g2.connect(hp);if(at>=off)s2.start(when+(at-off));else s2.start(when,off-at);N.src.push(s2);if(id)N.vg[id]=g2};
+    add(take.buf,ts,voxGain("lead"),"lead");
+    (take.voices||[]).forEach(function(v){add(v.buf,ts+0.018,voxGain(v.id),v.id)}); // added voices: a touch late, behind the lead
     (take.extra||[]).forEach(function(x){add(x.buf,x.start,0.9)}); // a second singer
   }
   return N;
@@ -704,7 +718,7 @@ function play(from,opt){
   if(tk){return (S.ab==="before"?rawTake(tk):prepAll(tk)).then(function(pt){go(pt)}).catch(function(e){$("recMsg").textContent="✗ "+e.message;report("prep",e.message);go(null)})}
   go(null);return Promise.resolve();
 }
-function stopPlay(keep){
+function stopPlay(keep){PL.stopAt=0;
   if(!keep)PL.tok++;
   if(PL.nodes){PL.nodes.src.forEach(function(s){try{s.stop()}catch(e){}});try{PL.nodes.master.disconnect()}catch(e){}PL.nodes=null}
   if(PL.playing){PL.off=Math.min(S.dur||0,pos());PL.playing=false}
@@ -970,7 +984,9 @@ function wordsHtml(el,l){el.innerHTML="";el.className="ln cur"+(hasHeb(l.text)?"
   tokens(l.text).forEach(function(w,i){if(i)el.appendChild(document.createTextNode(" "));var s=document.createElement("span");s.className="w";s.textContent=w;el.appendChild(s)})}
 var recSec=-1;
 function drawStage(p){
-  liveTick(p);drawLane(p);if((p|0)!==recSec){recSec=p|0;updRecBtn()}
+  if(PL.stopAt&&PL.playing&&!REC.on&&p>=PL.stopAt){PL.stopAt=0;stopPlay();return}
+  if(REC.on&&REC.autoStop&&p>=REC.autoStop){REC.autoStop=0;stopRec();return}
+  tlHead(p);liveTick(p);drawLane(p);if((p|0)!==recSec){recSec=p|0;updRecBtn()}
   $("stTime").textContent=fmt(p);$("tNow").textContent=fmt(p);if(S.dur)$("seek").value=Math.round(p/S.dur*1000);
   var L=S.lines,k=lineAt(p),cur=L[k],nx=L[k+1];
   var showCur=cur&&(p<=cur.e+1.2||(nx&&nx.t-p<2.5));
@@ -1040,24 +1056,24 @@ $("recBtn").onclick=function(){startRec()};
 // re-record one part: sing from the line the player stands on, stop after it; the part is spliced into the selected take
 $("punchBtn").onclick=function(){var tk=S.takes[S.sel];if(!tk||REC.on)return;
   if(pos()<takeAt(tk)-1||pos()>takeAt(tk)+tk.raw.length/tk.sr){toast("זזים קודם בנגן לשורה שרוצים לתקן, בתוך ההקלטה");return}
-  startRec(tk)};
+  REC.autoStop=0;startRec(tk)};
 $("stopBtn").onclick=function(){stopRec()};
 function startRec(punch){
   if(REC.on)return;if(!navigator.mediaDevices||!window.AudioWorkletNode){toast("הדפדפן הזה לא מאפשר הקלטה. פותחים ב-Chrome או ב-Safari מעודכן");return}
   var c=ax(),p0=punch?Math.max(0,(function(){var k=lineAt(pos());return k>=0?S.lines[k].t-2:pos()})()):recFrom();
   stopPlay(true);$("recBtn").disabled=true;$("recMsg").textContent="פותחים את המיקרופון…";
   micOpen(S.mode).then(function(){
-    REC.on=true;REC.mode=punch?punch.mode:S.mode;REC.p0=p0;REC.punch=punch||null;REC.hot=0;$("fromStartBtn").hidden=true;recLbl="";REC.lat0=(+ls("ks_lat_dev")||120)/1000;LANE.live=[];$("scoreBox").hidden=true;wake(true);$("recBtn").hidden=true;$("stopBtn").hidden=false;$("stopBtn").textContent="■ עצירה";$("recBtn").disabled=false;$("recMsg").textContent="";updDock();
+    REC.on=true;REC.mode=punch?punch.mode:S.mode;REC.p0=p0;REC.punch=punch||null;if(!punch)REC.autoStop=0;REC.hot=0;$("fromStartBtn").hidden=true;recLbl="";REC.lat0=(+ls("ks_lat_dev")||120)/1000;LANE.live=[];$("scoreBox").hidden=true;wake(true);$("recBtn").hidden=true;$("stopBtn").hidden=false;$("stopBtn").textContent="■ עצירה";$("recBtn").disabled=false;$("recMsg").textContent="";updDock();
     try{window.scrollTo({top:Math.max(0,$("stage").getBoundingClientRect().top+window.scrollY-8),behavior:"smooth"})}catch(e){}
     var T0=c.currentTime+3.3;REC.T0=T0;REC.node.port.postMessage({start:T0});
     var big=$("big3");big.hidden=false;[3,2,1].forEach(function(n,i){setTimeout(function(){if(REC.on)big.textContent=n},i*1000)});setTimeout(function(){big.hidden=true;if(REC.on)$("stRec").hidden=false},3200);
     var g=REC.mode==="speaker"?0:guideGain();REC.gV=g;REC.gI=S.inst;REC.semi=S.semi;
     play(p0,{when:T0,noTake:true,guide:g});
     REC.timer=setInterval(function(){if(REC.on&&AX.currentTime>T0){$("recMsg").textContent="מקליט… "+fmt(AX.currentTime-T0)+(REC.hot>2?" · חזק מדי למיקרופון, מתרחקים מעט":"");REC.hot=0;$("stopBtn").textContent="■ עצירה · "+fmt(AX.currentTime-T0)}},500);
-  }).catch(function(e){$("recBtn").disabled=false;$("recMsg").textContent=/Permission|NotAllowed/i.test(e&&e.name||e)?"✗ אין הרשאה למיקרופון. מאשרים גישה למיקרופון בדפדפן ומנסים שוב.":"✗ "+(e.message||e);report("mic",(e&&e.name||"")+" "+(e&&e.message||e));micClose()});
+  }).catch(function(e){$("recBtn").disabled=false;$("recMsg").textContent=/Permission|NotAllowed/i.test(e&&e.name||e)?"✗ אין הרשאה למיקרופון. מאשרים גישה למיקרופון בדפדפן ומנסים שוב.":"✗ "+(e.message||e);REC.autoStop=0;report("mic",(e&&e.name||"")+" "+(e&&e.message||e));micClose()});
 }
 function stopRec(discard){
-  if(!REC.on)return;REC.on=false;wake(false);clearInterval(REC.timer);$("big3").hidden=true;$("stRec").hidden=true;$("stopBtn").hidden=true;$("recBtn").hidden=false;$("meter").hidden=true;updDock();
+  if(!REC.on)return;REC.on=false;REC.autoStop=0;wake(false);clearInterval(REC.timer);$("big3").hidden=true;$("stRec").hidden=true;$("stopBtn").hidden=true;$("recBtn").hidden=false;$("meter").hidden=true;updDock();
   var played=AX.currentTime-REC.T0;stopPlay();
   var fin=new Promise(function(res){REC.done=res;REC.node.port.postMessage({stop:true});setTimeout(res,1500)});
   fin.then(function(){
@@ -1133,7 +1149,7 @@ function spliceTake(A,B){
   var n=A.raw.length,xf=Math.round(0.06*sr),i0=Math.round((s0-aS)*sr),i1=Math.round((s1-aS)*sr),sh=Math.round((aS-bS)*sr);
   var mix=function(a,b){var o=new Float32Array(n);o.set(a.subarray(0,n));for(var i=Math.max(0,i0-xf);i<Math.min(n,i1+xf);i++){var j=i+sh,bv=j>=0&&j<b.length?b[j]:0,w=i<i0?(i-(i0-xf))/xf:i>=i1?1-(i-i1)/xf:1;w=0.5-0.5*Math.cos(Math.PI*Math.max(0,Math.min(1,w)));o[i]=o[i]*(1-w)+bv*w}return o};
   var tr=null;if(A.track&&B.track){tr=new Float32Array(A.track);var f0=Math.round((s0-aS)/0.01),f1=Math.round((s1-aS)/0.01),fs=Math.round((aS-bS)/0.01);for(var f=Math.max(0,f0);f<Math.min(tr.length,f1);f++){var q=f+fs;tr[f]=q>=0&&q<B.track.length?B.track[q]:0}}
-  var m={n:(S.takes.length?S.takes[S.takes.length-1].n:0)+1,raw:mix(A.raw,B.raw),dry:mix(ad,bd),track:tr,trackNeural:!!(A.trackNeural&&B.trackNeural),sr:sr,p0:A.p0,lat:A.lat,adj:A.adj,mode:A.mode,semi:A.semi,clean:null,useClean:false,cleanN:null,prepKey:"",at:Date.now(),sync:A.sync,bleed:A.bleed,stereo:A.stereo,cutDb:A.cutDb,share:A.share,peak:A.peak,clip:A.clip,merged:true,cut0:s0,cut1:s1};
+  var m={n:(S.takes.length?S.takes[S.takes.length-1].n:0)+1,raw:mix(A.raw,B.raw),dry:mix(ad,bd),track:tr,trackNeural:!!(A.trackNeural&&B.trackNeural),sr:sr,p0:A.p0,lat:A.lat,adj:A.adj,mode:A.mode,semi:A.semi,clean:null,useClean:false,cleanN:null,prepKey:"",at:Date.now(),sync:A.sync,bleed:A.bleed,stereo:A.stereo,cutDb:A.cutDb,share:A.share,peak:A.peak,clip:A.clip,cuts:(A.cuts||[]).filter(function(c){return c.b<s0-aS||c.a>s1-aS}),merged:true,cut0:s0,cut1:s1};
   m.score=scoreTake(m);return m}
 function diagText(tk){var d=tk.diag;if(!d)return "";return "sync "+tk.sync+" · "+(d.found?"playback found":"no playback")+" · delay "+d.delay+" ms · votes "+d.votes+" · drift "+d.ppm+" ppm · steps "+d.steps+" · music share "+d.share+" · cut "+d.cut+" dB"+(d.stereo?" · stereo":"")+(d.mel?" · melody "+d.mel:"")}
 function syncText(tk){var ms=Math.round(tk.lat*1000);
@@ -1154,7 +1170,7 @@ function renderTakes(){
   var tk=S.takes[S.sel];$("takeBox").hidden=!tk;$("withTakeBox").hidden=!tk;
   if(tk){drawKnob("sync");$("useCleanBox").hidden=!tk.clean;$("useClean").checked=tk.useClean;$("cleanBtn").hidden=!!tk.clean||tk.cleanN!=null;
     $("latNote").textContent="עיכוב: "+Math.round(tk.lat*1000)+" ms";$("syncMsg").textContent=syncText(tk);
-    $("scoreMsg").textContent=tk.score?"★ "+scoreText(tk.score):"";$("lvlMsg").textContent=takeWarn(tk);showAdj(tk);$("diagMsg").textContent=diagText(tk)}
+    $("scoreMsg").textContent=tk.score?"★ "+scoreText(tk.score):"";$("lvlMsg").textContent=takeWarn(tk);showAdj(tk);$("diagMsg").textContent=diagText(tk);if(TL.tk!==tk)TL.sel=null;tlDraw()}
   updOut();updDock();
 }
 // noise reduction, tuning and de-ess are rendered once per setting (in the background); the rest are live nodes
@@ -1180,20 +1196,21 @@ function refTrack(){
   return S.refP;
 }
 function prepTake(tk){
-  var useC=tk.useClean&&tk.clean,k=S.k,src=useC?tk.clean:(tk.dry||tk.raw),key=[useC?"c":tk.dry?"d":"r",S.tune,S.semi,tk.adj,Math.round(tk.lat*1000),k.nr,k.deess,k.gate,S.harm].join("|"),start=takeAt(tk);
-  if(tk.prepKey===key&&tk.prep)return Promise.resolve({buf:tk.prep,start:start,harm:tk.prepH||null});
+  var useC=tk.useClean&&tk.clean,k=S.k,src=useC?tk.clean:(tk.dry||tk.raw),key=[useC?"c":tk.dry?"d":"r",S.tune,S.semi,tk.adj,Math.round(tk.lat*1000),k.nr,k.deess,k.gate,voxOn().join(""),JSON.stringify(tk.cuts||[])].join("|"),start=takeAt(tk),vox=voxOn();
+  if(tk.prepKey===key&&tk.prep)return Promise.resolve({buf:tk.prep,start:start,voices:tk.prepV||[]});
   if(tk.prepP&&tk.prepPKey===key)return tk.prepP;
   var tn=S.tune>0?TUNE[S.tune]:null,msg=$("recMsg");msg.textContent="מעבדים את הקול…";
-  if(tn||S.harm)S.refLoud=true;
-  tk.prepPKey=key;tk.prepP=(tn?refTrack():S.harm?refTrack().catch(function(){return null}):Promise.resolve(null)).then(function(ref){var x=src.slice(0);
-    return job(0,{op:"voice",x:x,sr:tk.sr,nr:k.nr/100,deess:k.deess/100,gate:k.gate/100,neural:true,track:!useC&&tk.track?tk.track.slice(0):null,trackNeural:tk.trackNeural,tune:tn?Object.assign({semi:S.semi,lag:start,keys:ref&&ref.keys||null},tn):null,harm:S.harm?{dir:S.harm,semi:S.semi,lag:start,keys:ref&&ref.keys||null}:null,ref:ref?ref.f0.slice(0):null,refHop:ref?ref.hop:0.01},[x.buffer],
+  if(tn||vox.length)S.refLoud=true;
+  tk.prepPKey=key;tk.prepP=(tn?refTrack():vox.length?refTrack().catch(function(){return null}):Promise.resolve(null)).then(function(ref){var x=src.slice(0);
+    return job(0,{op:"voice",x:x,sr:tk.sr,nr:k.nr/100,deess:k.deess/100,gate:k.gate/100,neural:true,track:!useC&&tk.track?tk.track.slice(0):null,trackNeural:tk.trackNeural,tune:tn?Object.assign({semi:S.semi,lag:start,keys:ref&&ref.keys||null},tn):null,harm:vox.length?{voices:vox,semi:S.semi,lag:start,keys:ref&&ref.keys||null}:null,ref:ref?ref.f0.slice(0):null,refHop:ref?ref.hop:0.01},[x.buffer],
       function(p,note){msg.textContent=note==="model"?"טוענים את מנוע זיהוי התווים (פעם ראשונה במכשיר, כמה עשרות MB)…":(tn?"מעבדים את הקול ומתקנים זיופים… ":"מעבדים את הקול… ")+Math.round(p*100)+"%"});
   }).then(function(r){
     var y=r.y,gain=levelGain(y,tk.sr),i;
-    if(r.yh){for(i=0;i<r.yh.length;i++)r.yh[i]*=gain}
-    tk.prep=mkBuf([y],tk.sr);tk.prepH=r.yh?mkBuf([r.yh],tk.sr):null;tk.prepKey=key;tk.prepP=null;msg.textContent="";
+    applyCuts(y,tk);tk.prepV=[];
+    if(r.yv)vox.forEach(function(id){var v=r.yv[id];if(!v)return;for(i=0;i<v.length;i++)v[i]*=gain;applyCuts(v,tk);tk.prepV.push({id:id,buf:mkBuf([v],tk.sr)})});
+    tk.prep=mkBuf([y],tk.sr);tk.prepKey=key;tk.prepP=null;msg.textContent="";
     $("tuneMsg").textContent=r.stats&&r.stats.notes!=null?"✓ "+r.stats.notes+" תווים זוהו בשירה שלך, "+r.stats.moved+" מהם כוונו לתו של הזמר המקורי.":"";
-    return {buf:tk.prep,start:start,harm:tk.prepH};
+    return {buf:tk.prep,start:start,voices:tk.prepV};
   },function(e){tk.prepP=null;throw e});
   return tk.prepP;
 }
@@ -1207,7 +1224,7 @@ function levelGain(y,sr){
 function rawTake(tk){if(!tk.rawBuf||tk.rawFor!==tk.raw){var y=tk.raw.slice(0);levelGain(y,tk.sr);tk.rawBuf=mkBuf([y],tk.sr);tk.rawFor=tk.raw}return Promise.resolve({buf:tk.rawBuf,start:takeAt(tk),raw:true})}
 // the selected take, plus a second singer when one is marked
 function prepAll(tk){return prepTake(tk).then(function(pt){var d=S.duo;if(!d||d===tk||S.takes.indexOf(d)<0)return pt;
-  return prepTake(d).then(function(p2){return {buf:pt.buf,start:pt.start,harm:pt.harm,extra:[{buf:p2.buf,start:p2.start}]}})})}
+  return prepTake(d).then(function(p2){return {buf:pt.buf,start:pt.start,voices:pt.voices,extra:[{buf:p2.buf,start:p2.start}]}})})}
 // the voice is set against the playback's own level, so quiet and loud songs both get a voice that sits on top
 function voiceTarget(){if(!S.instLvl){var b=S.stems.i,d=b.getChannelData(0),hop=Math.round(b.sampleRate*0.05),lv=[];for(var i=0;i+hop<=d.length;i+=hop*4){var s=0;for(var q=i;q<i+hop;q+=8)s+=d[q]*d[q];lv.push(Math.sqrt(s/(hop/8)))}lv.sort(function(a,b){return a-b});S.instLvl=lv[Math.floor(lv.length*0.85)]||0.15}
   return Math.max(0.09,Math.min(0.2,S.instLvl*0.8))}
@@ -1261,10 +1278,63 @@ function listenOn(){if(S.listen!=="after"&&S.listen!=="before")setListen("after"
 $("listenSeg").onclick=function(e){var b=e.target.closest("button");if(!b)return;setListen(b.dataset.l);var tk=S.takes[S.sel];
   if(PL.playing)play(pos());else if(tk&&b.dataset.l!=="none")play(Math.max(0,Math.max(tk.p0,pos())))};
 // timing by ear: 10 ms a press; what the user settles on is remembered for the next takes made the same way
-function nudgeSync(d){var tk=S.takes[S.sel];if(!tk)return;tk.adj=Math.max(-300,Math.min(300,tk.adj+d));drawKnob("sync");showAdj(tk);ls("ks_adj_"+(tk.sync==="bleed"?"bleed":tk.mode),String(tk.adj));retake()}
+function nudgeSync(d){var tk=S.takes[S.sel];if(!tk)return;TL.sel=null;tk.adj=Math.max(-300,Math.min(300,tk.adj+d));drawKnob("sync");showAdj(tk);ls("ks_adj_"+(tk.sync==="bleed"?"bleed":tk.mode),String(tk.adj));retake()}
 function showAdj(tk){$("adjOut").textContent=(tk.adj>0?"+":"")+tk.adj+" ms"}
 $("syncEarly").onclick=function(){nudgeSync(-10)};$("syncLate").onclick=function(){nudgeSync(10)};
-$("harmSeg").onclick=function(e){var b=e.target.closest("button");if(!b)return;S.harm=+b.dataset.h;setPressed($("harmSeg"),"h",S.harm);if(S.listen!=="after")setListen("after");retake()};
+/* ---------- voices mix: the lead, a second voice above / below, an octave above / below ---------- */
+var VOX=[["lead","הקול שלי"],["hu","קול שני מעל"],["hd","קול שני מתחת"],["ou","אוקטבה למעלה"],["od","אוקטבה למטה"]];
+function voxOn(){return ["hu","hd","ou","od"].filter(function(id){return S.vox[id]>0})}
+function voxGain(id){var v=(S.vox[id]||0)/100;return id==="lead"?v:v*0.7}
+(function(){var box=$("voxMix");VOX.forEach(function(v){var r=document.createElement("div");r.className="mixrow";r.innerHTML='<label></label><input type="range" min="0" max="100" step="5"><output></output>';
+  var inp=r.querySelector("input"),out=r.querySelector("output");r.querySelector("label").textContent=v[1];inp.value=S.vox[v[0]];inp.id="vox_"+v[0];inp.setAttribute("aria-label",v[1]);out.textContent=S.vox[v[0]]+"%";
+  inp.oninput=function(){var was=S.vox[v[0]];S.vox[v[0]]=+inp.value;out.textContent=inp.value+"%";var g=PL.nodes&&PL.nodes.vg&&PL.nodes.vg[v[0]];if(g)g.gain.value=voxGain(v[0])};
+  inp.onchange=function(){if(S.listen!=="after")setListen("after");var g=PL.nodes&&PL.nodes.vg&&PL.nodes.vg[v[0]],tk=S.takes[S.sel];if(tk&&S.vox[v[0]]>0&&(!g||!PL.playing))play(Math.max(0,Math.max(tk.p0,pos())))}; // a voice that was not built yet is built now
+  box.appendChild(r)})})();
+// deleted parts: silence between a short fade out and a fade in, both inside the deleted stretch, so the singing around it is untouched
+function applyCuts(y,tk){var C=tk.cuts||[],sr=tk.sr;C.forEach(function(c){var a=Math.max(0,Math.round(c.a*sr)),b=Math.min(y.length,Math.round(c.b*sr)),F=Math.min(Math.round(0.03*sr),(b-a)>>1);if(b<=a)return;
+  for(var i=a;i<b;i++){var g=i<a+F?0.5+0.5*Math.cos(Math.PI*(i-a)/F):i>=b-F?0.5-0.5*Math.cos(Math.PI*(i-(b-F))/F):0;y[i]*=g}})}
+/* ---------- the take on a timeline: lyric lines above, what was recorded below; touch a part to delete it, a line to re-record it ---------- */
+var TL={pps:30,d:1,sel:null,tk:null,W:0,LH:30};
+function tlSegs(tk){var x=tk.dry||tk.raw;if(tk.segs&&tk.segsFor===x)return tk.segs;
+  var sr=tk.sr,H=Math.round(sr*0.02),n=Math.floor(x.length/H),env=new Float32Array(n),pk=0,f,i;
+  for(f=0;f<n;f++){var e=0;for(i=f*H;i<(f+1)*H;i+=2)e+=x[i]*x[i];env[f]=Math.sqrt(e/(H/2));if(env[f]>pk)pk=env[f]}
+  var srt=Array.from(env).sort(function(a,b){return a-b}),fl=srt[Math.floor(n*0.2)]||0,thr=Math.max(fl*3,pk*0.04,0.0015),segs=[],st=-1,gap=0;
+  for(f=0;f<=n;f++){var on=f<n&&env[f]>thr;if(on){if(st<0)st=f;gap=0}else if(st>=0){gap++;if(gap>12||f===n){var en=f-gap+1;if(en-st>=3)segs.push({a:st*0.02,b:en*0.02});st=-1;gap=0}}}
+  segs.forEach(function(g){var v=0,t=0;if(tk.track)for(var q=Math.floor(g.a/0.01);q<Math.min(tk.track.length,Math.ceil(g.b/0.01));q++){t++;if(tk.track[q])v++}g.sung=!tk.track||(t&&v/t>0.3)});
+  tk.env=env;tk.envPk=pk||1;tk.segs=segs;tk.segsFor=x;return segs}
+function tlCut(tk,a,b){return (tk.cuts||[]).findIndex(function(c){return c.a<=a+0.02&&c.b>=b-0.02})}
+function tlDraw(){
+  var tk=S.takes[S.sel],cv=$("tl");if(!tk||$("takeBox").hidden)return;TL.tk=tk;var segs=tlSegs(tk),dur=tk.raw.length/tk.sr,st=takeAt(tk);
+  var d=Math.min(1.5,window.devicePixelRatio||1),pps=Math.max(8,Math.min(30,11000/d/dur)),W=Math.max($("tlWrap").clientWidth||300,Math.ceil(dur*pps)),H=150,LH=TL.LH;TL.pps=pps;TL.W=W;
+  cv.style.width=W+"px";cv.width=Math.round(W*d);cv.height=Math.round(H*d);var g=cv.getContext("2d");g.setTransform(d,0,0,d,0,0);g.clearRect(0,0,W,H);
+  var X=function(t){return t*pps},mid=LH+(H-LH)/2,amp=(H-LH)/2-6,sel=TL.sel;
+  if(sel){g.fillStyle="rgba(106,47,184,.13)";g.fillRect(X(sel.a-st),0,X(sel.b-sel.a),H)}
+  (tk.cuts||[]).forEach(function(c){g.fillStyle="rgba(210,60,80,.12)";g.fillRect(X(c.a),LH,X(c.b-c.a),H-LH)});
+  // lyric lines
+  g.font="600 12px Rubik, Arial";g.textBaseline="middle";
+  S.lines.forEach(function(l,k){var a=l.t-st,b=l.e-st;if(b<0||a>dur)return;var x=X(Math.max(0,a)),w=Math.max(8,X(Math.min(dur,b))-x-2),on=sel&&sel.line===k;
+    g.fillStyle=on?"#6a2fb8":"rgba(106,47,184,.1)";rrect(g,x,4,w,LH-9,6);g.save();g.beginPath();g.rect(x+4,4,w-8,LH-9);g.clip();g.fillStyle=on?"#fff":"#3a2a55";g.direction=hasHeb(l.text)?"rtl":"ltr";g.textAlign="left";g.fillText(l.text,x+5,4+(LH-9)/2+1);g.restore()});
+  // what was recorded: one bar per pixel, coloured by the kind of part it belongs to
+  var env=tk.env,pk=tk.envPk,si=0;
+  for(var px=0;px<W;px++){var t=px/pps,f0=Math.floor(t/0.02),f1=Math.min(env.length,Math.ceil((px+1)/pps/0.02)),m=0;for(var f=f0;f<f1;f++)if(env[f]>m)m=env[f];
+    while(si<segs.length&&segs[si].b<t)si++;var sg=si<segs.length&&segs[si].a<=t?segs[si]:null,cut=tlCut(tk,t,t)>=0,h=Math.max(1,Math.sqrt(m/pk)*amp);
+    g.fillStyle=cut?"rgba(120,110,130,.35)":sg?(sg.sung?"#6a2fb8":"#e08a2e"):"rgba(120,110,130,.45)";g.fillRect(px,mid-h,1,2*h)}
+  g.strokeStyle="rgba(210,60,80,.8)";g.lineWidth=1.5;(tk.cuts||[]).forEach(function(c){g.beginPath();g.moveTo(X(c.a),mid);g.lineTo(X(c.b),mid);g.stroke()});
+  tlHead(pos());tlBar()}
+function tlHead(p){var tk=TL.tk;if(!tk||$("takeBox").hidden)return;var x=(p-takeAt(tk))*TL.pps,h=$("tlHead");h.style.display=x<0||x>TL.W?"none":"";h.style.left=x+"px";
+  if(PL.playing&&!REC.on){var w=$("tlWrap");if(x<w.scrollLeft+20||x>w.scrollLeft+w.clientWidth-40)w.scrollLeft=Math.max(0,x-w.clientWidth*0.3)}}
+function tlBar(){var sel=TL.sel,tk=TL.tk;$("tlBar").hidden=!sel;if(!sel||!tk)return;var st=takeAt(tk),cut=tlCut(tk,sel.a-st,sel.b-st)>=0;
+  $("tlSel").textContent=(sel.line!=null?"שורה: ":sel.sung?"שירה: ":"רעש: ")+fmt(sel.a)+" – "+fmt(sel.b);$("tlDel").textContent=cut?"שחזור הקטע":"מחיקת הקטע";$("tlRec").hidden=sel.line==null}
+$("tl").onclick=function(e){var tk=TL.tk;if(!tk||REC.on)return;var r=this.getBoundingClientRect(),t=(e.clientX-r.left)/TL.pps,y=e.clientY-r.top,st=takeAt(tk),dur=tk.raw.length/tk.sr,sel=null;
+  if(y<TL.LH){S.lines.forEach(function(l,k){if(!sel&&l.t-st<=t&&l.e-st>=t){var nx=S.lines[k+1],pv=S.lines[k-1];sel={line:k,a:Math.max(st,l.t-0.15,pv?pv.e:0),b:Math.min(st+dur,l.e+0.25,nx?nx.t-0.05:1e9)}}})}
+  else{var c=(tk.cuts||[]).find(function(c){return c.a<=t&&c.b>=t});if(c)sel={a:c.a+st,b:c.b+st,sung:true};
+    else tlSegs(tk).forEach(function(g){if(!sel&&g.a-0.08<=t&&g.b+0.08>=t)sel={a:Math.max(st,g.a-0.04+st),b:Math.min(st+dur,g.b+0.06+st),sung:g.sung}})}
+  TL.sel=sel;if(!sel){if(PL.playing)play(t+st);else{PL.off=Math.max(0,t+st);drawStage(PL.off);updRecBtn()}}tlDraw()};
+$("tlDel").onclick=function(){var tk=TL.tk,sel=TL.sel;if(!tk||!sel)return;var st=takeAt(tk),i=tlCut(tk,sel.a-st,sel.b-st);tk.cuts=tk.cuts||[];
+  if(i>=0)tk.cuts.splice(i,1);else{tk.cuts=tk.cuts.filter(function(c){return c.b<sel.a-st||c.a>sel.b-st});tk.cuts.push({a:sel.a-st,b:sel.b-st})}
+  tlDraw();if(S.listen!=="after")setListen("after");var from=Math.max(0,sel.a-1.5),to=sel.b+1.5;var pr=play(from);PL.stopAt=to;return pr};
+$("tlPlay").onclick=function(){var sel=TL.sel;if(!sel)return;listenOn();play(Math.max(0,sel.a-0.3));PL.stopAt=sel.b+0.3};
+$("tlRec").onclick=function(){var tk=TL.tk,sel=TL.sel;if(!tk||!sel||sel.line==null||REC.on)return;var l=S.lines[sel.line];stopPlay();PL.off=l.t;drawStage(l.t);REC.autoStop=l.e+0.9;startRec(tk)};
 $("useClean").onchange=function(){var tk=S.takes[S.sel];if(tk){tk.useClean=this.checked;retake()}};
 buildKnobs();
 window.updDockRef=function(){updDock()};
@@ -1477,7 +1547,7 @@ $("lnCreate").onclick=function(){var name=$("lnName").value.trim();if(!name)retu
   api("ks_s_link_new",{name:name,phone:$("lnPhone").value.trim(),quota:+$("lnQuota").value||5,days:+$("lnDays").value||90}).then(function(){$("lnName").value="";$("lnPhone").value="";toast("✓ הקישור נוצר");loadLinks()}).catch(function(e){toast(e.message)}).then(function(){$("lnCreate").disabled=false})};
 
 window.addEventListener("beforeunload",function(e){if(S.takes.length||REC.on||S.dirty){e.preventDefault();e.returnValue=""}});
-window.__ks={LANE:LANE,VID:VID,scoreTake:scoreTake,spliceTake:spliceTake,prepAll:prepAll,rawTake:rawTake,drawVert:drawVert,laneDraw:laneDraw,buildNotes:buildNotes,warmRef:warmRef,takeWarn:takeWarn,renderTakes:renderTakes,takeAt:takeAt,S:S,PL:PL,REC:REC,analyzeTake:analyzeTake,play:play,stopPlay:stopPlay,openSong:openSong,alignWords:alignWords,linesFromWords:linesFromWords,prepTake:prepTake,renderMix:renderMix,drawCanvas:drawCanvas,keyedFor:keyedFor,setApi:function(u){API=u},AUTH:AUTH};
+window.__ks={TL:TL,tlDraw:tlDraw,tlSegs:tlSegs,applyCuts:applyCuts,LANE:LANE,VID:VID,scoreTake:scoreTake,spliceTake:spliceTake,prepAll:prepAll,rawTake:rawTake,drawVert:drawVert,laneDraw:laneDraw,buildNotes:buildNotes,warmRef:warmRef,takeWarn:takeWarn,renderTakes:renderTakes,takeAt:takeAt,S:S,PL:PL,REC:REC,analyzeTake:analyzeTake,play:play,stopPlay:stopPlay,openSong:openSong,alignWords:alignWords,linesFromWords:linesFromWords,prepTake:prepTake,renderMix:renderMix,drawCanvas:drawCanvas,keyedFor:keyedFor,setApi:function(u){API=u},AUTH:AUTH};
 boot();
 })();
 </script>

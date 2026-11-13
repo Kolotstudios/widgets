@@ -449,8 +449,8 @@ var KSDSP = (function () {
     var starts = [], H = N >> 1; for (var s = 0; s + N <= n; s += H) starts.push(s);
     var step = Math.max(1, Math.ceil(starts.length / 40)), k0 = Math.round(150 / fs * N), k1 = Math.round(Math.min(7000, fs * 0.45) / fs * N), used = 0;
     for (var q = 0; q < starts.length; q += step) {
-      var s0 = starts[q], eb = 0; for (i = 0; i < N; i++) { re[i] = a[s0 + i] * w[i]; im[i] = b[s0 + i] * w[i]; eb += im[i] * im[i]; }
-      if (eb / N < 1e-9) continue;
+      var s0 = starts[q], eb = 0, ea = 0; for (i = 0; i < N; i++) { re[i] = a[s0 + i] * w[i]; im[i] = b[s0 + i] * w[i]; eb += im[i] * im[i]; ea += re[i] * re[i]; }
+      if (eb / N < 1e-9 || ea / N < 1e-10) continue;
       fft(re, im, T, false);
       for (k = k0; k <= k1; k++) {
         var nk = N - k, zr = re[k], zi = im[k], c2 = re[nk], d2 = -im[nk];
@@ -476,41 +476,42 @@ var KSDSP = (function () {
      Each frequency band gets its own short filter (6 taps over ~60 ms, re-fitted every ~2.7 s by least squares) that
      turns the playback into what the microphone heard of it; that estimate is subtracted, and what is left of the
      music (reverb tail, speaker distortion) is pushed down by a Wiener gain driven by the same estimate. */
-  function aec(mic, ref, sr, d0, onp, dbg, cfg) {
+  function aec(mic, ref, sr, d0, onp, dbg, cfg, refS) {
     cfg = cfg || {};
     var N = 2048, H = 512, T = tables(N), w = T.win, K = N / 2 + 1, n = mic.length, i, k, f, a, b2;
-    var TD = [-1, 0, 1, 2, 3, 4], KLO = Math.round(8000 / sr * N), PADL = 4, PADR = 1, B = 512, A = 256, BW = B + PADL + PADR, M = Math.ceil(n / H) + 3;
-    var Yr = new Float32Array(BW * K), Yi = new Float32Array(BW * K), Xr = new Float32Array(BW * K), Xi = new Float32Array(BW * K);
+    var TD = [-1, 0, 1, 2, 3, 4], KLO = Math.round(6000 / sr * N), PADL = 4, PADR = 1, B = 512, A = 256, BW = B + PADL + PADR, M = Math.ceil(n / H) + 3, ST = refS ? 2 : 1, LM = 12;
+    var Yr = new Float32Array(BW * K), Yi = new Float32Array(BW * K), Xr = new Float32Array(BW * K), Xi = new Float32Array(BW * K), Sr = refS ? new Float32Array(BW * K) : null, Si = refS ? new Float32Array(BW * K) : null;
     var re = new Float64Array(N), im = new Float64Array(N);
     function analyze(m, idx) {
-      var s0 = m * H - N, o = idx * K;
-      if (m < 0 || m >= M) { Yr.fill(0, o, o + K); Yi.fill(0, o, o + K); Xr.fill(0, o, o + K); Xi.fill(0, o, o + K); return; }
-      for (i = 0; i < N; i++) { var q = s0 + i, r = q - d0; re[i] = q >= 0 && q < n ? mic[q] * w[i] : 0; im[i] = r >= 0 && r < ref.length ? ref[r] * w[i] : 0; }
+      var s0 = m * H - N, o = idx * K, q, r;
+      if (m < 0 || m >= M) { Yr.fill(0, o, o + K); Yi.fill(0, o, o + K); Xr.fill(0, o, o + K); Xi.fill(0, o, o + K); if (refS) { Sr.fill(0, o, o + K); Si.fill(0, o, o + K); } return; }
+      for (i = 0; i < N; i++) { q = s0 + i; r = q - d0; re[i] = q >= 0 && q < n ? mic[q] * w[i] : 0; im[i] = r >= 0 && r < ref.length ? ref[r] * w[i] : 0; }
       fft(re, im, T, false);
       for (k = 0; k < K; k++) { var nk = (N - k) % N, zr = re[k], zi = im[k], c2 = re[nk], d2 = -im[nk]; Yr[o + k] = (zr + c2) / 2; Yi[o + k] = (zi + d2) / 2; Xr[o + k] = (zi - d2) / 2; Xi[o + k] = -(zr - c2) / 2; }
+      if (refS) { for (i = 0; i < N; i++) { r = s0 + i - d0; re[i] = r >= 0 && r < refS.length ? refS[r] * w[i] : 0; im[i] = 0; } fft(re, im, T, false); for (k = 0; k < K; k++) { Sr[o + k] = re[k]; Si[o + k] = im[k]; } }
     }
-    var BETA = cfg.beta || 2, ALPHA = cfg.alpha == null ? 0.85 : cfg.alpha, GMIN = cfg.gmin || 0.1, HOLD = cfg.hold || 0.5, PCT = cfg.pct || 0.25;
+    var BETA = cfg.beta || 2, ALPHA = cfg.alpha == null ? 0.85 : cfg.alpha, GMIN = cfg.gmin || 0.1, HOLD = cfg.hold || 0.5, PCT = cfg.pct || 0.25, DEC = cfg.dec || 2;
     var out = new Float32Array(n + 2 * N), ws = new Float32Array(n + 2 * N);
     var prevR = new Float32Array(A * K), prevI = new Float32Array(A * K), curR = new Float32Array(B * K), curI = new Float32Array(B * K), havePrev = false;
     var gam = new Float32Array(K).fill(0.1), gamInit = false, hold = new Float64Array(K), pG = new Float64Array(K).fill(1), pPost = new Float64Array(K).fill(1), G = new Float64Array(K);
-    var ratio = new Float32Array(B), Ar = new Float64Array(36), Ai = new Float64Array(36), pr = new Float64Array(6), pi = new Float64Array(6), hr = new Float64Array(6), hi = new Float64Array(6);
+    var ratio = new Float32Array(B), Ar = new Float64Array(LM * LM), Ai = new Float64Array(LM * LM), pr = new Float64Array(LM), pi = new Float64Array(LM), hr = new Float64Array(LM), hi = new Float64Array(LM), xr = new Float64Array(LM), xi = new Float64Array(LM);
     var sY = 0, sE = 0, sO = 0, sEst = 0, pend = null, er = new Float64Array(N), ei = new Float64Array(N), W0;
-    function solve(L) { // complex Gaussian elimination, L <= 6
-      var c, r, j;
+    function solve(L) { // complex Gaussian elimination with pivoting; a dead column (no such signal) gets a zero tap
+      var c, r, j, t;
       for (c = 0; c < L; c++) {
-        var pv = c, pm = 0; for (r = c; r < L; r++) { var mg = Ar[r * 6 + c] * Ar[r * 6 + c] + Ai[r * 6 + c] * Ai[r * 6 + c]; if (mg > pm) { pm = mg; pv = r; } }
-        if (pm < 1e-30) { for (j = 0; j < L; j++) { hr[j] = 0; hi[j] = 0; } return; }
-        if (pv !== c) { for (j = 0; j < L; j++) { var t = Ar[c * 6 + j]; Ar[c * 6 + j] = Ar[pv * 6 + j]; Ar[pv * 6 + j] = t; t = Ai[c * 6 + j]; Ai[c * 6 + j] = Ai[pv * 6 + j]; Ai[pv * 6 + j] = t; } t = pr[c]; pr[c] = pr[pv]; pr[pv] = t; t = pi[c]; pi[c] = pi[pv]; pi[pv] = t; }
-        var dr = Ar[c * 6 + c], di = Ai[c * 6 + c], dm = dr * dr + di * di;
+        var pv = c, pm = 0; for (r = c; r < L; r++) { var mg = Ar[r * LM + c] * Ar[r * LM + c] + Ai[r * LM + c] * Ai[r * LM + c]; if (mg > pm) { pm = mg; pv = r; } }
+        if (pm < 1e-30) { for (j = 0; j < L; j++) { Ar[c * LM + j] = 0; Ai[c * LM + j] = 0; } Ar[c * LM + c] = 1; pr[c] = 0; pi[c] = 0; continue; }
+        if (pv !== c) { for (j = 0; j < L; j++) { t = Ar[c * LM + j]; Ar[c * LM + j] = Ar[pv * LM + j]; Ar[pv * LM + j] = t; t = Ai[c * LM + j]; Ai[c * LM + j] = Ai[pv * LM + j]; Ai[pv * LM + j] = t; } t = pr[c]; pr[c] = pr[pv]; pr[pv] = t; t = pi[c]; pi[c] = pi[pv]; pi[pv] = t; }
+        var dr = Ar[c * LM + c], di = Ai[c * LM + c], dm = dr * dr + di * di;
         for (r = c + 1; r < L; r++) {
-          var fr = (Ar[r * 6 + c] * dr + Ai[r * 6 + c] * di) / dm, fi = (Ai[r * 6 + c] * dr - Ar[r * 6 + c] * di) / dm;
-          for (j = c; j < L; j++) { Ar[r * 6 + j] -= fr * Ar[c * 6 + j] - fi * Ai[c * 6 + j]; Ai[r * 6 + j] -= fr * Ai[c * 6 + j] + fi * Ar[c * 6 + j]; }
+          var fr = (Ar[r * LM + c] * dr + Ai[r * LM + c] * di) / dm, fi = (Ai[r * LM + c] * dr - Ar[r * LM + c] * di) / dm; if (fr === 0 && fi === 0) continue;
+          for (j = c; j < L; j++) { Ar[r * LM + j] -= fr * Ar[c * LM + j] - fi * Ai[c * LM + j]; Ai[r * LM + j] -= fr * Ai[c * LM + j] + fi * Ar[c * LM + j]; }
           pr[r] -= fr * pr[c] - fi * pi[c]; pi[r] -= fr * pi[c] + fi * pr[c];
         }
       }
       for (c = L - 1; c >= 0; c--) {
-        var sr2 = pr[c], si = pi[c]; for (j = c + 1; j < L; j++) { sr2 -= Ar[c * 6 + j] * hr[j] - Ai[c * 6 + j] * hi[j]; si -= Ar[c * 6 + j] * hi[j] + Ai[c * 6 + j] * hr[j]; }
-        var d3 = Ar[c * 6 + c], d4 = Ai[c * 6 + c], dn = d3 * d3 + d4 * d4; hr[c] = (sr2 * d3 + si * d4) / dn; hi[c] = (si * d3 - sr2 * d4) / dn;
+        var sr2 = pr[c], si = pi[c]; for (j = c + 1; j < L; j++) { sr2 -= Ar[c * LM + j] * hr[j] - Ai[c * LM + j] * hi[j]; si -= Ar[c * LM + j] * hi[j] + Ai[c * LM + j] * hr[j]; }
+        var d3 = Ar[c * LM + c], d4 = Ai[c * LM + c], dn = d3 * d3 + d4 * d4; hr[c] = (sr2 * d3 + si * d4) / dn; hi[c] = (si * d3 - sr2 * d4) / dn;
       }
     }
     function emit(m, sR, sI) { // one finished frame (spectrum of the cleaned signal): two frames share one inverse FFT
@@ -522,7 +523,7 @@ var KSDSP = (function () {
       pend = null;
     }
     var fR = new Float64Array(K), fI = new Float64Array(K), Gs = new Float64Array(K);
-    function finish(m, yo, eR, eI, eo) { // residual suppression for frame m: Y at Yr[yo..], echo estimate at eR[eo..]
+    function finish(m, yo, eR, eI, eo) { // residual suppression for frame m: Y at Yr[yo..], playback estimate at eR[eo..]
       for (k = 0; k < K; k++) {
         var yr = Yr[yo + k], yi = Yi[yo + k], qr = eR[eo + k], qi = eI[eo + k], e1 = yr - qr, e2 = yi - qi, pe = e1 * e1 + e2 * e2, pq = qr * qr + qi * qi;
         hold[k] = Math.max(pq, hold[k] * HOLD); // the music rings on a little after each frame (room)
@@ -537,24 +538,25 @@ var KSDSP = (function () {
     for (var b = 0, first = true; b < M; b += A, first = false) {
       W0 = b - PADL;
       if (first) { for (f = 0; f < BW; f++) analyze(W0 + f, f); }
-      else { Yr.copyWithin(0, A * K); Yi.copyWithin(0, A * K); Xr.copyWithin(0, A * K); Xi.copyWithin(0, A * K); for (f = BW - A; f < BW; f++) analyze(W0 + f, f); }
+      else { Yr.copyWithin(0, A * K); Yi.copyWithin(0, A * K); Xr.copyWithin(0, A * K); Xi.copyWithin(0, A * K); if (refS) { Sr.copyWithin(0, A * K); Si.copyWithin(0, A * K); } for (f = BW - A; f < BW; f++) analyze(W0 + f, f); }
       for (k = 0; k < K; k++) {
-        var L = k <= KLO ? 6 : 2, t0 = k <= KLO ? 0 : 1, tr = 0;
-        for (a = 0; a < L; a++) { pr[a] = 0; pi[a] = 0; for (b2 = 0; b2 < L; b2++) { Ar[a * 6 + b2] = 0; Ai[a * 6 + b2] = 0; } }
-        for (f = 0; f < B; f++) {
+        // taps: the mono sum over 6 frames (2 above 6 kHz), and the same again for the stereo difference when the speakers are stereo
+        var L1 = k <= KLO ? 6 : 2, t0 = k <= KLO ? 0 : 1, L = L1 * ST, tr = 0, xo;
+        for (a = 0; a < L; a++) { pr[a] = 0; pi[a] = 0; for (b2 = 0; b2 < L; b2++) { Ar[a * LM + b2] = 0; Ai[a * LM + b2] = 0; } }
+        for (f = (b / A) % DEC === 0 ? 0 : 1; f < B; f += DEC) { // neighbouring frames overlap by 75%: every second one is enough for the fit
           var fo = (f + PADL) * K + k, yr0 = Yr[fo], yi0 = Yi[fo];
+          for (a = 0; a < L1; a++) { xo = fo - TD[t0 + a] * K; xr[a] = Xr[xo]; xi[a] = Xi[xo]; if (refS) { xr[L1 + a] = Sr[xo]; xi[L1 + a] = Si[xo]; } }
           for (a = 0; a < L; a++) {
-            var xa = fo - TD[t0 + a] * K, xar = Xr[xa], xai = Xi[xa];
-            pr[a] += yr0 * xar + yi0 * xai; pi[a] += yi0 * xar - yr0 * xai; // Y * conj(x_a)
-            for (b2 = a; b2 < L; b2++) { var xb = fo - TD[t0 + b2] * K, xbr = Xr[xb], xbi = Xi[xb]; Ar[a * 6 + b2] += xbr * xar + xbi * xai; Ai[a * 6 + b2] += xbi * xar - xbr * xai; } // x_b * conj(x_a)
+            var xar = xr[a], xai = xi[a]; pr[a] += yr0 * xar + yi0 * xai; pi[a] += yi0 * xar - yr0 * xai; // Y * conj(x_a)
+            for (b2 = a; b2 < L; b2++) { Ar[a * LM + b2] += xr[b2] * xar + xi[b2] * xai; Ai[a * LM + b2] += xi[b2] * xar - xr[b2] * xai; } // x_b * conj(x_a)
           }
         }
-        for (a = 0; a < L; a++) { tr += Ar[a * 6 + a]; for (b2 = 0; b2 < a; b2++) { Ar[a * 6 + b2] = Ar[b2 * 6 + a]; Ai[a * 6 + b2] = -Ai[b2 * 6 + a]; } }
-        var reg = tr / L * 1e-3 + 1e-12; for (a = 0; a < L; a++) Ar[a * 6 + a] += reg;
+        for (a = 0; a < L; a++) { tr += Ar[a * LM + a]; for (b2 = 0; b2 < a; b2++) { Ar[a * LM + b2] = Ar[b2 * LM + a]; Ai[a * LM + b2] = -Ai[b2 * LM + a]; } }
+        var reg = tr / L * 1e-3 + 1e-12; for (a = 0; a < L; a++) Ar[a * LM + a] += reg;
         solve(L);
         for (f = 0; f < B; f++) {
           var fo2 = (f + PADL) * K + k, qr2 = 0, qi2 = 0;
-          for (a = 0; a < L; a++) { var xo = fo2 - TD[t0 + a] * K; qr2 += hr[a] * Xr[xo] - hi[a] * Xi[xo]; qi2 += hr[a] * Xi[xo] + hi[a] * Xr[xo]; }
+          for (a = 0; a < L1; a++) { xo = fo2 - TD[t0 + a] * K; qr2 += hr[a] * Xr[xo] - hi[a] * Xi[xo]; qi2 += hr[a] * Xi[xo] + hi[a] * Xr[xo]; if (refS) { qr2 += hr[L1 + a] * Sr[xo] - hi[L1 + a] * Si[xo]; qi2 += hr[L1 + a] * Si[xo] + hi[L1 + a] * Sr[xo]; } }
           curR[f * K + k] = qr2; curI[f * K + k] = qi2;
           var e3 = Yr[fo2] - qr2, e4 = Yi[fo2] - qi2, pq2 = qr2 * qr2 + qi2 * qi2;
           ratio[f] = pq2 > 1e-13 ? (e3 * e3 + e4 * e4) / pq2 : 1e9;
@@ -577,16 +579,23 @@ var KSDSP = (function () {
     return { y: y, share: sEst / (sY + 1e-20), linDb: 10 * Math.log10((sY + 1e-20) / (sE + 1e-20)), totDb: 10 * Math.log10((sY + 1e-20) / (sO + 1e-20)) };
   }
   // after a recording: find the playback in it, take it out, report the latency
-  function post(mic, ref, sr, onp) {
+  function post(mic, ref, sr, onp, refS) {
     var g = gccDelay(mic, ref, sr, 0.6), r = { delay: g.delay, conf: g.conf, ratio: g.ratio, bleed: false, y: mic, share: 0, cutDb: 0 };
     if (g.conf < 12 || g.delay < -0.01) return r;
+    if (refS) { var es = 0, em = 0, i; for (i = 0; i < ref.length; i += 16) { es += refS[i] * refS[i]; em += ref[i] * ref[i]; } if (es < em * 1e-4) refS = null; } // a mono song has no difference channel
     var d0 = Math.round(g.delay * sr) - Math.round(0.004 * sr), n = mic.length, P = Math.round(8 * sr);
     if (n > 2 * P) { // a quick look at 8 seconds first: with headphones only a trace of the playback leaks in, and the full pass is not needed
-      var s0 = Math.floor((n - P) / 2), pm = mic.subarray(s0, s0 + P), pr = new Float32Array(P), i; for (i = 0; i < P; i++) { var q = s0 + i - d0; pr[i] = q >= 0 && q < ref.length ? ref[q] : 0; }
-      var pre = aec(pm, pr, sr, 0); r.share = pre.share; if (pre.share < 0.012) return r;
+      var probe = function (s0, st) {
+        var pm = mic.subarray(s0, s0 + P), pr = new Float32Array(P), ps = st ? new Float32Array(P) : null, i2, q;
+        for (i2 = 0; i2 < P; i2++) { q = s0 + i2 - d0; if (q >= 0 && q < ref.length) { pr[i2] = ref[q]; if (ps) ps[i2] = refS[q]; } }
+        return aec(pm, pr, sr, 0, null, null, null, ps);
+      };
+      var sA = Math.floor((n - P) / 2), sB = Math.floor((n - P) / 5), pre = probe(sA, false); r.share = pre.share; if (pre.share < 0.012) return r;
+      // one speaker (or two that sound the same at the mic) needs only the mono sum; the second reference is used when it clearly explains more
+      if (refS && Math.max(probe(sA, true).linDb - pre.linDb, probe(sB, true).linDb - probe(sB, false).linDb) < 0.3) refS = null;
     }
-    var a = aec(mic, ref, sr, d0, onp);
-    r.share = a.share; r.cutDb = a.totDb; r.linDb = a.linDb;
+    var a = aec(mic, ref, sr, d0, onp, null, null, refS);
+    r.share = a.share; r.cutDb = a.totDb; r.linDb = a.linDb; r.stereo = !!refS;
     if (a.share > 0.02) { r.bleed = true; r.y = a.y; }
     return r;
   }
@@ -747,11 +756,11 @@ if (typeof window === "undefined" && typeof self !== "undefined" && typeof self.
         var km = KSDSP.keymap({ f0: m.ref, hop: m.refHop }, m.inst, m.sr); self.postMessage({ id: m.id, ok: true, k: km.k, hop: km.hop });
       } else if (m.op === "post") {
         // right after a recording: latency + playback removal, then the take's pitch map (and, with headphones, timing against the melody)
-        var pr = KSDSP.post(m.mic, m.ref, m.sr, function (p) { prog(p * 0.7); });
+        var pr = KSDSP.post(m.mic, m.ref, m.sr, function (p) { prog(p * 0.7); }, m.refS || null);
         var done = function (t, neural) {
           var mel = null; if (!pr.bleed && m.refTrack) { mel = KSDSP.melLag(t, { f0: m.refTrack, hop: m.refHop }, m.p0 - m.lat0); if (mel.conf > 15 && Math.abs(mel.lag) > 0.1) { var m2 = KSDSP.melLag(t, { f0: m.refTrack, hop: m.refHop }, m.p0 - m.lat0 + mel.lag); if (m2.conf > 15) mel = { lag: mel.lag + m2.lag, conf: m2.conf, n: m2.n }; } }
           var y = pr.y === m.mic ? new Float32Array(m.mic) : pr.y;
-          self.postMessage({ id: m.id, ok: true, y: y, delay: pr.delay, conf: pr.conf, ratio: pr.ratio, bleed: pr.bleed, share: pr.share, cutDb: pr.cutDb, f0: t.f0, hop: t.hop, neural: neural, mel: mel }, [y.buffer]);
+          self.postMessage({ id: m.id, ok: true, y: y, delay: pr.delay, conf: pr.conf, ratio: pr.ratio, bleed: pr.bleed, stereo: !!pr.stereo, share: pr.share, cutDb: pr.cutDb, f0: t.f0, hop: t.hop, neural: neural, mel: mel }, [y.buffer]);
         };
         KSDSP.nf0(pr.y, m.sr, function (p) { prog(0.7 + p * 0.3); }, function () { self.postMessage({ id: m.id, progress: 0.7, note: "model" }); })
           .then(function (t) { done(t, true); }, function () { done(KSDSP.f0(pr.y, m.sr), false); });

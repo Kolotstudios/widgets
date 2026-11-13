@@ -379,11 +379,11 @@ body.docked{padding-bottom:120px}
 <div class="dlg" id="dlg" hidden><div class="card" role="dialog" aria-modal="true"><p id="dlgMsg" style="margin:0"></p><div class="row"><button class="btn primary" id="dlgOk">אישור</button><button class="btn ghost" id="dlgNo">ביטול</button></div></div></div>
 <div class="toast" id="toast" hidden></div>
 
-<script src="ks-dsp.js?v=2026-11-13a"></script>
+<script src="ks-dsp.js?v=2026-11-13b"></script>
 <script>
 (function(){
 "use strict";
-var VER="2026-11-13a",TERMS_V="1";
+var VER="2026-11-13b",TERMS_V="1";
 var API="https://kolot-recorder.kolot-studios.workers.dev";
 var $=function(s){return document.getElementById(s)};
 var AC=window.AudioContext||window.webkitAudioContext,OAC=window.OfflineAudioContext||window.webkitOfflineAudioContext;
@@ -934,15 +934,17 @@ function stopRec(discard){
 // after a recording: measure the latency from the playback that leaked into the take (or from the melody with headphones),
 // remove that playback with the known playback as reference, and map the take's pitch - all once, in the background
 function analyzeTake(tk,rec){
-  var msg=$("recMsg"),kb=S.keyed[rec.semi]||curKeyed(),n=tk.raw.length,sr=tk.sr,o0=Math.round(tk.p0*sr),ref=new Float32Array(n);
-  [[kb.i,rec.gI],[kb.v,rec.gV]].forEach(function(x){var b=x[0],g=x[1];if(!b||!g)return;for(var c=0;c<b.numberOfChannels;c++){var d=b.getChannelData(c),gg=g/b.numberOfChannels,m=Math.min(n,d.length-o0);for(var i=0;i<m;i++)ref[i]+=d[o0+i]*gg}});
+  var msg=$("recMsg"),kb=S.keyed[rec.semi]||curKeyed(),n=tk.raw.length,sr=tk.sr,o0=Math.round(tk.p0*sr),ref=new Float32Array(n),refS=null;
+  // what the speakers played: the sum of both channels, and their difference for devices with two speakers (each reaches the mic differently)
+  [[kb.i,rec.gI],[kb.v,rec.gV]].forEach(function(x){var b=x[0],g=x[1];if(!b||!g)return;var nc=Math.min(2,b.numberOfChannels);if(nc===2&&!refS)refS=new Float32Array(n);
+    for(var c=0;c<nc;c++){var d=b.getChannelData(c),gg=g/nc,gs=c?-gg:gg,m=Math.min(n,d.length-o0);for(var i=0;i<m;i++){ref[i]+=d[o0+i]*gg;if(nc===2)refS[i]+=d[o0+i]*gs}}});
   msg.textContent="מנתחים את ההקלטה: סנכרון מול השיר…";
   var rt=S.ref?Promise.resolve(S.ref):refTrack().catch(function(){return null}),mic=tk.raw.slice(0);
   return rt.then(function(r){
-    return job(0,{op:"post",mic:mic,ref:ref,sr:sr,p0:tk.p0,lat0:tk.lat,refTrack:r?r.f0.slice(0):null,refHop:r?r.hop:0.01},[mic.buffer,ref.buffer],function(p,note){
+    return job(0,{op:"post",mic:mic,ref:ref,refS:refS,sr:sr,p0:tk.p0,lat0:tk.lat,refTrack:r?r.f0.slice(0):null,refHop:r?r.hop:0.01},refS?[mic.buffer,ref.buffer,refS.buffer]:[mic.buffer,ref.buffer],function(p,note){
       msg.textContent=note==="model"?"טוענים את מנוע זיהוי התווים (פעם ראשונה במכשיר)…":p<0.7?"מנתחים את ההקלטה: סנכרון והסרת המוזיקה שנכנסה למיקרופון… "+Math.round(p/0.7*100)+"%":"ממפים את התווים ששרתם… "+Math.round((p-0.7)/0.3*100)+"%"});
   }).then(function(r){
-    tk.dry=r.y;tk.track=r.f0;tk.trackNeural=r.neural;tk.bleed=r.bleed;tk.cutDb=r.cutDb;tk.prepKey="";
+    tk.dry=r.y;tk.track=r.f0;tk.trackNeural=r.neural;tk.bleed=r.bleed;tk.stereo=r.stereo;tk.cutDb=r.cutDb;tk.prepKey="";
     // playback clearly in the take: its delay is the latency. Only a trace of it (headphones): believe it when the peak is unmistakable
     var melOk=r.mel&&r.mel.conf>15&&r.mel.n>=20,melEst=melOk?Math.max(0,Math.min(0.5,tk.lat+r.mel.lag)):null;
     if(r.delay>=0&&r.delay<0.45&&(r.bleed?r.conf>=12:(r.conf>=20&&r.ratio>=2&&(!melOk||Math.abs(r.delay-melEst)<0.1)))){tk.lat=r.delay;tk.sync=r.bleed?"bleed":"leak";ls("ks_lat_dev",String(Math.round(r.delay*1000)))}

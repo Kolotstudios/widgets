@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>קליפ מהבית – בדיקת מכשיר</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap">
+<style>
+/* Stage 0 feasibility page: can this phone film + record clean audio against a guide, in landscape, in sync? */
+:root{--bg:#16111c;--paper:#201929;--ink:#f0eaf5;--muted:#a99db6;--line:#382d45;--accent:#b78bf0;--gold:#ffd166;--rec:#f0566b;--ok:#5cc58a;--f:"Rubik",system-ui,Arial,sans-serif}
+*{box-sizing:border-box}[hidden]{display:none!important}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--f)}
+.wrap{max-width:900px;margin:0 auto;padding:16px;display:grid;gap:14px}
+h1{font-size:22px;margin:0}p{margin:0;color:var(--muted)}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:16px;display:grid;gap:12px}
+.btn{border:0;border-radius:12px;padding:14px 18px;font:600 17px var(--f);background:var(--accent);color:#1b1325;cursor:pointer}
+.btn.rec{background:var(--rec);color:#fff}.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.btn:disabled{opacity:.45}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:5px;background:#2d2340;padding:5px;border-radius:12px}
+.seg button{border:0;background:transparent;color:var(--ink);font:600 15px var(--f);padding:9px 6px;border-radius:9px}
+.seg button[aria-pressed=true]{background:var(--accent);color:#1b1325}
+.stage{position:relative;background:#000;border-radius:14px;overflow:hidden;aspect-ratio:16/9}
+.stage video{width:100%;height:100%;object-fit:cover;display:block}
+.stage video.mirror{transform:scaleX(-1)}
+.count{position:absolute;inset:0;display:grid;place-items:center;font:700 120px var(--f);color:var(--gold);text-shadow:0 4px 24px #000}
+.lyric{position:absolute;left:0;right:0;top:8px;text-align:center;font:700 22px var(--f);color:#fff;text-shadow:0 2px 8px #000}
+.dot{position:absolute;top:12px;right:12px;width:16px;height:16px;border-radius:50%;background:var(--rec);animation:b 1s infinite}
+@keyframes b{50%{opacity:.25}}
+.meter{height:8px;border-radius:99px;background:#2d2340;overflow:hidden}.meter i{display:block;height:100%;width:0;background:var(--ok)}
+pre{margin:0;direction:ltr;text-align:left;white-space:pre-wrap;font:13px/1.5 ui-monospace,Menlo,monospace;color:var(--ink);background:#120d18;border-radius:10px;padding:12px;overflow:auto}
+#rotate{position:fixed;inset:0;background:var(--bg);z-index:9;display:grid;place-items:center;text-align:center;padding:24px}
+#rotate .ph{width:70px;height:120px;border:5px solid var(--gold);border-radius:14px;margin:0 auto 18px;animation:r 2.2s infinite}
+@keyframes r{0%,25%{transform:rotate(0)}60%,100%{transform:rotate(-90deg)}}
+#rotate b{font-size:24px}
+.status{min-height:1.4em;color:var(--muted);font-size:14px}
+</style>
+</head>
+<body>
+<div id="rotate" hidden><div><div class="ph"></div><b>מסובבים את הטלפון לרוחב</b><p>הקליפ מצולם לרוחב. ממשיכים ברגע שהטלפון מסובב.</p></div></div>
+<div class="wrap">
+  <h1>קליפ מהבית – בדיקת מכשיר</h1>
+  <p>בדיקה של דקה: מצלמים ושרים 10 שניות עם המוזיקה, ואז רואים אם התמונה, הקול והמוזיקה מסונכרנים.</p>
+
+  <section class="card" id="s1">
+    <b>איך שומעים את המוזיקה?</b>
+    <div class="seg" id="modeSeg"><button data-m="wired" aria-pressed="true">אוזניות חוטיות</button><button data-m="bt" aria-pressed="false">בלוטות'</button><button data-m="none" aria-pressed="false">בלי אוזניות</button></div>
+    <button class="btn" id="start">הפעלת מצלמה ומיקרופון</button>
+    <div class="status" id="st1"></div>
+  </section>
+
+  <section class="card" id="s2" hidden>
+    <div class="stage"><video id="cam" class="mirror" playsinline muted autoplay></video><div class="lyric" id="lyric" hidden>שרים או מוחאים כפיים לפי הקצב</div><div class="count" id="count" hidden></div><div class="dot" id="dot" hidden></div></div>
+    <div class="meter"><i id="lv"></i></div>
+    <div class="row"><button class="btn rec" id="rec">הקלטה של 10 שניות</button><span class="status" id="st2"></span></div>
+  </section>
+
+  <section class="card" id="s3" hidden>
+    <b>התוצאה</b>
+    <div class="stage"><video id="out" playsinline muted></video></div>
+    <div class="row"><button class="btn" id="play">ניגון התוצאה</button><button class="btn ghost" id="again">הקלטה נוספת</button><a class="btn ghost" id="dl" download>הורדת הווידאו</a></div>
+    <b>האם התמונה, הקול והמוזיקה יחד?</b>
+    <div class="seg" id="verdict"><button data-v="good" aria-pressed="false">כן, מסונכרן</button><button data-v="voice" aria-pressed="false">הקול לא על הקצב</button><button data-v="lips" aria-pressed="false">השפתיים לא על הקול</button></div>
+    <pre id="report"></pre>
+    <div class="row"><a class="btn" id="wa" target="_blank" rel="noopener">שליחת הדוח בוואטסאפ</a><button class="btn ghost" id="copy">העתקת הדוח</button></div>
+  </section>
+</div>
+<script src="ks-dsp.js"></script>
+<script>
+"use strict";
+var $=function(id){return document.getElementById(id)};
+var GUIDE_URL="b-sound/music/happy.mp3",GUIDE_FROM=0,TAKE=10,LEAD=0.45,WA="972555170280";
+var AC=window.AudioContext||window.webkitAudioContext,ctx=null,stream=null,guide=null,node=null,chunks=[],lvPk=0,mode="wired",verdict="";
+var R={};// last take: pcm, sr, blob, mime, delay, conf, bleed, av, avConf, lat, video dims
+var WL="class R extends AudioWorkletProcessor{constructor(){super();this.t0=1e9;this.on=false;this.b=new Float32Array(4096);this.n=0;this.pk=0;this.c=0;"+
+ "this.port.onmessage=e=>{const d=e.data;if(d.start!=null){this.t0=d.start;this.on=true;this.n=0}if(d.stop){if(this.n)this.port.postMessage({pcm:this.b.slice(0,this.n)});this.n=0;this.on=false;this.port.postMessage({done:true})}}}"+
+ "process(ins){const ch=ins[0]&&ins[0][0];if(!ch)return true;for(let k=0;k<ch.length;k++){const v=Math.abs(ch[k]);if(v>this.pk)this.pk=v}if(++this.c>=30){this.port.postMessage({lv:this.pk});this.pk=0;this.c=0}"+
+ "if(this.on){let s=0;const end=currentTime+ch.length/sampleRate;if(end<=this.t0)return true;if(currentTime<this.t0)s=Math.min(ch.length,Math.round((this.t0-currentTime)*sampleRate));"+
+ "for(let k=s;k<ch.length;k++){this.b[this.n++]=ch[k];if(this.n===4096){this.port.postMessage({pcm:this.b});this.b=new Float32Array(4096);this.n=0}}}return true}}registerProcessor('hc-rec',R);";
+function seg(el,attr,cb){el.onclick=function(e){var b=e.target.closest("button");if(!b)return;[].forEach.call(el.children,function(x){x.setAttribute("aria-pressed",x===b?"true":"false")});cb(b.dataset[attr])}}
+seg($("modeSeg"),"m",function(v){mode=v});
+seg($("verdict"),"v",function(v){verdict=v;report()});
+function landscape(){return window.innerWidth>=window.innerHeight}
+function gate(){$("rotate").hidden=!stream||landscape()}
+window.addEventListener("resize",gate);window.addEventListener("orientationchange",function(){setTimeout(gate,300)});
+function mono(buf){var a=buf.getChannelData(0);if(buf.numberOfChannels<2)return new Float32Array(a);var b=buf.getChannelData(1),m=new Float32Array(a.length);for(var i=0;i<a.length;i++)m[i]=(a[i]+b[i])/2;return m}
+function decode(ab){return new Promise(function(ok,no){var p=ctx.decodeAudioData(ab,ok,no);if(p&&p.catch)p.catch(no)})}
+
+$("start").onclick=function(){
+  var st=$("st1");$("start").disabled=true;st.textContent="מפעיל…";
+  try{if(navigator.audioSession)navigator.audioSession.type="play-and-record"}catch(e){}
+  ctx=new AC({latencyHint:"interactive"});ctx.resume();
+  navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:1280},height:{ideal:720},frameRate:{ideal:30}},
+    audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false,channelCount:1}}).then(function(s){
+    stream=s;$("cam").srcObject=s;
+    return ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([WL],{type:"application/javascript"})));
+  }).then(function(){
+    var src=ctx.createMediaStreamSource(stream);node=new AudioWorkletNode(ctx,"hc-rec",{numberOfInputs:1,numberOfOutputs:1,channelCount:1,channelCountMode:"explicit"});
+    var sink=ctx.createGain();sink.gain.value=0;src.connect(node);node.connect(sink);sink.connect(ctx.destination);
+    node.port.onmessage=function(e){var d=e.data;if(d.pcm)chunks.push(d.pcm);if(d.lv!=null)$("lv").style.width=Math.min(100,Math.round(Math.sqrt(d.lv)*100))+"%";if(d.done&&node.done){node.done();node.done=null}};
+    st.textContent="טוען מוזיקה…";return fetch(GUIDE_URL).then(function(r){return r.arrayBuffer()}).then(decode);
+  }).then(function(buf){guide=buf;$("s1").hidden=true;$("s2").hidden=false;gate()})
+  .catch(function(err){$("start").disabled=false;st.textContent="לא הצלחתי להפעיל: "+(err&&err.message||err)+". צריך לאשר מצלמה ומיקרופון, ולפתוח ב-Safari או ב-Chrome."});
+};
+
+function pickMime(){var t=["video/mp4;codecs=avc1,mp4a.40.2","video/mp4","video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm"];if(!window.MediaRecorder)return null;return t.find(function(x){return MediaRecorder.isTypeSupported(x)})||""}
+$("rec").onclick=function(){
+  if(!landscape()){gate();return}
+  var mime=pickMime();if(mime===null){$("st2").textContent="הדפדפן הזה לא מקליט וידאו.";return}
+  $("rec").disabled=true;$("st2").textContent="";chunks=[];
+  var parts=[],mr=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:2500000}:{videoBitsPerSecond:2500000});
+  mr.ondataavailable=function(e){if(e.data&&e.data.size)parts.push(e.data)};
+  var n=3,cEl=$("count");cEl.hidden=false;cEl.textContent=n;
+  var iv=setInterval(function(){n--;if(n>0)cEl.textContent=n;else{clearInterval(iv);cEl.hidden=true;go()}},800);
+  function go(){
+    $("dot").hidden=false;$("lyric").hidden=false;
+    mr.start();var T0=ctx.currentTime+LEAD;
+    var g=ctx.createBufferSource();g.buffer=guide;g.connect(ctx.destination);g.start(T0,GUIDE_FROM,TAKE);
+    node.port.postMessage({start:T0});
+    setTimeout(function(){
+      node.done=function(){mr.onstop=function(){finish(new Blob(parts,{type:mr.mimeType||mime||"video/mp4"}),mr.mimeType||mime)};mr.stop()};
+      node.port.postMessage({stop:true});
+    },(LEAD+TAKE+0.35)*1000);
+  }
+};
+function finish(blob,mime){
+  $("dot").hidden=true;$("lyric").hidden=true;$("st2").textContent="מעבד…";
+  var len=chunks.reduce(function(a,c){return a+c.length},0),pcm=new Float32Array(len),o=0;chunks.forEach(function(c){pcm.set(c,o);o+=c.length});
+  var sr=ctx.sampleRate,vs=stream.getVideoTracks()[0].getSettings(),as={};try{as=stream.getAudioTracks()[0].getSettings()}catch(e){}
+  var ref=mono(guide).subarray(Math.round(GUIDE_FROM*sr),Math.round((GUIDE_FROM+TAKE)*sr));
+  var pk=0,sq=0;for(var i=0;i<pcm.length;i++){var v=Math.abs(pcm[i]);if(v>pk)pk=v;sq+=v*v}
+  var g=KSDSP.gccDelay(pcm,ref,sr,0.6),lat=Math.min(0.5,(ctx.outputLatency||0)+(ctx.baseLatency||0)+(as.latency||0))||0.03;
+  R={pcm:pcm,sr:sr,blob:blob,mime:mime,delay:g.delay,conf:g.conf,bleed:g.conf>6,lat:lat,vw:vs.width,vh:vs.height,fps:vs.frameRate,peak:pk,rms:Math.sqrt(sq/Math.max(1,pcm.length)),
+     out:ctx.outputLatency||0,base:ctx.baseLatency||0,inLat:as.latency||0,ec:as.echoCancellation,av:null,avConf:0,avErr:""};
+  blob.arrayBuffer().then(decode).then(function(vb){var va=mono(vb),a=KSDSP.gccDelay(va,pcm,sr,1.0);R.av=a.delay;R.avConf=a.conf;R.vDur=vb.duration},function(e){R.avErr=String(e&&e.message||e)})
+  .then(function(){
+    var url=URL.createObjectURL(blob);$("out").src=url;$("dl").href=url;$("dl").download="home-clip-test."+(/mp4/.test(mime)?"mp4":"webm");
+    $("s2").hidden=true;$("s3").hidden=false;$("rec").disabled=false;$("st2").textContent="";report();
+  });
+}
+// playback: video (muted) + clean voice + guide, voice shifted back by the measured (or estimated) round-trip delay
+var playing=[];
+function stopPlay(){playing.forEach(function(s){try{s.stop()}catch(e){}});playing=[];$("out").pause()}
+$("play").onclick=function(){
+  stopPlay();var v=$("out"),d=R.bleed?R.delay:R.lat,av=R.av!=null&&R.avConf>4?R.av:LEAD;
+  v.currentTime=0;v.play().then(function(){
+    var tick=function(){if(v.currentTime<=0.05)return requestAnimationFrame(tick);
+      var vt=v.currentTime,at=ctx.currentTime+0.06,pos=vt+0.06-av;// position inside the PCM take at ctx time `at`
+      var vb=ctx.createBuffer(1,R.pcm.length,R.sr);vb.getChannelData(0).set(R.pcm);
+      var s1=ctx.createBufferSource();s1.buffer=vb;var gv=ctx.createGain();gv.gain.value=1.6;s1.connect(gv);gv.connect(ctx.destination);
+      var s2=ctx.createBufferSource();s2.buffer=guide;var gg=ctx.createGain();gg.gain.value=R.bleed?0.35:0.6;s2.connect(gg);gg.connect(ctx.destination);
+      var gp=pos-d;// guide time that this voice sample was sung against
+      if(pos>=0)s1.start(at,pos);else s1.start(at-pos,0);
+      if(gp>=0)s2.start(at,GUIDE_FROM+gp,Math.max(0.1,TAKE-gp));else s2.start(at-gp,GUIDE_FROM,TAKE);
+      playing=[s1,s2];
+    };tick();
+  });
+};
+$("out").addEventListener("ended",stopPlay);
+$("again").onclick=function(){stopPlay();$("s3").hidden=true;$("s2").hidden=false;verdict="";[].forEach.call($("verdict").children,function(x){x.setAttribute("aria-pressed","false")});gate()};
+function ms(x){return x==null?"-":Math.round(x*1000)+" ms"}
+function report(){
+  var M={wired:"wired headphones",bt:"bluetooth",none:"no headphones"},V={good:"in sync",voice:"voice off the beat",lips:"lips off the voice","":"(not answered)"};
+  var t=["KOLOT home-clip device test","verdict: "+V[verdict],"listening: "+M[mode],
+   "video: "+R.vw+"x"+R.vh+" @"+(R.fps?Math.round(R.fps):"?")+"fps, "+R.mime+", "+(R.blob.size/1e6).toFixed(2)+" MB"+(R.vDur?", "+R.vDur.toFixed(2)+" s":""),
+   "landscape: "+(R.vw>R.vh?"yes":"NO (portrait frames)"),
+   "audio: "+R.sr+" Hz, "+(R.pcm.length/R.sr).toFixed(2)+" s, peak "+R.peak.toFixed(3)+", rms "+R.rms.toFixed(4)+", echoCancellation="+R.ec,
+   "guide in mic: "+(R.bleed?"yes":"no")+" (conf "+R.conf.toFixed(1)+"), measured delay "+ms(R.delay),
+   "reported latency: out "+ms(R.out)+", base "+ms(R.base)+", in "+ms(R.inLat)+" -> estimate "+ms(R.lat),
+   "video/voice offset: "+(R.av==null?"n/a "+R.avErr:ms(R.av)+" (conf "+R.avConf.toFixed(1)+", expected about "+ms(LEAD)+")"),
+   "ua: "+navigator.userAgent].join("\n");
+  $("report").textContent=t;$("wa").href="https://wa.me/"+WA+"?text="+encodeURIComponent(t);
+}
+$("copy").onclick=function(){var t=$("report").textContent;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){$("copy").textContent="הועתק"},function(){var r=document.createRange();r.selectNodeContents($("report"));var s=getSelection();s.removeAllRanges();s.addRange(r)})};
+</script>
+</body>
+</html>

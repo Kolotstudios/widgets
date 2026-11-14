@@ -143,7 +143,7 @@ export default {
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(req, isAdmin) });
 
     if (path === '/widget.js') {
-      return new Response(WIDGET_JS.replace('__API__', url.origin).replace('__WA__', WA_NUMBER), {
+      return new Response(WIDGET_JS.replaceAll('__API__', url.origin).replaceAll('__WA__', WA_NUMBER), {
         headers: { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'public, max-age=600', 'Access-Control-Allow-Origin': '*' },
       });
     }

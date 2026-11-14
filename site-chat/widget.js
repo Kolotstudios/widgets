@@ -1,4 +1,4 @@
-/* KOLOT site chat widget - served by the kolot-site-chat worker at /widget.js (__API__ and __WA__ are filled in by the worker).
+/* KOLOT site chat widget - served by the kolot-site-chat worker at /widget.js (API and WA placeholders are filled in by the worker).
    One tag on the site: <script src="https://kolot-site-chat.kolot-studios.workers.dev/widget.js" async></script>
    Icon only: nothing opens or pops up by itself. Hebrew, RTL, mobile full-screen. */
 (function () {

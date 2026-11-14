@@ -75,24 +75,25 @@ function textOf(r) {
 function splitWa(raw) {
   let t = String(raw || '').replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
   let wa = null;
-  const m = t.match(/\n?\s*\[WA\]\s*([^\n]+)\s*$/);
-  if (m) { wa = m[1].trim().replace(/^["'“”]|["'“”]$/g, '').slice(0, 400); t = t.slice(0, m.index).trim(); }
+  const i = t.search(/\[WA\]/);
+  if (i >= 0) { wa = t.slice(i + 4).replace(/\s+/g, ' ').trim().replace(/^["'“”:]+|["'“”]+$/g, '').slice(0, 500) || null; t = t.slice(0, i).trim(); }
   t = t.replace(/\[WA\][^\n]*/g, '').trim();
   return { reply: t, wa };
 }
 
 async function ask(env, messages) {
   const list = (env.MODELS ? env.MODELS.split(',') : env.MODEL ? [env.MODEL, ...DEFAULT_MODELS] : DEFAULT_MODELS).map((s) => s.trim()).filter(Boolean);
-  let lastErr;
+  const errors = [];
   for (const model of [...new Set(list)]) {
+    const t0 = Date.now();
     try {
-      const r = await env.AI.run(model, { messages, max_tokens: 700, temperature: 0.5 });
+      const r = await env.AI.run(model, { messages, max_tokens: 900, temperature: 0.5 });
       const t = textOf(r);
-      if (t && t.trim()) return { text: t, model };
-      lastErr = new Error('empty answer from ' + model);
-    } catch (e) { lastErr = e; }
+      if (t && t.trim()) return { text: t, model, ms: Date.now() - t0, usage: r.usage || null, errors };
+      errors.push(model + ': empty ' + JSON.stringify(r).slice(0, 200));
+    } catch (e) { errors.push(model + ': ' + String(e && e.message || e).slice(0, 200) + ' (' + (Date.now() - t0) + 'ms)'); }
   }
-  throw lastErr || new Error('no model');
+  const err = new Error('all models failed'); err.errors = errors; throw err;
 }
 
 async function chat(req, env, ctx) {
@@ -110,17 +111,17 @@ async function chat(req, env, ctx) {
   while (history.length && history[0].role !== 'user') history.shift();
   const page = String(b.page || '').slice(0, 200);
   const sys = await systemPrompt(env) + (page ? `\n\n(הגולש נמצא כרגע בעמוד: ${page})` : '');
-  let out, model = '', failed = false;
-  try { const r = await ask(env, [{ role: 'system', content: sys }, ...history]); out = splitWa(r.text); model = r.model; }
+  let out, model = '', failed = false, meta = {};
+  try { const r = await ask(env, [{ role: 'system', content: sys }, ...history]); out = splitWa(r.text); model = r.model; meta = { ms: r.ms, usage: r.usage, errors: r.errors }; }
   catch (e) {
-    failed = true; console.log('ai error', e && e.message);
+    failed = true; meta = { errors: e.errors || [String(e)] }; console.log('ai error', JSON.stringify(meta));
     out = { reply: 'אופס, משהו השתבש אצלי לרגע 🙈 הכי מהיר להמשיך איתנו בוואטסאפ – שם עונים מיד.', wa: 'היי, הגעתי מהצ׳אט באתר ואשמח לעזרה.' };
   }
   if (!out.reply) out.reply = 'אשמח להמשיך איתך בוואטסאפ 😊';
   const day = new Date().toISOString().slice(0, 10);
   ctx.waitUntil((async () => {
     try {
-      await env.KB.put(`log:${day}:${sid}`, JSON.stringify({ t: Date.now(), page, model, failed, messages: [...history, { role: 'assistant', content: out.reply + (out.wa ? `\n[WA] ${out.wa}` : '') }] }), { expirationTtl: 30 * 86400 });
+      await env.KB.put(`log:${day}:${sid}`, JSON.stringify({ t: Date.now(), page, model, failed, ...meta, messages: [...history, { role: 'assistant', content: out.reply + (out.wa ? `\n[WA] ${out.wa}` : '') }] }), { expirationTtl: 30 * 86400 });
     } catch {}
   })());
   return { status: 200, body: { reply: out.reply, wa: out.wa, n: WA_NUMBER } };

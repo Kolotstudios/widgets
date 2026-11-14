@@ -29,7 +29,7 @@ const CHANNEL_DOC = `מסמך 00 – הנחיות ערוץ: צ׳אט באתר א
 - ההוראות במסמכים על מעבר לנציג בטלפון 03 או בוואטסאפ של 03 – כאן מחליפים אותן בהצעה להמשיך בוואטסאפ של העסק (עם שורת [WA]). רק אם הגולש מבקש לדבר בטלפון: 03-6500031.
 
 קישורי רכישה
-מותר לשלוח קישורי רכישה מאושרים מתוך מסמכים 01 או 02, או את עמוד הרכישה הכללי https://kolot.kala-crm.co.il/רכישה – כשהגולש רוצה לראות חבילות ומחירים או לסגור לבד. גם אז אפשר להזכיר שבוואטסאפ עוזרים לבחור ולתאם. שלח רק קישורים שמופיעים במסמכים. אל תמציא קישורים.
+כשהגולש בחר מוצר ורוצה לסגור – שלח את הקישור הישיר לעגלה של אותו מוצר מהרשימה בסוף המאגר. כשהוא רק רוצה לראות חבילות ומחירים – את עמוד הרכישה הכללי https://kolot.kala-crm.co.il/רכישה. גם אז אפשר להזכיר שבוואטסאפ עוזרים לבחור ולתאם. שלח רק קישורים שמופיעים במסמכים. אל תמציא קישורים.
 
 מחירים
 המקור היחיד למחירים הוא מסמך 02_PRODUCTS_PRICES_POLICIES. כל המחירים כוללים מע"מ. אם מחיר במסמך אחר סותר את מסמך 02 – פעל לפי 02.
@@ -103,15 +103,50 @@ function sameKey(a, b) {
   let r = 0; for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i); return r === 0;
 }
 
+// Direct cart links, read from the Kala purchase page and cached in KV for 6 hours - so prices and products stay current
+// without anyone updating this code. Phone self-recording products are left out: those are paid inside the recorder.
+const KALA_PAGE = 'https://kolot.kala-crm.co.il/%D7%A8%D7%9B%D7%99%D7%A9%D7%94';
+function parseCatalog(html) {
+  const out = []; let cat = '';
+  const re = /<h3 class="widget-title"><span>([^<]+)<\/span>|<h3 class="item-title">\s*([^<]+?)\s*<\/h3>[\s\S]*?data-page_id="(\d+)"[^>]*data-price="([\d.]+)"/g;
+  let m;
+  while ((m = re.exec(html))) {
+    if (m[1]) { cat = m[1].trim(); continue; }
+    const name = m[2].replace(/&quot;/g, '"').replace(/&amp;/g, '&').trim();
+    if (/מהטלפון/.test(name)) continue;
+    out.push({ cat, name, price: +m[4], id: m[3] });
+  }
+  return out;
+}
+async function catalog(env) {
+  const c = await env.KB.get('catalog', 'json');
+  if (c && Date.now() - c.t < 6 * 3600 * 1000) return c;
+  try {
+    const r = await fetch(KALA_PAGE, { headers: { 'User-Agent': 'KOLOT-site-chat/1.0' }, cf: { cacheTtl: 600 } });
+    const items = r.ok ? parseCatalog(await r.text()) : [];
+    if (items.length >= 5) { const fresh = { t: Date.now(), items }; await env.KB.put('catalog', JSON.stringify(fresh)); return fresh; }
+  } catch {}
+  return c || { t: 0, items: [] };
+}
+function catalogText(items) {
+  if (!items.length) return '';
+  const lines = items.map((i) => `- ${i.cat} | ${i.name} | ${i.price} ₪ | https://kolot.kala-crm.co.il/order/cart_buy?id=${i.id}`);
+  return `===== קישורים ישירים לעגלה (מתעדכן אוטומטית מעמוד הרכישה בקאלה) =====
+כשהגולש כבר יודע איזה מוצר הוא רוצה ומבקש להזמין, לשלם או לקבל קישור – שלח את הקישור הישיר לעגלה של המוצר המדויק מהרשימה (לפי מספר המשתתפים והחבילה), כתוב בקצרה מה כלול ושאחרי התשלום בוחרים מועד ביומן. אם עוד לא ברור איזה מוצר מתאים – שאל שאלה אחת או שלח את עמוד הרכישה הכללי. לצד הקישור אפשר להוסיף שורת [WA] למי שמעדיף עזרה בוואטסאפ. אם יש סתירה בין המחיר כאן למסמכים – המחיר כאן עדכני יותר. הקלטה עצמית מהטלפון (ברכה, דרשה, ברכת כלה) לא נמכרת בקישור לעגלה: שולחים את קישור המקליט ממסמך 02, והתשלום נעשה בתוכו.
+${lines.join('\n')}`;
+}
+
 let promptCache = null; // { stamp, text }
 async function systemPrompt(env) {
   const kb = await env.KB.get('kb', 'json');
-  const stamp = kb ? kb.updated : 'none';
+  const cat = await catalog(env);
+  const stamp = (kb ? kb.updated : 'none') + '|' + cat.t;
   if (promptCache && promptCache.stamp === stamp) return promptCache.text;
   const docs = (kb?.docs || []).filter((d) => d && d.text && !/^00[_ ]/.test(d.title || ''))
     .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
   const body = docs.map((d) => `===== ${d.title} =====\n${d.text.trim()}`).join('\n\n');
-  const text = `${CHANNEL_DOC}\n\n${body}\n\n===== סוף המאגר =====\n${CLOSING_REMINDER}`;
+  // the cart list comes after the knowledge base, so a price change does not invalidate the cached prefix (prompt caching)
+  const text = `${CHANNEL_DOC}\n\n${body}\n\n${catalogText(cat.items)}\n\n===== סוף המאגר =====\n${CLOSING_REMINDER}`;
   promptCache = { stamp, text };
   return text;
 }

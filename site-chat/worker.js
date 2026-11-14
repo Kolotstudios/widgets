@@ -2,7 +2,8 @@
 // Replaces the Chatbase widget on kolot-studios.com. Answers from the Kala agent's knowledge base (docs 01-07, stored in KV)
 // plus the website-channel rules in channel.js, and steers visitors to the business WhatsApp (Kala agent).
 //
-// Bindings: KB (KV namespace "kolot-site-chat"), AI (Workers AI). Secret: ADMIN_KEY. Optional vars: MODEL, MODELS (comma list).
+// Bindings: KB (KV namespace "kolot-site-chat"), AI (Workers AI). Secrets: ADMIN_KEY, OPENAI_API_KEY (optional - when set, OpenAI answers first).
+// Optional vars: OPENAI_MODEL (default gpt-6.1-terra), OPENAI_REASONING (default low), MODEL / MODELS for the Workers AI fallback.
 // Routes:
 //   GET  /widget.js        the chat widget (one <script> tag on the site)
 //   POST /chat             { sid, messages:[{role,content}], page } -> { reply, wa }
@@ -89,7 +90,34 @@ function splitWa(raw) {
   return { reply: t, wa };
 }
 
+// OpenAI (when the OPENAI_API_KEY secret is set): first choice. Model from OPENAI_MODEL, default gpt-6.1-terra.
+async function askOpenAI(env, messages) {
+  const model = env.OPENAI_MODEL || 'gpt-6.1-terra';
+  const t0 = Date.now();
+  const r = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + env.OPENAI_API_KEY },
+    body: JSON.stringify({ model, messages, max_completion_tokens: 1200, reasoning_effort: env.OPENAI_REASONING || 'low', prompt_cache_key: 'kolot-site-chat' }),
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error('openai ' + r.status + ': ' + String(j.error?.message || '').slice(0, 200));
+  const t = textOf(j);
+  if (!t || !t.trim()) throw new Error('openai: empty answer');
+  return { text: t, model: 'openai/' + model, ms: Date.now() - t0, usage: j.usage || null };
+}
+
 async function ask(env, messages) {
+  const pre = [];
+  if (env.OPENAI_API_KEY) {
+    try { return { ...(await askOpenAI(env, messages)), errors: pre }; }
+    catch (e) { pre.push(String(e && e.message || e).slice(0, 250)); }
+  }
+  const r = await askWorkersAI(env, messages).catch((e) => { e.errors = [...pre, ...(e.errors || [])]; throw e; });
+  r.errors = [...pre, ...(r.errors || [])];
+  return r;
+}
+
+async function askWorkersAI(env, messages) {
   const list = (env.MODELS ? env.MODELS.split(',') : env.MODEL ? [env.MODEL, ...DEFAULT_MODELS] : DEFAULT_MODELS).map((s) => s.trim()).filter(Boolean);
   const errors = [];
   for (const model of [...new Set(list)]) {

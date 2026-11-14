@@ -63,7 +63,15 @@ const WIDGET_JS = "/* KOLOT site chat widget - served by the kolot-site-chat wor
 
 
 
-const DEFAULT_MODELS = ['@cf/google/gemma-4-26b-a4b-it', '@cf/zai-org/glm-5.3-flash', '@cf/openai/gpt-oss-120b'];
+// Gemma 4 with thinking off: good Hebrew, ~2-6s, ~340 neurons per answer with the full knowledge base (Workers Free = 10,000/day).
+// gpt-oss-120b is only the fallback (about 3x the cost). glm-5.3-flash needs the Workers Paid plan.
+const DEFAULT_MODELS = ['@cf/google/gemma-4-26b-a4b-it', '@cf/openai/gpt-oss-120b'];
+const MODEL_PARAMS = {
+  '@cf/google/gemma-4-26b-a4b-it': { chat_template_kwargs: { enable_thinking: false } },
+  '@cf/qwen/qwen3-30b-a3b-fp8': { chat_template_kwargs: { enable_thinking: false } },
+  '@cf/openai/gpt-oss-120b': { reasoning_effort: 'low' },
+  '@cf/openai/gpt-oss-20b': { reasoning_effort: 'low' },
+};
 const ALLOWED_ORIGIN = /^https:\/\/([a-z0-9-]+\.)*kolot-studios\.com$|^https:\/\/kolot-site-chat\.[a-z0-9-]+\.workers\.dev$/i;
 const MAX_MSG = 800, MAX_TURNS = 16, MAX_USER_MSGS = 40;
 
@@ -137,7 +145,7 @@ async function ask(env, messages) {
   for (const model of [...new Set(list)]) {
     const t0 = Date.now();
     try {
-      const r = await env.AI.run(model, { messages, max_tokens: 900, temperature: 0.5 });
+      const r = await env.AI.run(model, { messages, max_tokens: 900, temperature: 0.5, ...(MODEL_PARAMS[model] || {}) });
       const t = textOf(r);
       if (t && t.trim()) return { text: t, model, ms: Date.now() - t0, usage: r.usage || null, errors };
       errors.push(model + ': empty ' + JSON.stringify(r).slice(0, 200));

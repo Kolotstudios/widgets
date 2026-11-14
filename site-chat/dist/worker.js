@@ -210,6 +210,17 @@ export default {
         promptCache = null;
         return json({ ok: true, docs: docs.map((d) => [d.title, d.text.length]), updated: kb.updated }, 200, h);
       }
+      if (path === '/admin/try' && req.method === 'POST') {
+        // experiment: { model, params, system?, question } -> raw answer + usage (does not touch the live prompt)
+        const b = await req.json();
+        const sys = b.system === 'live' ? await systemPrompt(env) : (b.system || 'ענה בעברית בקצרה.');
+        const t0 = Date.now();
+        try {
+          const r = await env.AI.run(b.model, { messages: [{ role: 'system', content: sys }, { role: 'user', content: b.question || 'היי' }], ...(b.params || {}) });
+          return json({ ms: Date.now() - t0, text: textOf(r), usage: r.usage || null, raw: JSON.stringify(r).slice(0, 1500) }, 200, h);
+        } catch (e) { return json({ ms: Date.now() - t0, error: String(e && e.message || e) }, 200, h); }
+      }
+      if (path === '/admin/kb' && url.searchParams.get('full')) return json(await env.KB.get('kb', 'json'), 200, h);
       if (path === '/admin/kb') {
         const kb = await env.KB.get('kb', 'json');
         return json({ updated: kb?.updated, source: kb?.source, docs: (kb?.docs || []).map((d) => [d.title, d.text.length]), promptChars: (await systemPrompt(env)).length }, 200, h);

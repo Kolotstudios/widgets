@@ -12,37 +12,38 @@
 
   var css = '' +
     '#kc-btn{position:fixed;bottom:20px;right:20px;z-index:2147483000;width:60px;height:60px;border-radius:50%;border:0;cursor:pointer;' +
-    'background:linear-gradient(160deg,#2a2a31,#121215);box-shadow:0 8px 24px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;transition:transform .2s}' +
+    'background:linear-gradient(160deg,#3d1f6e,#2b1450);box-shadow:0 8px 24px rgba(43,20,80,.4);display:flex;align-items:center;justify-content:center;transition:transform .2s}' +
     '#kc-btn:hover{transform:scale(1.06)}#kc-btn svg{width:30px;height:30px}' +
     '#kc-panel{position:fixed;bottom:92px;right:20px;z-index:2147483001;width:370px;max-width:calc(100vw - 24px);height:560px;max-height:calc(100vh - 120px);' +
     'background:#fff;border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,.3);display:none;flex-direction:column;overflow:hidden;direction:rtl;' +
-    'font-family:Assistant,Rubik,Heebo,Arial,sans-serif;color:#1d1d22}' +
+    'font-family:almoni-dl-aaa-400,Assistant,Rubik,Heebo,Arial,sans-serif;color:#1d1d22}' +
     '#kc-panel.open{display:flex}' +
-    '#kc-head{background:linear-gradient(160deg,#25252b,#111114);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:10px}' +
+    '#kc-head{background:linear-gradient(160deg,#3d1f6e,#2b1450);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:10px}' +
     '#kc-head .kc-t{flex:1;min-width:0}#kc-head b{display:block;font-size:17px}#kc-head small{opacity:.75;font-size:12.5px}' +
     '#kc-head button{background:none;border:0;color:#fff;cursor:pointer;padding:6px;border-radius:8px;line-height:0}#kc-head button:hover{background:rgba(255,255,255,.12)}' +
     '#kc-wa-top{background:#25D366!important;border-radius:20px!important;padding:6px 10px!important;font-size:13px;font-weight:700;line-height:1!important;display:flex;gap:5px;align-items:center}' +
     '#kc-body{flex:1;overflow-y:auto;padding:14px;background:#f5f4f1;display:flex;flex-direction:column;gap:8px}' +
     '.kc-m{max-width:85%;padding:9px 12px;border-radius:14px;font-size:15px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word}' +
     '.kc-a{background:#fff;align-self:flex-start;border-bottom-right-radius:4px;box-shadow:0 1px 2px rgba(0,0,0,.06)}' +
-    '.kc-u{background:#2a2a31;color:#fff;align-self:flex-end;border-bottom-left-radius:4px}' +
-    '.kc-m a{color:#b8860b;text-decoration:underline}.kc-u a{color:#ffd98a}' +
+    '.kc-u{background:#2b1450;color:#fff;align-self:flex-end;border-bottom-left-radius:4px}' +
+    '.kc-m a{color:#7a4fc0;text-decoration:underline}.kc-u a{color:#ffd98a}' +
     '.kc-wa{align-self:flex-start;display:inline-flex;gap:8px;align-items:center;background:#25D366;color:#fff!important;text-decoration:none!important;font-weight:700;' +
     'padding:10px 16px;border-radius:24px;font-size:15px;box-shadow:0 4px 12px rgba(37,211,102,.35)}' +
     '.kc-chips{display:flex;flex-wrap:wrap;gap:6px}.kc-chip{border:1px solid #d9d6cf;background:#fff;border-radius:16px;padding:6px 11px;font-size:13.5px;cursor:pointer;font-family:inherit;color:#1d1d22}' +
-    '.kc-chip:hover{border-color:#b8860b}' +
+    '.kc-chip:hover{border-color:#f2b635;background:#fff8e6}' +
     '.kc-typing{align-self:flex-start;background:#fff;border-radius:14px;padding:10px 14px}.kc-typing i{display:inline-block;width:7px;height:7px;margin:0 2px;border-radius:50%;background:#aaa;animation:kcb 1s infinite}' +
     '.kc-typing i:nth-child(2){animation-delay:.15s}.kc-typing i:nth-child(3){animation-delay:.3s}@keyframes kcb{0%,80%,100%{opacity:.3}40%{opacity:1}}' +
     '#kc-form{display:flex;gap:8px;padding:10px;border-top:1px solid #eee;background:#fff}' +
     '#kc-in{flex:1;border:1px solid #ddd;border-radius:20px;padding:10px 14px;font-size:16px;font-family:inherit;resize:none;max-height:90px;outline:none;direction:rtl}' +
-    '#kc-in:focus{border-color:#b8860b}' +
-    '#kc-send{border:0;border-radius:50%;width:42px;height:42px;background:#2a2a31;color:#fff;cursor:pointer;flex:none;display:flex;align-items:center;justify-content:center}' +
+    '#kc-in:focus{border-color:#7a4fc0}' +
+    '#kc-send{border:0;border-radius:50%;width:42px;height:42px;background:#2b1450;color:#fff;cursor:pointer;flex:none;display:flex;align-items:center;justify-content:center}' +
     '#kc-send:disabled{opacity:.4}' +
     '#kc-foot{font-size:11px;color:#999;text-align:center;padding:0 0 6px;background:#fff}' +
-    '@media (max-width:520px){#kc-panel{inset:0;width:100%;max-width:100%;height:100%;max-height:100%;border-radius:0;bottom:0;right:0}#kc-btn{bottom:16px;right:16px}' +
+    '@media (max-width:768px){#kc-btn{bottom:90px;right:14px;width:56px;height:56px}#kc-panel{bottom:156px}}' +
+    '@media (max-width:520px){#kc-panel{inset:0;width:100%;max-width:100%;height:100%;max-height:100%;border-radius:0;bottom:0;right:0}' +
     'body.kc-lock{overflow:hidden}}';
 
-  var ICON_CHAT = '<svg viewBox="0 0 24 24" fill="none"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.2 3.6c-.5.4-1.3.1-1.3-.6V16A2.5 2.5 0 0 1 4 13.5z" fill="#f0c06e"/><circle cx="8.5" cy="9.6" r="1.2" fill="#121215"/><circle cx="12" cy="9.6" r="1.2" fill="#121215"/><circle cx="15.5" cy="9.6" r="1.2" fill="#121215"/></svg>';
+  var ICON_CHAT = '<svg viewBox="0 0 24 24" fill="none"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.2 3.6c-.5.4-1.3.1-1.3-.6V16A2.5 2.5 0 0 1 4 13.5z" fill="#f2b635"/><circle cx="8.5" cy="9.6" r="1.2" fill="#2b1450"/><circle cx="12" cy="9.6" r="1.2" fill="#2b1450"/><circle cx="15.5" cy="9.6" r="1.2" fill="#2b1450"/></svg>';
   var ICON_X = '<svg viewBox="0 0 24 24" width="22" height="22"><path d="M6 6l12 12M18 6L6 18" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg>';
   var ICON_WA = '<svg viewBox="0 0 24 24" width="18" height="18" fill="#fff"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.4.6-.4.4c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.9-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.2.1.6-.1 1.2z"/></svg>';
   var ICON_SEND = '<svg viewBox="0 0 24 24" width="20" height="20" fill="#fff" style="transform:scaleX(-1)"><path d="M3.4 20.4 21 12 3.4 3.6 3.4 10l12.6 2-12.6 2z"/></svg>';

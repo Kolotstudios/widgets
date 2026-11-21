@@ -102,6 +102,22 @@ body.dragging,body.dragging *{cursor:grabbing!important;user-select:none}
 .panel .fld{display:grid;gap:4px}.panel .fld input{font-size:16px}
 .cl{display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--bg)}
 .cl .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+/* projects library (staff): every song the studio worked on, by name */
+.lib{gap:12px}
+.lib-h{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.lib-h h2{margin:0;font-size:22px}
+.lib-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.lib-tools input{flex:1 1 220px;min-width:0;font-size:16px;padding:9px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--bg)}
+.lib-f{display:flex;gap:6px;flex-wrap:wrap}
+.lib-f button{border-radius:999px;padding:5px 12px;font-size:14px}
+.lib-f button[aria-pressed="true"]{background:var(--accent,#6a2fb8);color:#fff;border-color:transparent}
+.lib-list{display:grid;gap:8px}
+.lib .cl b.t{font-size:17px}
+.lib .cl.here{border-color:var(--accent,#6a2fb8)}
+.lib .cl.rev{border-color:var(--warn,#c0392b);background:var(--soft,#fff4ef)}
+.lib-empty{padding:18px;text-align:center}
+@media (max-width:640px){.lib .cl{grid-template-columns:1fr}.lib .cl .acts{justify-content:flex-start}.lib-h h2{font-size:20px}}
+body.libmode .steps,body.libmode .nav,body.libmode [data-step],body.libmode #modeSeg,body.libmode #cloudInfo,body.libmode #cloudSave,body.libmode #cloudList,body.libmode #intakeBtn,body.libmode #cloudNew{display:none!important}
 .tag{border-radius:999px;padding:1px 9px;font-size:12px;font-weight:700}.tag.open{background:#d9f5e3;color:#14663a}.tag.lock{background:#fde2dc;color:#9a2f1c}
 body.locked #fixBox,body.locked [data-step="people"] .row,body.locked [data-step="people"] label,body.locked #peopleList,body.locked #pickChips,body.locked #pickFloat,body.locked #splitList,body.locked #autoSplit,body.locked #clearSplit{pointer-events:none;opacity:.6}
 .fld{display:grid;gap:4px;margin-bottom:10px}.fld input,.fld textarea{font-size:16px}
@@ -145,7 +161,13 @@ body.locked #fixBox,body.locked [data-step="people"] .row,body.locked [data-step
       <input type="radio" name="mode" id="m-client" value="client" checked><label for="m-client">תצוגת לקוח</label>
     </div>
   </header>
-  <div id="staffBar" class="staffbar" hidden><span id="reviewBadge" class="tag lock" hidden style="cursor:pointer"></span><span id="cloudInfo" class="hint small">פרויקט מקומי – עוד לא נשמר ללקוח</span><span class="sp"></span><button class="small primary" id="intakeBtn">📥 גייד חדש</button><button class="small" id="cloudList">📋 לקוחות</button><button class="small" id="upMgr">👤 לינקים להעלאה</button><button class="small" id="cloudNew">➕ שיר חדש</button><button class="small" id="cloudSave">☁ שמירה ולינק ללקוח</button></div>
+  <div id="staffBar" class="staffbar" hidden><span id="reviewBadge" class="tag lock" hidden style="cursor:pointer"></span><span id="cloudInfo" class="hint small">פרויקט מקומי – עוד לא נשמר ללקוח</span><span class="sp"></span><button class="small primary" id="intakeBtn">📥 גייד חדש</button><button class="small" id="cloudList">📁 הפרויקטים</button><button class="small" id="upMgr">👤 לינקים להעלאה</button><button class="small" id="cloudNew">➕ שיר חדש</button><button class="small" id="cloudSave">☁ שמירה ולינק ללקוח</button></div>
+  <section id="lib" class="card lib" hidden aria-labelledby="libT">
+    <div class="lib-h"><h2 id="libT">הפרויקטים</h2><span class="hint small" id="libCount"></span><span class="sp"></span><button class="small primary" id="libIntake">📥 גייד חדש</button><button class="small" id="libNew">➕ שיר חדש</button></div>
+    <div class="lib-tools"><input id="libQ" type="search" placeholder="חיפוש לפי שם שיר, לקוח או מספר הזמנה" aria-label="חיפוש פרויקט">
+      <div class="lib-f" id="libF"><button class="small" data-f="all" aria-pressed="true">הכל</button><button class="small" data-f="rev" aria-pressed="false">לבדיקה</button><button class="small" data-f="open" aria-pressed="false">פתוחים</button><button class="small" data-f="sent" aria-pressed="false">נשלחו ללקוח</button><button class="small" data-f="closed" aria-pressed="false">סגורים</button></div></div>
+    <div class="lib-list" id="libList"></div>
+  </section>
   <div id="clientBar" class="clientbar" hidden></div>
   <div id="gate" class="card" hidden style="text-align:center;gap:10px"><h2>הקריוקי המשפחתי שלכם</h2><p class="hint">הכלי נפתח דרך הלינק האישי שקיבלתם מאולפני קולות. אם קיבלתם לינק – פתחו אותו כמו שהוא, במלואו.</p><p><button class="small" id="staffLogin" style="border:none;background:none;color:var(--muted);font-weight:400">כניסת צוות</button></p></div>
   <div id="upCard" class="card" hidden>
@@ -907,18 +929,41 @@ $('cloudSave').onclick=()=>{if(!P.lines.length)return toast('קודם מכיני
    const u=linkOf(r.k);$('cMsg').textContent='✓ נשמר';$('cOut').innerHTML=`<div class="fld" style="margin-top:8px"><label>הלינק של הלקוח (פתוח עד ${fmtE(r.expires)})</label><input type="text" readonly value="${esc(u)}" style="direction:ltr" onclick="this.select()"><div class="row"><button class="small primary" id="cCopy">🔗 העתקה</button><a class="btn small" target="_blank" rel="noopener" href="${esc(u)}">פתיחה לבדיקה</a><button class="small" id="cSend">📲 שליחה ללקוח בוואטסאפ</button></div><p class="hint small">שולחים ללקוח בעצמכם (למשל יחד עם הגייד). המערכת לא שולחת הודעות לבד.</p></div>`;$('cCopy').onclick=()=>copyLink(r.k);$('cSend').onclick=e=>sendToClient(r.k,e.target)}
   catch(e){$('cMsg').textContent='✗ '+(e.message||e)}finally{$('cGo').disabled=false}}};
 // list of client projects (staff)
-$('cloudList').onclick=async()=>{showPanel('<b>לקוחות</b><p class="hint">טוען…</p>');try{const r=await staffApi({action:'kk_list'});if(!r.ok)throw new Error(r.error);renderList(r.items)}catch(e){showPanel(`<b>לקוחות</b><p class="warn">✗ ${esc(e.message||e)}</p><button id="cX">סגירה</button>`);$('cX').onclick=hidePanel}};
-function renderList(items){showPanel(`<div class="row"><b>לקוחות (${items.length})</b><span class="sp"></span><button class="small" id="cX">סגירה</button></div>`+(items.length?items.map(it=>`<div class="cl" data-k="${it.k}"><div><b>${esc(it.name||'לקוח')}</b> <span class="hint small">${esc(it.title||'')}</span><br><span class="tag ${it.editable?'open':'lock'}">${it.closed?'סגור':it.editable?'פתוח עד '+fmtE(it.expires):'נעול'}</span> <span class="hint small">${it.recDate?'הקלטה '+it.recDate.split('-').reverse().join('/')+' · ':''}${it.updated?(it.by==='client'?'הלקוח עדכן ':'עודכן ')+fmtD(it.updated):''}${it.people?' · '+it.people+' משתתפים':''}${it.sentAt?' · נשלח '+fmtD(it.sentAt):''}${it.uploaderName?' · הועלה ע"י '+esc(it.uploaderName):''}${it.needsReview?`<br><span class="warn small">⚠ לבדיקה: ${esc(it.needsReview)}</span>`:''}${it.reminded?' · תזכורת '+fmtD(it.reminded):''}</span></div>
- <div class="acts"><button class="small" data-a="copy">🔗 לינק</button>${it.sentAt?'':'<button class="small" data-a="send">📲 שליחה</button>'}<button class="small" data-a="open">פתיחה</button><button class="small" data-a="ext">+7 ימים</button><button class="small" data-a="${it.closed?'reopen':'close'}">${it.closed?'פתיחה מחדש':'סגירה'}</button></div></div>`).join(''):'<p class="hint">עוד אין לקוחות.</p>'));
- $('cX').onclick=hidePanel;
- $('panelBox').onclick=async e=>{const b=e.target.closest('[data-a]');if(!b)return;const k=b.closest('[data-k]').dataset.k;const a=b.dataset.a;
-  if(a==='copy')return copyLink(k);
-  if(a==='send'){await sendToClient(k,b);try{const l=await staffApi({action:'kk_list'});renderList(l.items)}catch(err){}return}
-  if(a==='open'){if(P.lines.length&&!(P.cloud&&P.cloud.k===k)&&!await yes('לפתוח את השיר של הלקוח במקום הפרויקט שפתוח עכשיו? (פרויקט שלא נשמר ללקוח יימחק מהמכשיר)'))return;b.disabled=true;b.textContent='טוען…';try{const r=await staffApi({action:'kk_load',k});if(!r.ok)throw new Error(r.error);await applyCloud(r);P.cloud={k,name:r.name,recDate:r.state.recDate,orderId:(items.find(x=>x.k===k)||{}).orderId||''};save();if(audioBlob)DB.put('audio',audioBlob);renderStaffBar();hidePanel();show(0);toast('נפתח: '+(r.name||''))}catch(err){toast('✗ '+(err.message||err))}return}
-  const body={action:'kk_meta',k};if(a==='ext')body.extendDays=7;if(a==='close')body.closed=true;if(a==='reopen')body.closed=false;b.disabled=true;
-  try{const r=await staffApi(body);if(!r.ok)throw new Error(r.error);const l=await staffApi({action:'kk_list'});renderList(l.items)}catch(err){toast('✗ '+(err.message||err));b.disabled=false}}}
-$('cloudNew').onclick=async()=>{if(P.lines.length&&!await yes('להתחיל שיר חדש? הפרויקט שפתוח עכשיו יימחק מהמכשיר'+(P.cloud&&P.cloud.k?' (אצל הלקוח הוא נשאר שמור)':'')+'.'))return;
- Object.assign(P,{title:'',lyrics:'',lines:[],bpm:0,beat0:0,people:[],assign:{},bg:{type:'theme',v:'party'},ratio:'h',img:null,cloud:null});audioBlob=null;audioBuf=null;peaks=null;audio.removeAttribute('src');$('title').value='';$('lyrics').value='';$('drop').classList.remove('has');$('drop').textContent='גוררים לכאן את קובץ הגייד (mp3 / wav) או לוחצים לבחירה';reparse();await DB.put('audio',null);save();renderStaffBar();show(0)};
+// projects library: opens on every staff visit; every song saved for a customer is here, by name
+const LIB={items:null,q:'',f:'all'};
+async function openLib(){document.body.classList.add('libmode');$('lib').hidden=false;hidePanel();libDraw();
+ try{const r=await staffApi({action:'kk_list'});if(!r.ok)throw new Error(r.error);LIB.items=r.items;libDraw();const n=r.items.filter(x=>x.needsReview).length,bd=$('reviewBadge');bd.hidden=!n;bd.textContent=`⚠ ${n} שירים ממתינים לבדיקה`}
+ catch(e){$('libList').innerHTML=`<p class="warn">✗ ${esc(e.message||e)}</p>`}}
+function closeLib(){document.body.classList.remove('libmode');$('lib').hidden=true;show(step||0)}
+function renderList(items){LIB.items=items;if(LIB.f==='all'&&items.some(x=>x.needsReview))LIB.f='rev';openLib()}
+function libMatch(it){const q=LIB.q.trim().toLowerCase();if(q&&![it.title,it.name,it.orderId,it.uploaderName].some(v=>String(v||'').toLowerCase().includes(q)))return false;
+ return LIB.f==='all'||(LIB.f==='rev'&&it.needsReview)||(LIB.f==='open'&&it.editable&&!it.closed)||(LIB.f==='sent'&&it.sentAt)||(LIB.f==='closed'&&it.closed)}
+function libDraw(){document.querySelectorAll('#libF button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.f===LIB.f));
+ const L=$('libList'),here=P.cloud&&P.cloud.k,draft=!here&&(P.lines.length||P.title);let h='';
+ if(draft)h+=`<div class="cl here"><div><b class="t">${esc(P.title||'שיר בלי שם')}</b> <span class="tag lock">טיוטה במכשיר הזה, עוד לא נשמרה ללקוח</span><br><span class="hint small">${P.lines.length} שורות${P.people.length?' · '+P.people.length+' משתתפים':''}</span></div><div class="acts"><button class="small primary" data-a="here">המשך עבודה</button></div></div>`;
+ if(!LIB.items){L.innerHTML=h+'<p class="hint">טוען את הפרויקטים…</p>';return}
+ const items=LIB.items.filter(libMatch).sort((a,b)=>(b.needsReview?1:0)-(a.needsReview?1:0)||(b.updated||0)-(a.updated||0));
+ $('libCount').textContent=LIB.items.length+' שירים';
+ h+=items.map(it=>`<div class="cl${it.k===here?' here':''}${it.needsReview?' rev':''}" data-k="${it.k}"><div><b class="t">${esc(it.title||'שיר בלי שם')}</b> <span class="hint small">${esc(it.name||'')}${it.orderId?' · הזמנה '+esc(it.orderId):''}</span>${it.k===here?' <span class="tag open">פתוח עכשיו</span>':''}<br><span class="tag ${it.closed?'lock':it.editable?'open':'lock'}">${it.closed?'סגור':it.editable?'פתוח ללקוח עד '+fmtE(it.expires):'נעול'}</span> <span class="hint small">${it.recDate?'הקלטה '+it.recDate.split('-').reverse().join('/')+' · ':''}${it.updated?(it.by==='client'?'הלקוח עדכן ':'עודכן ')+fmtD(it.updated):''}${it.people?' · '+it.people+' משתתפים':''}${it.sentAt?' · נשלח '+fmtD(it.sentAt):''}${it.uploaderName?' · הועלה ע"י '+esc(it.uploaderName):''}</span>${it.needsReview?`<br><span class="warn small">⚠ לבדיקה: ${esc(it.needsReview===true?'גייד חדש שהועלה':it.needsReview)}</span>`:''}</div>
+ <div class="acts"><button class="small primary" data-a="open">${it.k===here?'המשך עבודה':'פתיחה'}</button><button class="small" data-a="copy">🔗 לינק</button>${it.sentAt?'':'<button class="small" data-a="send">📲 שליחה</button>'}<button class="small" data-a="ext">+7 ימים</button><button class="small" data-a="${it.closed?'reopen':'close'}">${it.closed?'פתיחה מחדש':'סגירה'}</button></div></div>`).join('');
+ if(!items.length)h+=`<p class="hint lib-empty">${LIB.items.length?'אין פרויקטים שמתאימים לחיפוש.':'עוד אין פרויקטים. מתחילים מ"גייד חדש" או "שיר חדש".'}</p>`;
+ L.innerHTML=h}
+$('libQ').oninput=e=>{LIB.q=e.target.value;libDraw()};
+$('libF').onclick=e=>{const b=e.target.closest('[data-f]');if(!b)return;LIB.f=b.dataset.f;libDraw()};
+$('libNew').onclick=async()=>{await newSong();if(!P.lines.length&&!P.title)closeLib()};
+$('libIntake').onclick=()=>{closeLib();$('intakeBtn').click()};
+$('libList').onclick=async e=>{const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a;if(a==='here')return closeLib();const k=b.closest('[data-k]').dataset.k;
+ if(a==='copy')return copyLink(k);
+ if(a==='send'){await sendToClient(k,b);return openLib()}
+ if(a==='open'){if(P.cloud&&P.cloud.k===k)return closeLib();
+  if(!(P.cloud&&P.cloud.k)&&P.lines.length&&!await yes('לפתוח את השיר הזה? הטיוטה שפתוחה במכשיר עוד לא נשמרה ללקוח, והיא תימחק.'))return;
+  b.disabled=true;b.textContent='טוען…';try{const r=await staffApi({action:'kk_load',k});if(!r.ok)throw new Error(r.error);await applyCloud(r);const it=(LIB.items||[]).find(x=>x.k===k)||{};P.cloud={k,name:r.name,recDate:r.state.recDate,orderId:it.orderId||''};save();if(audioBlob)DB.put('audio',audioBlob);renderStaffBar();closeLib();show(0);toast('נפתח: '+(r.name||P.title||''))}catch(err){toast('✗ '+(err.message||err));b.disabled=false;b.textContent='פתיחה'}return}
+ const body={action:'kk_meta',k};if(a==='ext')body.extendDays=7;if(a==='close')body.closed=true;if(a==='reopen')body.closed=false;b.disabled=true;
+ try{const r=await staffApi(body);if(!r.ok)throw new Error(r.error);openLib()}catch(err){toast('✗ '+(err.message||err));b.disabled=false}};
+$('cloudList').onclick=()=>openLib();
+async function newSong(){if(P.lines.length&&!await yes('להתחיל שיר חדש? הפרויקט שפתוח עכשיו יימחק מהמכשיר'+(P.cloud&&P.cloud.k?' (אצל הלקוח הוא נשאר שמור)':'')+'.'))return;
+ Object.assign(P,{title:'',lyrics:'',lines:[],bpm:0,beat0:0,people:[],assign:{},bg:{type:'theme',v:'party'},ratio:'h',img:null,cloud:null});audioBlob=null;audioBuf=null;peaks=null;audio.removeAttribute('src');$('title').value='';$('lyrics').value='';$('drop').classList.remove('has');$('drop').textContent='גוררים לכאן את קובץ הגייד (mp3 / wav) או לוחצים לבחירה';reparse();await DB.put('audio',null);save();renderStaffBar();show(0)}
+$('cloudNew').onclick=async()=>{await newSong();if(document.body.classList.contains('libmode'))closeLib()};
 async function applyCloud(r){const pr=r.project||{};Object.assign(P,{title:'',lyrics:'',lines:[],bpm:0,beat0:0,people:[],assign:{},bg:{type:'theme',v:'party'},ratio:'h'},pr);
  P.img=r.img?new Blob([Uint8Array.from(atob(r.img),c=>c.charCodeAt(0))],{type:'image/jpeg'}):null;await loadImg();
  if(r.audio){const bl=new Blob([Uint8Array.from(atob(r.audio),c=>c.charCodeAt(0))],{type:r.mime||'audio/mpeg'});await setAudio(bl,false)}
@@ -991,7 +1036,7 @@ function renderUps(items){showPanel(`<div class="row"><b>לינקים להעלא
   if(b.dataset.u==='off'&&!await yes('להשבית את הלינק? מי שיש לו אותו לא יוכל להעלות יותר.'))return;try{const r=await staffApi({action:'kk_up_set',key,active:b.dataset.u==='on'});if(!r.ok)throw new Error(r.error);const l=await staffApi({action:'kk_up_list'});renderUps(l.items)}catch(err){toast('✗ '+(err.message||err))}}}
 async function copyText(u){try{await navigator.clipboard.writeText(u);toast('הלינק הועתק')}catch(e){askText('העתיקו את הלינק:',{value:u,ok:'סגירה',copy:true})}}
 // staff: songs waiting for a check
-async function refreshReview(){try{const r=await staffApi({action:'kk_list'});if(!r.ok)return;const n=r.items.filter(x=>x.needsReview).length;const b=$('reviewBadge');b.hidden=!n;b.textContent=`⚠ ${n} שירים ממתינים לבדיקה`;b.onclick=()=>renderList(r.items)}catch(e){}}
+async function refreshReview(){try{const r=await staffApi({action:'kk_list'});if(!r.ok)return;const n=r.items.filter(x=>x.needsReview).length;const b=$('reviewBadge');b.hidden=!n;b.textContent=`⚠ ${n} שירים ממתינים לבדיקה`;b.onclick=()=>{LIB.f='rev';renderList(r.items)}}catch(e){}}
 
 $('staffLogin').onclick=async()=>{const pw=((await askText('סיסמת צוות:',{password:true,ok:'כניסה'}))||'').trim();if(!pw)return;try{const r=await api({action:'login',pass:pw});if(!r.ok)throw new Error(r.error);lsSet('kk_pass',pw);location.reload()}catch(e){toast('✗ '+(e.message||e))}};
 
@@ -1013,7 +1058,7 @@ $('staffLogin').onclick=async()=>{const pw=((await askText('סיסמת צוות:
  if(P.bg.type==='theme'&&!saved)P.bg.v=suggestTheme();
  cur=Math.max(0,P.lines.findIndex(l=>l.t==null));if(cur<0)cur=P.lines.length;
  if(!P.lines.length)mode='staff';$('m-'+mode).checked=true;
- show(0)})();
+ show(0);openLib()})();
 </script>
 </body>
 </html>

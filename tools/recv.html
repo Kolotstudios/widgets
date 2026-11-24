@@ -1,9 +1,0 @@
-<!doctype html><meta charset="utf-8"><title>recv</title>
-<!-- studio helper: saves a file handed over with postMessage({name, blob}) from another studio tab -->
-<script>
-addEventListener("message",function(e){
-  var d=e.data;if(!d||!d.blob||!d.name) return;
-  var a=document.createElement("a");a.href=URL.createObjectURL(d.blob);a.download=String(d.name).slice(0,120);document.body.appendChild(a);a.click();
-  e.source&&e.source.postMessage({saved:d.name,size:d.blob.size},"*");
-});
-</script>

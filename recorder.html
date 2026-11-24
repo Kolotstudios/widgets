@@ -187,6 +187,7 @@ h3{font:700 15px var(--f-body);margin:0;color:var(--muted);letter-spacing:.02em}
 @keyframes blink{50%{opacity:.25}}
 #count{position:absolute;inset:0;display:grid;place-items:center;font:700 120px var(--f-display);color:var(--stage-ink);background:rgba(14,10,19,.72);pointer-events:none}
 @media (prefers-reduced-motion:reduce){.st-text{scroll-behavior:auto}.recdot{animation:none}.meter i{transition:none}}
+#resumeBox.paidResume{border:2px solid #2e7d32;background:#eef8ef;font-weight:600}
 </style>
 </head>
 <body>
@@ -802,12 +803,15 @@ function okBlessers(){return S.blessers.filter(function(b){return wc(b.text)>0})
 // first save: a free draft that keeps the recording in the cloud
 function createDraft(ok){
   CLOUD.dev=CLOUD.dev||devId();
+  if(PAIDK&&!PAIDK.asked){PAIDK.asked=true;
+    if(confirm("כבר שילמת על ברכה"+(PAIDK.name?" („"+PAIDK.name+"”)":"")+" והקובץ הסופי מחכה לך.\n\nאישור: חזרה לברכה ששולמה, יצירת הקובץ והורדה.\nביטול: הקלטה חדשה (בתשלום נפרד).")){goDraft(PAIDK.k);return new Promise(function(){})}}
   var qp=new URLSearchParams(location.search),forName=(qp.get("for")||"").trim(),dn=((ok[0]||{}).name||"").trim();
   return cloudApi("rc_c_draft",{mode:S.mode,name:forName&&forName!==dn?(dn?dn+" ל"+forName:forName):dn,src:qp.get("src")||"",blessers:ok.map(function(b){return {name:b.name,text:b.text}})}).then(function(r){
     if(!r.ok) throw new Error(r.error||"לא הצלחנו לשמור בענן.");
     CLOUD.on=true;CLOUD.k=r.k;CLOUD.draft=true;CLOUD.paid=false;CLOUD.paidBlessers=null;CLOUD.code=r.code;CLOUD.fixedMode=true;S.editsLeft=5;S.maxBlessers=single()?1:5;
     try{history.replaceState(null,"",location.pathname+"#k="+r.k)}catch(e){location.hash="k="+r.k}
     try{localStorage.setItem(DRAFT_LS,JSON.stringify({k:r.k,at:Date.now()}))}catch(e){}
+    rememberDraft(r.k,dn);
     S.blessers=ok;S.blessers.forEach(function(b,j){resplit(b);b.si=j});markSaved();
     payUI();cloudSettingsSoon();return true;
   });
@@ -1842,6 +1846,19 @@ function priceText(){
   return (n===1?"ברכה אחת":n+" מברכים")+": "+priceFor(S.mode,n)+" ₪"+(n>1?" ("+PRICING.base+" ₪ ועוד "+(n-1)+" × "+PRICING.extra+" ₪)":"");
 }
 var DRAFT_LS="kolot_rec_draft";
+// every draft this device opened (newest first): a paid one is offered again before a new, unpaid recording starts
+var DRAFTS_LS="kolot_rec_drafts",PAIDK=null;
+function rememberDraft(k,name){try{var a=JSON.parse(localStorage.getItem(DRAFTS_LS)||"[]").filter(function(x){return x.k!==k&&Date.now()-x.at<14*86400000});a.unshift({k:k,at:Date.now(),name:String(name||"").slice(0,60)});localStorage.setItem(DRAFTS_LS,JSON.stringify(a.slice(0,6)))}catch(e){}}
+function findPaidDraft(){
+  var a=[];try{a=JSON.parse(localStorage.getItem(DRAFTS_LS)||"[]")}catch(e){}
+  try{var d=JSON.parse(localStorage.getItem(DRAFT_LS)||"null");if(d&&d.k&&!a.some(function(x){return x.k===d.k})) a.push({k:d.k,at:d.at,name:""})}catch(e){}
+  a=a.filter(function(x){return Date.now()-x.at<14*86400000}).slice(0,6);
+  if(!API||!a.length) return Promise.resolve(null);
+  return Promise.all(a.map(function(x){
+    return fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"rc_c_state",k:x.k,dev:CLOUD.dev})}).then(function(r){return r.json()}).then(function(r){return r.ok&&r.state&&r.state.paid&&!r.state.expired?x:null}).catch(function(){return null});
+  })).then(function(r){return r.filter(Boolean)[0]||null});
+}
+function goDraft(k){location.replace(location.pathname+"#k="+k);location.reload()}
 function devId(){
   var v=null;try{v=localStorage.getItem("kolot_rec_dev")}catch(e){}
   if(!v){var m=document.cookie.match(/(?:^|; )kolot_rec_dev=([a-f0-9]{32})/);if(m) v=m[1]}
@@ -1931,7 +1948,7 @@ function cloudOpen(){
     S.blessers=(r.blessers&&r.blessers.length?r.blessers:[{name:"",text:""}]).map(function(b,j){var x=newBlesser(b.name,b.text);if(r.blessers&&r.blessers.length) x.si=j;return x});
     S.editsLeft=r.editsLeft!=null?r.editsLeft:0;markSaved();
     CLOUD.paid=r.paid!==false;CLOUD.draft=!!r.draft;CLOUD.code=r.code||"";CLOUD.paidBlessers=r.state&&r.state.paidBlessers!=null?r.state.paidBlessers:null;
-    if(CLOUD.draft){try{localStorage.setItem(DRAFT_LS,JSON.stringify({k:CLOUD.k,at:Date.now()}))}catch(e){}}
+    if(CLOUD.draft){try{localStorage.setItem(DRAFT_LS,JSON.stringify({k:CLOUD.k,at:Date.now()}))}catch(e){}rememberDraft(CLOUD.k,((r.blessers||[])[0]||{}).name)}
     if(r.contact&&needPay()) startPayPoll();
     var inc=takeIncoming();
     if(r.state&&r.state.status!=="open") CLOUD.submitted=true;
@@ -2000,7 +2017,7 @@ setInterval(function(){
 },1000);
 
 /* ---------- visible errors (prototype) ---------- */
-var VERSION="2026-11-11a";
+var VERSION="2026-11-24a";
 function reportErr(msg){
   var el=document.getElementById("errBox");
   if(!el){el=document.createElement("p");el.id="errBox";el.className="note warn";el.style.cssText="position:fixed;inset:auto 8px calc(8px + env(safe-area-inset-bottom,0px)) 8px;z-index:99;background:var(--paper);border:1px solid var(--warn);border-radius:10px;padding:8px 10px;margin:0";document.body.appendChild(el)}
@@ -2021,6 +2038,13 @@ if(hk){
   CLOUD.dev=devId();loadText();renderSetup();payUI();
   try{var dr=JSON.parse(localStorage.getItem(DRAFT_LS)||"null");
     if(dr&&dr.k&&Date.now()-dr.at<14*86400000){$("#resumeBox").hidden=false;$("#resumeLink").href=location.pathname+"#k="+dr.k;$("#resumeLink").onclick=function(e){e.preventDefault();location.replace(location.pathname+"#k="+dr.k);location.reload()}}}catch(e){}
+  findPaidDraft().then(function(x){if(!x) return;PAIDK=x;
+    $("#resumeBox").hidden=false;$("#resumeBox").classList.add("paidResume");
+    $("#resumeBox").querySelector("span").textContent="כבר שילמת על ברכה"+(x.name?" („"+x.name+"”)":"")+". הקובץ הסופי מחכה לך, בלי ההפרעות.";
+    $("#resumeLink").textContent="לחזרה לברכה ולהורדה";$("#resumeLink").href=location.pathname+"#k="+x.k;
+    $("#resumeLink").onclick=function(e){e.preventDefault();goDraft(x.k)};
+    try{$("#resumeBox").scrollIntoView({block:"center"})}catch(e){}
+  });
 }
 if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){$("#setupStatus").textContent="הדפדפן הזה לא מאפשר הקלטה. כדאי לפתוח את הקישור ב-Chrome או ב-Safari.";$("#toRecord").disabled=true}
 })();

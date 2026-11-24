@@ -321,7 +321,7 @@ h3{font:700 15px var(--f-body);margin:0;color:var(--muted);letter-spacing:.02em}
         <div class="group">
           <h3>מוסיקה</h3>
           <div class="sliders">
-          <div class="slider"><label for="lift">הרמת מוסיקה בין ברכות ובסוף</label><output id="liftOut"></output><input type="range" id="lift" min="0" max="8" step="0.5" value="3.5"></div>
+          <div class="slider"><label for="lift">הרמת מוסיקה בין ברכות ובסוף</label><output id="liftOut"></output><input type="range" id="lift" min="0" max="2" step="0.5" value="1.5"></div>
           <div class="slider"><label for="musicDb">עוצמת מוסיקה</label><output id="musicDbOut"></output><input type="range" id="musicDb" min="-30" max="0" step="1" value="-17"></div>
           </div>
         </div>
@@ -1291,7 +1291,7 @@ bindOut("lift",dB);bindOut("gap",sec);bindOut("fade",sec);bindOut("famGap",sec);
 function settings(){
   return {nrMix:+$("#nrMix").value/100,aiMix:+$("#aiMix").value/100,deess:+$("#deess").value,highs:+$("#highs").value,mids:+$("#mids").value,
     voiceDb:+$("#voiceDb").value,room:+$("#room").value/100,hall:+$("#hall").value/100,musicDb:+$("#musicDb").value,
-    gap:+$("#gap").value,fade:+$("#fade").value,famGap:+$("#famGap").value,lift:+$("#lift").value,sv:2,preset:S.preset,mlevel:S.mlevel};
+    gap:+$("#gap").value,fade:+$("#fade").value,famGap:+$("#famGap").value,lift:+$("#lift").value,sv:3,preset:S.preset,mlevel:S.mlevel};
 }
 ["nrMix","aiMix","deess","highs","mids","voiceDb","room","hall","musicDb"].forEach(function(id){
   $("#"+id).addEventListener("input",function(){if(MIXP.nodes&&MIXP.ctx) applySet(MIXP.nodes,settings(),MIXP.ctx,true);cloudSettingsSoon()});
@@ -1307,7 +1307,7 @@ var VOICE_PRESETS={
   hall:{nrMix:90,aiMix:4,deess:45,highs:-5,mids:-4,voiceDb:-3,room:8,hall:14},
   clean:{nrMix:100,aiMix:35,deess:50,highs:-6,mids:-4,voiceDb:-3,room:8,hall:3}
 };
-var MUSIC_LEVELS={soft:-22,normal:-17,loud:-12};
+var MUSIC_LEVELS={soft:-9,normal:-5,loud:-2}; // dB on top of the RMS-normalised bed; under the voice the bed sits ~12-14 dB below it (sv 3)
 S.preset="natural";S.mlevel="normal";
 var applying=false;
 function setSlider(id,v){var el=$("#"+id);if(!el) return;el.value=v;el.dispatchEvent(new Event("input"))}
@@ -1524,7 +1524,7 @@ function buildTimeline(){
 }
 // music bed: low under the voice, lifted in the intro, between blessers and after the last word, then a smooth fade
 function duckPoints(T,lift){
-  var L=dbg(lift||0),duck=dbg(-9),pts=[[0,0],[1.5,L]],merged=[];
+  var L=dbg(Math.min(lift||0,2)),duck=dbg(-5.5),pts=[[0,0],[1.5,L]],merged=[];
   T.spans.forEach(function(sp){var l=merged[merged.length-1];if(l&&sp[0]-l[1]<3.5) l[1]=sp[1];else merged.push([sp[0],sp[1]])});
   merged.forEach(function(sp,i){
     pts.push([Math.max(1.6,sp[0]-0.9),i?pts[pts.length-1][1]:L],[Math.max(1.7,sp[0]-0.05),duck],[sp[1]+0.25,duck]);
@@ -1934,9 +1934,10 @@ function applySettings(st,music){
   if(st) ["nrMix","aiMix","deess","highs","mids","voiceDb","room","hall","musicDb","gap","fade","famGap","lift"].forEach(function(id){
     var map={nrMix:100,aiMix:100,room:100,hall:100},v=st[id];if(v==null) return;
     if(id==="famGap"&&!st.sv) return; // older saves used 10 s; the default is now 8 s
+    if((id==="musicDb"||id==="lift")&&(st.sv|0)<3&&st.mlevel) return; // before sv 3 the music sat far too low: take the level from the chosen preset
     var el=$("#"+id);el.value=map[id]?Math.round(v*map[id]):v;el.dispatchEvent(new Event("input"));
   });
-  if(st){S.preset=st.preset!=null?st.preset:S.preset;S.mlevel=st.mlevel!=null?st.mlevel:S.mlevel;markPresets()}
+  if(st){S.preset=st.preset!=null?st.preset:S.preset;S.mlevel=st.mlevel!=null?st.mlevel:S.mlevel;markPresets();if((st.sv|0)<3&&S.mlevel&&MUSIC_LEVELS[S.mlevel]!=null) applyLevel(S.mlevel,true)}
   if(music&&music!=="file"&&(music==="none"||music.indexOf("m:")===0)){setMusic(music,false,true);S.musicPicked=true}
 }
 $("#gateRetry").onclick=function(){cloudOpen()};
@@ -2017,7 +2018,7 @@ setInterval(function(){
 },1000);
 
 /* ---------- visible errors (prototype) ---------- */
-var VERSION="2026-11-24a";
+var VERSION="2026-11-24b";
 function reportErr(msg){
   var el=document.getElementById("errBox");
   if(!el){el=document.createElement("p");el.id="errBox";el.className="note warn";el.style.cssText="position:fixed;inset:auto 8px calc(8px + env(safe-area-inset-bottom,0px)) 8px;z-index:99;background:var(--paper);border:1px solid var(--warn);border-radius:10px;padding:8px 10px;margin:0";document.body.appendChild(el)}

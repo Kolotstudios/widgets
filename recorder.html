@@ -304,7 +304,7 @@ h3{font:700 15px var(--f-body);margin:0;color:var(--muted);letter-spacing:.02em}
           <h3>קול</h3>
         <div class="sliders">
           <div class="slider"><label for="nrMix">ניקוי רעשים</label><output id="nrMixOut"></output><input type="range" id="nrMix" min="0" max="100" step="1" value="90"></div>
-          <div class="slider" id="aiWrap"><label for="aiMix">ניקוי AI לרעשים משתנים</label><output id="aiMixOut"></output><input type="range" id="aiMix" min="0" max="100" step="1" value="4"></div>
+          <div class="slider" id="aiWrap"><label for="aiMix">ניקוי AI לרעשים משתנים</label><output id="aiMixOut"></output><input type="range" id="aiMix" min="0" max="100" step="1" value="85"></div>
           <div class="slider"><label for="deess">דה-אסר (ש/ס)</label><output id="deessOut"></output><input type="range" id="deess" min="0" max="100" step="1" value="45"></div>
           <div class="slider"><label for="highs">גבוהים <span dir="ltr">8–10K</span></label><output id="highsOut"></output><input type="range" id="highs" min="-9" max="6" step="0.5" value="-6"></div>
           <div class="slider"><label for="mids">מיד <span dir="ltr">450Hz</span></label><output id="midsOut"></output><input type="range" id="mids" min="-8" max="3" step="0.5" value="-4"></div>
@@ -314,7 +314,7 @@ h3{font:700 15px var(--f-body);margin:0;color:var(--muted);letter-spacing:.02em}
         <div class="group">
           <h3>אפקט הד</h3>
         <div class="sliders">
-          <div class="slider"><label for="room">חדר (קצר וטבעי)</label><output id="roomOut"></output><input type="range" id="room" min="0" max="15" step="1" value="8"></div>
+          <div class="slider"><label for="room">חדר (קצר וטבעי)</label><output id="roomOut"></output><input type="range" id="room" min="0" max="20" step="1" value="11"></div>
           <div class="slider"><label for="hall">אולם (הד ארוך)</label><output id="hallOut"></output><input type="range" id="hall" min="0" max="10" step="1" value="3"></div>
         </div>
         </div>
@@ -1294,7 +1294,7 @@ bindOut("lift",dB);bindOut("gap",sec);bindOut("fade",sec);bindOut("famGap",sec);
 function settings(){
   return {nrMix:+$("#nrMix").value/100,aiMix:+$("#aiMix").value/100,deess:+$("#deess").value,highs:+$("#highs").value,mids:+$("#mids").value,
     voiceDb:+$("#voiceDb").value,room:+$("#room").value/100,hall:+$("#hall").value/100,musicDb:+$("#musicDb").value,
-    gap:+$("#gap").value,fade:+$("#fade").value,famGap:+$("#famGap").value,lift:+$("#lift").value,sv:4,preset:S.preset,mlevel:S.mlevel};
+    gap:+$("#gap").value,fade:+$("#fade").value,famGap:+$("#famGap").value,lift:+$("#lift").value,sv:5,preset:S.preset,mlevel:S.mlevel};
 }
 ["nrMix","aiMix","deess","highs","mids","voiceDb","room","hall","musicDb"].forEach(function(id){
   $("#"+id).addEventListener("input",function(){if(MIXP.nodes&&MIXP.ctx) applySet(MIXP.nodes,settings(),MIXP.ctx,true);cloudSettingsSoon()});
@@ -1305,12 +1305,13 @@ document.querySelectorAll("#musicExtra input[name=music]").forEach(function(r){r
 /* ---------- presets ---------- */
 var VOICE_PRESETS={
   // natural = the studio default set by Oren (4.11.2026); the others are variations of it
-  natural:{nrMix:90,aiMix:4,deess:45,highs:-6,mids:-4,voiceDb:-3,room:8,hall:3},
-  warm:{nrMix:85,aiMix:4,deess:50,highs:-6,mids:-3,voiceDb:-3,room:5,hall:1},
-  hall:{nrMix:90,aiMix:4,deess:45,highs:-5,mids:-4,voiceDb:-3,room:5,hall:8}, // ~40% less echo than before (24.11.2026)
-  clean:{nrMix:100,aiMix:35,deess:50,highs:-6,mids:-4,voiceDb:-3,room:8,hall:3}
+  // sv 5 (26.11.2026, Oren): AI voice de-noise 85% by default, a bit more short room echo so it is not dry; long hall tail unchanged
+  natural:{nrMix:90,aiMix:85,deess:45,highs:-6,mids:-4,voiceDb:-3,room:11,hall:3},
+  warm:{nrMix:85,aiMix:85,deess:50,highs:-6,mids:-3,voiceDb:-3,room:8,hall:1},
+  hall:{nrMix:90,aiMix:85,deess:45,highs:-5,mids:-4,voiceDb:-3,room:8,hall:8},
+  clean:{nrMix:100,aiMix:100,deess:50,highs:-6,mids:-4,voiceDb:-3,room:11,hall:3}
 };
-var MUSIC_LEVELS={soft:-9,normal:-5,loud:-2}; // dB on top of the RMS-normalised bed; under the voice the bed sits ~12-14 dB below it (sv 3)
+var MUSIC_LEVELS={soft:-8,normal:-4,loud:-1}; // dB on top of the RMS-normalised bed; under the voice the bed sits ~12-14 dB below it (sv 3)
 S.preset="natural";S.mlevel="normal";
 var applying=false;
 function setSlider(id,v){var el=$("#"+id);if(!el) return;el.value=v;el.dispatchEvent(new Event("input"))}
@@ -1937,11 +1938,11 @@ function applySettings(st,music){
   if(st) ["nrMix","aiMix","deess","highs","mids","voiceDb","room","hall","musicDb","gap","fade","famGap","lift"].forEach(function(id){
     var map={nrMix:100,aiMix:100,room:100,hall:100},v=st[id];if(v==null) return;
     if(id==="famGap"&&!st.sv) return; // older saves used 10 s; the default is now 8 s
-    if((id==="musicDb"||id==="lift")&&(st.sv|0)<3&&st.mlevel) return; // before sv 3 the music sat far too low: take the level from the chosen preset
-    if((id==="room"||id==="hall")&&(st.sv|0)<4&&st.preset&&VOICE_PRESETS[st.preset]){var pv=VOICE_PRESETS[st.preset][id];var e2=$("#"+id);e2.value=pv;e2.dispatchEvent(new Event("input"));return} // echo presets were lowered in sv 4
+    if((id==="musicDb"||id==="lift")&&(st.sv|0)<5&&st.mlevel) return; // before sv 3 the music sat far too low: take the level from the chosen preset
+    if((id==="aiMix"||id==="room"||id==="hall")&&(st.sv|0)<5&&st.preset&&VOICE_PRESETS[st.preset]){var pv=VOICE_PRESETS[st.preset][id];var e2=$("#"+id);e2.value=pv;e2.dispatchEvent(new Event("input"));return} // echo presets were lowered in sv 4
     var el=$("#"+id);el.value=map[id]?Math.round(v*map[id]):v;el.dispatchEvent(new Event("input"));
   });
-  if(st){S.preset=st.preset!=null?st.preset:S.preset;S.mlevel=st.mlevel!=null?st.mlevel:S.mlevel;markPresets();if((st.sv|0)<3&&S.mlevel&&MUSIC_LEVELS[S.mlevel]!=null) applyLevel(S.mlevel,true)}
+  if(st){S.preset=st.preset!=null?st.preset:S.preset;S.mlevel=st.mlevel!=null?st.mlevel:S.mlevel;markPresets();if((st.sv|0)<5&&S.mlevel&&MUSIC_LEVELS[S.mlevel]!=null) applyLevel(S.mlevel,true)}
   if(music&&music!=="file"&&(music==="none"||music.indexOf("m:")===0)){setMusic(music,false,true);S.musicPicked=true}
 }
 $("#gateRetry").onclick=function(){cloudOpen()};
@@ -2014,7 +2015,7 @@ function encodeMp3(L,R,sr){
 
 window.addEventListener("beforeunload",function(e){if(CLOUD.on&&!CLOUD.q.length&&!CLOUD.busy) return;if(S.blessers.some(function(b){return b.takes.some(Boolean)})){e.preventDefault();e.returnValue=""}});
 
-window.__kolotDebug={CLOUD:CLOUD,cloudQueue:cloudQueue,cloudFlush:cloudFlush,submitMix:submitMix,cloudOpen:cloudOpen,unwav:unwav,wavMono:wavMono,setApi:function(u){API=u},S:S,quickCheck:quickCheck,ensureClean:ensureClean,DSP:DSP,startLive:startLive,stopLive:stopLive,MIXP:MIXP,settings:settings,showReview:showReview,renderReview:renderReview,splitText:splitText,resplit:resplit,musicBuffer:musicBuffer,setMusic:setMusic,MLIB:MLIB,duckPoints:duckPoints,buildTimeline:buildTimeline,versOf:versOf,pollPaid:pollPaid};
+window.__kolotDebug={applySettings:applySettings,CLOUD:CLOUD,cloudQueue:cloudQueue,cloudFlush:cloudFlush,submitMix:submitMix,cloudOpen:cloudOpen,unwav:unwav,wavMono:wavMono,setApi:function(u){API=u},S:S,quickCheck:quickCheck,ensureClean:ensureClean,DSP:DSP,startLive:startLive,stopLive:stopLive,MIXP:MIXP,settings:settings,showReview:showReview,renderReview:renderReview,splitText:splitText,resplit:resplit,musicBuffer:musicBuffer,setMusic:setMusic,MLIB:MLIB,duckPoints:duckPoints,buildTimeline:buildTimeline,versOf:versOf,pollPaid:pollPaid};
 
 /* ---------- live processing timers ---------- */
 setInterval(function(){
@@ -2022,7 +2023,7 @@ setInterval(function(){
 },1000);
 
 /* ---------- visible errors (prototype) ---------- */
-var VERSION="2026-11-25o";
+var VERSION="2026-11-26d";
 function reportErr(msg){
   var el=document.getElementById("errBox");
   if(!el){el=document.createElement("p");el.id="errBox";el.className="note warn";el.style.cssText="position:fixed;inset:auto 8px calc(8px + env(safe-area-inset-bottom,0px)) 8px;z-index:99;background:var(--paper);border:1px solid var(--warn);border-radius:10px;padding:8px 10px;margin:0";document.body.appendChild(el)}

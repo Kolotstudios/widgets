@@ -188,6 +188,7 @@ h3{font:700 15px var(--f-body);margin:0;color:var(--muted);letter-spacing:.02em}
 #count{position:absolute;inset:0;display:grid;place-items:center;font:700 120px var(--f-display);color:var(--stage-ink);background:rgba(14,10,19,.72);pointer-events:none}
 @media (prefers-reduced-motion:reduce){.st-text{scroll-behavior:auto}.recdot{animation:none}.meter i{transition:none}}
 #resumeBox.paidResume{border:2px solid #2e7d32;background:#eef8ef;font-weight:600}
+.choose3{display:grid;gap:8px;margin:4px 0 12px}.choose3 .c3t{margin:0;font-weight:600}.c3{display:grid;gap:2px;text-align:right;font:inherit;color:var(--ink);background:var(--paper);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;cursor:pointer}.c3 b{color:var(--accent);font-size:17px}.c3 span{color:var(--muted);font-size:14px}.c3:hover{border-color:var(--accent)}
 </style>
 </head>
 <body>
@@ -230,6 +231,12 @@ h3{font:700 15px var(--f-body);margin:0;color:var(--muted);letter-spacing:.02em}
       <div class="card">
         <div class="row between"><h2 id="textTitle">הטקסט</h2><button class="btn small" id="sampleBtn" type="button">טען טקסט לדוגמה</button></div>
         <p class="note" id="editNote" hidden></p>
+        <div class="choose3" id="choose3" hidden>
+          <p class="c3t">איך תרצו להכין את הטקסט?</p>
+          <button type="button" class="c3" id="c3gen"><b>ברכה אישית חדשה</b><span>עונים על כמה שאלות במחולל, ומקבלים ברכה שנכתבת במיוחד</span></button>
+          <button type="button" class="c3" id="c3lib"><b>ברכה מוכנה מהמאגר</b><span>בוחרים ברכה מוכנה, מוסיפים שם, והיא מתאימה את עצמה לבן או לבת</span></button>
+          <button type="button" class="c3" id="c3own"><b>יש לי ברכה משלי</b><span>מדביקים את הנוסח שלכם בתיבה למטה</span></button>
+        </div>
         <div id="blessers" style="display:grid;gap:12px"></div>
         <button class="btn" id="addBlesser" type="button" hidden>+ הוספת מברך</button>
         <p class="note" id="incNote" hidden></p>
@@ -756,6 +763,8 @@ function renderSetup(){
     if(ro){inp.readOnly=true;ta.readOnly=true}
     d.append(head,inp,ta,cnt);box.appendChild(d);
   });
+  var empty=!S.blessers.some(function(b){return wc(b.text)>0});
+  $("#choose3").hidden=!(empty&&!S.ownText&&!S.localOnly&&!(CLOUD.on&&S.textLocked));
   renderPreview();setStep(1);editState();
   if(S.ownText&&!S.ownFocused&&!CLOUD.on){S.ownFocused=true;var t0=box.querySelector("textarea");if(t0){t0.placeholder=S.mode==="drasha"?"מדביקים כאן את הדרשה שלכם, כמו שהיא. המשפטים יעלו אחד אחד על המסך בזמן ההקלטה.":"מדביקים כאן את הנוסח שלכם, כמו שהוא. המשפטים יעלו אחד אחד על המסך בזמן ההקלטה.";setTimeout(function(){try{t0.focus()}catch(e){}},300)}}
 }
@@ -849,6 +858,9 @@ $("#toRecord").onclick=function(){
   });
 };
 // write a blessing for one blesser in the generator; it comes back into this recording (#k=…&slot=…&t=…)
+$("#c3gen").onclick=function(){openGenerator(S.blessers[0])};
+$("#c3lib").onclick=function(){location.href=new URL("library.html",location.href).href+(S.mode==="drasha"?"?from=self":"")};
+$("#c3own").onclick=function(){S.ownText=true;$("#choose3").hidden=true;var t=document.querySelector("#blessers textarea");if(t){t.placeholder="מדביקים כאן את הנוסח שלכם, כמו שהוא. המשפטים יעלו אחד אחד על המסך בזמן ההקלטה.";t.focus()}};
 function openGenerator(b){
   var st=$("#setupStatus");st.textContent="שומרים ועוברים למחולל…";
   saveAll().then(function(){
@@ -2034,7 +2046,7 @@ setInterval(function(){
 },1000);
 
 /* ---------- visible errors (prototype) ---------- */
-var VERSION="2026-11-26v9";
+var VERSION="2026-11-26L";
 function reportErr(msg){
   var el=document.getElementById("errBox");
   if(!el){el=document.createElement("p");el.id="errBox";el.className="note warn";el.style.cssText="position:fixed;inset:auto 8px calc(8px + env(safe-area-inset-bottom,0px)) 8px;z-index:99;background:var(--paper);border:1px solid var(--warn);border-radius:10px;padding:8px 10px;margin:0";document.body.appendChild(el)}

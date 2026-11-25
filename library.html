@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>מאגר ברכות מוכנות · אולפני קולות</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap">
+<style>
+:root{--bg:#f7f3f8;--paper:#fff;--ink:#251b2e;--muted:#6f6479;--line:#e6dcea;--accent:#6b2fb3;--accent-ink:#fff;--soft:#efe6f8;--f:"Rubik",system-ui,sans-serif}
+@media (prefers-color-scheme:dark){:root{--bg:#16111c;--paper:#201929;--ink:#f0eaf5;--muted:#a99db6;--line:#382d45;--accent:#b78bf0;--accent-ink:#1b1325;--soft:#2d2340}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 var(--f)}
+.wrap{max-width:760px;margin:0 auto;padding:18px 16px 60px}
+.brand{font-size:13px;letter-spacing:.06em;color:var(--accent);font-weight:700}
+h1{font-size:26px;margin:4px 0 6px}
+.lead{color:var(--muted);margin:0 0 18px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px}
+.card h2{font-size:18px;margin:0 0 10px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips button{font:inherit;font-size:16px;padding:9px 14px;border-radius:999px;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);cursor:pointer}
+.chips button[aria-pressed=true]{border-color:var(--accent);background:var(--soft);color:var(--accent);font-weight:600}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:560px){.row{grid-template-columns:1fr}}
+label.f{display:block;font-size:15px;color:var(--muted);margin-bottom:4px}
+input[type=text],textarea{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+textarea{min-height:260px;line-height:1.7;resize:vertical}
+.list{display:grid;gap:12px}
+.tpl{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.tpl h3{margin:0 0 6px;font-size:16px;color:var(--accent)}
+.tpl p{margin:0 0 4px;white-space:pre-line;color:var(--ink)}
+.tpl .more{color:var(--muted);font-size:14px}
+.btn{font:inherit;font-weight:600;border-radius:12px;padding:11px 18px;border:1.5px solid var(--accent);background:var(--accent);color:var(--accent-ink);cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn.big{font-size:18px;padding:13px 22px;width:100%}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.note{font-size:14px;color:var(--muted);margin:6px 0 0}
+[hidden]{display:none!important}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">אולפני קולות</div>
+  <h1>מאגר ברכות מוכנות</h1>
+  <p class="lead">בוחרים אירוע ומי מברך, ממלאים שם, והברכות מתאימות את עצמן: זכר או נקבה, מברך אחד או כמה. אחר כך אפשר לשנות כל מילה ולהקליט מהטלפון.</p>
+
+  <div id="pick">
+    <div class="card">
+      <h2>1. מה האירוע?</h2>
+      <div class="chips" id="evChips">
+        <button type="button" data-ev="bat">בת מצווה</button>
+        <button type="button" data-ev="bar">בר מצווה</button>
+        <button type="button" data-ev="bd">יום הולדת</button>
+        <button type="button" data-ev="wed">חתונה</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>2. מי מברך?</h2>
+      <div class="chips" id="fromChips">
+        <button type="button" data-from="par">הורים</button>
+        <button type="button" data-from="grand">סבא וסבתא</button>
+        <button type="button" data-from="sib">אחים</button>
+        <button type="button" data-from="fam">משפחה וחברים</button>
+        <button type="button" data-from="self" id="selfChip">דרשה של בעל/ת השמחה</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>3. הפרטים</h2>
+      <div class="row">
+        <div><label class="f" for="nm" id="nmLab">שם בעל/ת השמחה</label><input type="text" id="nm" placeholder="למשל: נועה"></div>
+        <div id="sgWrap"><label class="f" for="sg">חתימה (מי מברך)</label><input type="text" id="sg" placeholder="למשל: אמא ואבא"></div>
+      </div>
+      <div id="cgWrap" style="margin-top:12px"><label class="f">הברכה מיועדת ל</label>
+        <div class="chips" id="cgChips"><button type="button" data-c="0">בת / אישה</button><button type="button" data-c="1">בן / גבר</button><button type="button" data-c="2">כמה אנשים</button></div></div>
+      <div id="spWrap" style="margin-top:12px"><label class="f">מי מדבר בברכה?</label>
+        <div class="chips" id="spChips"><button type="button" data-s="2">כמה מברכים (אנחנו)</button><button type="button" data-s="0">אישה אחת (אני)</button><button type="button" data-s="1">גבר אחד (אני)</button></div></div>
+    </div>
+    <div class="list" id="list" aria-live="polite"></div>
+  </div>
+
+  <div id="edit" hidden>
+    <div class="card">
+      <h2>הברכה שלכם</h2>
+      <p class="note" style="margin:0 0 10px">אפשר לשנות כאן כל מילה, להוסיף פרט אישי או למחוק משפט. כל שורה היא פסקה, והיא תעלה על המסך בזמן ההקלטה.</p>
+      <textarea id="ta" aria-label="טקסט הברכה"></textarea>
+      <p class="note" id="cnt"></p>
+      <div class="actions">
+        <button class="btn big" type="button" id="toRec">להקלטה מהטלפון ←</button>
+      </div>
+      <div class="actions">
+        <button class="btn ghost" type="button" id="back">→ חזרה למאגר</button>
+        <button class="btn ghost" type="button" id="copy">העתקת הטקסט</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="library-data.js?v=1"></script>
+<script>
+(function(){
+var REC_URL="https://kolotstudios.github.io/widgets/recorder.html";
+var L=window.KOLOT_LIB||[];
+var st={ev:"bat",from:"par",c:0,s:2};
+try{var q=new URLSearchParams(location.search);if(q.get("ev"))st.ev=q.get("ev");if(q.get("from"))st.from=q.get("from")}catch(e){}
+function $(id){return document.getElementById(id)}
+function grp(){return st.ev==="bat"||st.ev==="bar"?"mitz":st.ev}
+function render(t){
+  var nm=$("nm").value.trim()||($("nm").placeholder.replace("למשל: ","")),sg=$("sg").value.trim()||"";
+  return t.replace(/\[c:([^|\]]*)\|([^|\]]*)\|([^\]]*)\]/g,function(m,a,b,d){return [a,b,d][st.c]})
+          .replace(/\[s:([^|\]]*)\|([^|\]]*)\|([^\]]*)\]/g,function(m,a,b,d){return [a,b,d][st.s]})
+          .replace(/\{n\}/g,nm).replace(/\{s\}/g,sg).replace(/\s+$/,"").replace(/,$/,"");
+}
+function press(box,attr,val){box.querySelectorAll("button").forEach(function(b){b.setAttribute("aria-pressed",String(b.getAttribute(attr)===String(val)))})}
+function sync(){
+  var g=grp();
+  if(st.ev==="bat")st.c=0;else if(st.ev==="bar")st.c=1;else if(st.ev==="wed")st.c=2;
+  if(st.from==="self"&&g!=="mitz")st.from="par";
+  $("selfChip").hidden=g!=="mitz";
+  $("cgWrap").hidden=st.ev!=="bd";
+  $("spWrap").hidden=st.from==="self";$("sgWrap").hidden=st.from==="self";
+  $("nmLab").textContent=st.ev==="wed"?"שמות בני הזוג":(st.from==="self"?"השם שלך":"שם בעל/ת השמחה");
+  $("nm").placeholder=st.ev==="wed"?"למשל: נועה ודניאל":(st.c===1?"למשל: איתי":(st.c===2?"למשל: נועה ואיתי":"למשל: נועה"));
+  $("sg").placeholder={par:"למשל: אמא ואבא",grand:"למשל: סבא וסבתא",sib:"למשל: יואב ומיכל",fam:"למשל: דודה רונית ומשפחתה"}[st.from]||"";
+  press($("evChips"),"data-ev",st.ev);press($("fromChips"),"data-from",st.from);press($("cgChips"),"data-c",st.c);press($("spChips"),"data-s",st.s);
+  var box=$("list");box.innerHTML="";
+  var items=L.filter(function(x){return x.ev===g&&x.from===st.from});
+  if(!items.length){box.innerHTML='<p class="note">אין עדיין ברכות מוכנות לשילוב הזה. אפשר לכתוב ברכה אישית במחולל, או להדביק ברכה משלכם במקליט.</p>';return}
+  items.forEach(function(x){
+    var full=render(x.text),lines=full.split("\n"),d=document.createElement("div");d.className="tpl";
+    var h=document.createElement("h3");h.textContent=x.title;
+    var p=document.createElement("p");p.textContent=lines.slice(0,3).join("\n");
+    var more=document.createElement("p");more.className="more";more.textContent=lines.length>3?"... ועוד "+(lines.length-3)+" שורות":"";
+    var b=document.createElement("button");b.type="button";b.className="btn";b.textContent="בוחרים את הברכה הזו";b.style.marginTop="8px";
+    b.onclick=function(){openEdit(x)};
+    d.append(h,p,more,b);box.appendChild(d);
+  });
+}
+function count(){var w=$("ta").value.trim().split(/\s+/).filter(Boolean).length;$("cnt").textContent=w?(w+" מילים · בערך "+Math.max(5,Math.round(w/2.1/5)*5)+" שניות הקלטה"):""}
+var cur=null;
+function openEdit(x){cur=x;$("ta").value=render(x.text);count();$("pick").hidden=true;$("edit").hidden=false;window.scrollTo(0,0);try{$("ta").focus()}catch(e){}}
+$("ta").oninput=count;
+$("back").onclick=function(){$("edit").hidden=true;$("pick").hidden=false};
+$("copy").onclick=function(){try{navigator.clipboard.writeText($("ta").value);this.textContent="הועתק ✓"}catch(e){}};
+$("toRec").onclick=function(){
+  var t=$("ta").value.trim();if(!t){$("ta").focus();return}
+  var self=st.from==="self",nm=$("nm").value.trim();
+  var p=new URLSearchParams({mode:self?"drasha":"blessing",name:self?nm:($("sg").value.trim()),text:t,src:"lib"});
+  if(!self&&nm)p.set("for",nm);
+  location.href=REC_URL+"?"+p.toString();
+};
+document.querySelectorAll("#evChips button").forEach(function(b){b.onclick=function(){st.ev=b.dataset.ev;sync()}});
+document.querySelectorAll("#fromChips button").forEach(function(b){b.onclick=function(){st.from=b.dataset.from;st.s=(st.from==="par"||st.from==="grand")?2:st.s;sync()}});
+document.querySelectorAll("#cgChips button").forEach(function(b){b.onclick=function(){st.c=+b.dataset.c;sync()}});
+document.querySelectorAll("#spChips button").forEach(function(b){b.onclick=function(){st.s=+b.dataset.s;sync()}});
+["nm","sg"].forEach(function(id){$(id).addEventListener("input",function(){clearTimeout(this._t);this._t=setTimeout(sync,250)})});
+sync();
+})();
+</script>
+</body>
+</html>

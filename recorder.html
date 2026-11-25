@@ -1812,9 +1812,9 @@ $("#payGo").onclick=function(){
     if(!r.ok){if(w) w.close();$("#payStatus").textContent=r.error||"לא הצלחנו לשמור את הפרטים.";return}
     try{localStorage.setItem("kolot_rec_contact",JSON.stringify({name:name,phone:phone}))}catch(e){}
     if(r.code) CLOUD.code=r.code;
-    var url=payLink();if(w) w.location.href=url;else window.open(url,"_blank","noopener");
+    var url=payLink();if(url.indexOf("https://crm.kolot-studios.com/pay/kala")===0) url+="&full_name="+encodeURIComponent(name)+"&mobile="+encodeURIComponent(phone);if(w) w.location.href=url;else window.open(url,"_blank","noopener");
     var copied=false;try{if(navigator.clipboard&&CLOUD.code){navigator.clipboard.writeText(CLOUD.code).then(function(){copied=true;$("#payStatus").textContent=$("#payStatus").textContent.replace("את קוד ההקלטה "+CLOUD.code+".","את קוד ההקלטה "+CLOUD.code+" (הקוד כבר הועתק, אפשר פשוט להדביק).")}).catch(function(){})}}catch(e){}
-    $("#payStatus").textContent="עמוד התשלום נפתח בלשונית חדשה, עם ההזמנה שלך כבר בעגלה. כדאי לכתוב בשדה \"הערות\" את קוד ההקלטה "+(CLOUD.code||"")+". אחרי התשלום ההקלטה נפתחת כאן לבד, בדרך כלל תוך דקה או שתיים. אפשר להשאיר את הדף פתוח או לחזור אליו מהקישור.";
+    $("#payStatus").textContent="עמוד התשלום המאובטח נפתח בלשונית חדשה (קוד ההקלטה "+(CLOUD.code||"")+" כבר מצורף). אחרי התשלום ההקלטה נפתחת כאן לבד, בדרך כלל תוך דקה או שתיים. אפשר להשאיר את הדף פתוח או לחזור אליו מהקישור.";
     startPayPoll();
   }).catch(function(){if(w) w.close();$("#payGo").disabled=false;$("#payStatus").textContent="אין חיבור לאינטרנט. מנסים שוב."});
 };
@@ -1827,11 +1827,11 @@ $("#copyMyLink").onclick=function(){
 var API="https://kolot-recorder.kolot-studios.workers.dev";
 var CLOUD={on:false,k:null,dev:null,q:[],busy:false,failed:0,submitted:false,fixedMode:false,setT:null,paid:true,draft:false,code:""};
 // payment: free drafts record and play with a soft chime; the clean file opens once the studio marks the draft paid
-var PAY_URL="https://kolot.kala-crm.co.il/"+encodeURIComponent("רכישה");
+var PAY_URL="https://crm.kolot-studios.com/shop.html?src=recorder";
 // prices in ₪ – keep in sync with PRICE_* in cloudflare/recorder-worker.js
 var PRICING={base:150,extra:50,drasha:150}; // ברכת כלה has the drasha price
 // Kala products (page ids): one product per number of blessers, a top-up for one more blesser, and a drasha
-var KALA_BASE="https://kolot.kala-crm.co.il/",KALA_IDS={pack:[76252,76253,76254,76255,76256],extra:76257,drasha:76258,kala:76261};
+var KALA_BASE="https://crm.kolot-studios.com/",KALA_IDS={pack:[76252,76253,76254,76255,76256],extra:76257,drasha:76258,kala:76261};
 var GEN_URL="https://kolotstudios.github.io/widgets/blessing.html";
 function nBlessers(){return Math.max(1,Math.min(5,S.blessers.filter(function(b){return wc(b.text)>0}).length))}
 function priceFor(mode,n){return single(mode)?PRICING.drasha:PRICING.base+PRICING.extra*Math.max(0,n-1)}
@@ -1839,11 +1839,11 @@ function extraDue(){return CLOUD.on&&CLOUD.draft&&CLOUD.paid&&CLOUD.paidBlessers
 function needPay(){return CLOUD.on&&(!CLOUD.paid||extraDue()>0)}
 function payLink(){
   var id=extraDue()?KALA_IDS.extra:(S.mode==="drasha"?KALA_IDS.drasha:(S.mode==="kala"?KALA_IDS.kala:KALA_IDS.pack[nBlessers()-1]));
-  return id?KALA_BASE+"order/cart_buy?id="+id:PAY_URL;
+  return id?"https://crm.kolot-studios.com/pay/kala?id="+id+"&code="+encodeURIComponent(CLOUD.code||"")+"&k="+encodeURIComponent(CLOUD.k||"")+"&qty="+(extraDue()||1):PAY_URL; // 26.11: payment through the CRM (iCredit), unlocked by the CRM after payment
 }
 function priceText(){
   var x=extraDue();
-  if(x) return "השלמה על "+(x===1?"מברך נוסף":x+" מברכים נוספים")+": "+PRICING.extra*x+" ₪"+(x>1?" (בעגלה משנים את הכמות ל־"+x+")":"");
+  if(x) return "השלמה על "+(x===1?"מברך נוסף":x+" מברכים נוספים")+": "+PRICING.extra*x+" ₪";
   if(S.mode==="drasha") return "דרשה: "+PRICING.drasha+" ₪";
   if(S.mode==="kala") return "ברכת כלה: "+PRICING.drasha+" ₪";
   var n=nBlessers();

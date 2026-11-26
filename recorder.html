@@ -189,6 +189,7 @@ h3{font:700 15px var(--f-body);margin:0;color:var(--muted);letter-spacing:.02em}
 @media (prefers-reduced-motion:reduce){.st-text{scroll-behavior:auto}.recdot{animation:none}.meter i{transition:none}}
 #resumeBox.paidResume{border:2px solid #2e7d32;background:#eef8ef;font-weight:600}
 .choose3{display:grid;gap:8px;margin:4px 0 12px}.choose3 .c3t{margin:0;font-weight:600}.c3{display:grid;gap:2px;text-align:right;font:inherit;color:var(--ink);background:var(--paper);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;cursor:pointer}.c3 b{color:var(--accent);font-size:17px}.c3 span{color:var(--muted);font-size:14px}.c3:hover{border-color:var(--accent)}
+.olist{list-style:none;margin:0;padding:0;display:grid;gap:8px}.orow{display:flex;align-items:center;gap:8px;background:var(--paper);border:1.5px solid var(--line);border-radius:12px;padding:8px 10px;touch-action:pan-y}.orow.drag{border-color:var(--accent);box-shadow:0 6px 18px rgba(0,0,0,.12);opacity:.95}.orow .oh{cursor:grab;font-size:20px;line-height:1;padding:6px 8px;touch-action:none;user-select:none;color:var(--muted)}.orow .on{flex:1;min-width:0;font-weight:600}.orow .on small{display:block;font-weight:400;color:var(--muted);font-size:13px}.orow .onum{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--soft);color:var(--accent);font-weight:700;font-size:13px;flex:none}.orow button{font:inherit;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);border-radius:10px;padding:6px 10px;cursor:pointer}.orow button:disabled{opacity:.35;cursor:default}
 </style>
 </head>
 <body>
@@ -271,6 +272,12 @@ h3{font:700 15px var(--f-body);margin:0;color:var(--muted);letter-spacing:.02em}
       <button class="btn small ghost" id="backToText" type="button">עריכת הטקסט</button>
     </div>
     <div id="takes" style="display:grid;gap:14px"></div>
+
+    <div class="card" id="orderCard" hidden>
+      <div class="row between"><h2>סדר הברכות</h2><span class="note">גוררים בעזרת ☰ או בחיצים</span></div>
+      <p class="note" style="margin:0 0 8px">כך יישמעו הברכות בקובץ הסופי. אפשר להאזין לכל ברכה בנפרד ולשנות את הסדר.</p>
+      <ol class="olist" id="orderList"></ol>
+    </div>
 
     <div class="card" id="mixCard">
       <div class="row between"><h2>הסאונד</h2><span class="note">בוחרים ושומעים מיד בנגן למטה</span></div>
@@ -1222,9 +1229,55 @@ function playBuffer(buf){
   stopPlaying();stopLive();
   return ensurePlay().then(function(ctx){var s=ctx.createBufferSource();s.buffer=buf;s.connect(ctx.destination);s.start();playing=s;s.onended=function(){if(playing===s) playing=null}});
 }
+// blesser order (family): listen to each blesser on its own and drag them into the order of the final file
+function blOrder(){var n=S.blessers.length,o=(S.order||[]).filter(function(x,ix,a){return x>=0&&x<n&&a.indexOf(x)===ix});for(var i=0;i<n;i++) if(o.indexOf(i)<0) o.push(i);return o}
+function hasTakes(b){return b.takes.some(function(t){return t&&t.res&&!t.res.empty})}
+function blesserBuffer(b){
+  var parts=[],sr=0;b.sentences.forEach(function(x,i){var tk=b.takes[i];if(tk&&tk.res&&!tk.res.empty){parts.push(tk.res.dry);sr=tk.sr}});
+  if(!parts.length) return null;var gap=Math.round(.4*sr),n=parts.reduce(function(a,p){return a+p.length+gap},0);
+  var buf=new OAC(1,1,sr).createBuffer(1,n,sr),d=buf.getChannelData(0),pos=0;parts.forEach(function(p){d.set(p,pos);pos+=p.length+gap});return buf;
+}
+function setOrder(o){S.order=o;renderOrder();restartIfPlaying();cloudSettingsSoon();try{track("rec_reorder",{rec_count:o.length})}catch(e){}}
+function renderOrder(){
+  var card=$("#orderCard"),list=$("#orderList"),ord=blOrder().filter(function(i){return hasTakes(S.blessers[i])});
+  card.hidden=!(S.mode==="family"&&ord.length>1);if(card.hidden) return;
+  list.innerHTML="";
+  ord.forEach(function(bi,pos){
+    var b=S.blessers[bi],li=document.createElement("li");li.className="orow";li.dataset.bi=bi;
+    var num=document.createElement("span");num.className="onum";num.textContent=pos+1;
+    var h=document.createElement("span");h.className="oh";h.textContent="☰";h.setAttribute("aria-hidden","true");
+    var nm=document.createElement("span");nm.className="on";nm.textContent=b.name||("מברך "+(bi+1));
+    var sm=document.createElement("small");sm.textContent=b.takes.filter(function(t){return t&&t.res&&!t.res.empty}).length+" משפטים";nm.appendChild(sm);
+    var play=document.createElement("button");play.type="button";play.textContent="▶ האזנה";play.setAttribute("aria-label","האזנה לברכה של "+(b.name||("מברך "+(bi+1))));
+    play.onclick=function(){var buf=blesserBuffer(b);if(buf) playBuffer(buf)};
+    var up=document.createElement("button");up.type="button";up.textContent="↑";up.disabled=pos===0;up.setAttribute("aria-label","להקדים");
+    var dn=document.createElement("button");dn.type="button";dn.textContent="↓";dn.disabled=pos===ord.length-1;dn.setAttribute("aria-label","לאחר");
+    function move(dir){var full=blOrder(),a=full.indexOf(bi),tgt=ord[pos+dir],c=full.indexOf(tgt);full[a]=tgt;full[c]=bi;setOrder(full)}
+    up.onclick=function(){move(-1)};dn.onclick=function(){move(1)};
+    h.addEventListener("pointerdown",function(ev){ev.preventDefault();dragRow(li,ev)});
+    li.append(num,h,nm,play,up,dn);list.appendChild(li);
+  });
+}
+function dragRow(li,ev){
+  var list=$("#orderList");li.classList.add("drag");try{li.setPointerCapture&&li.setPointerCapture(ev.pointerId)}catch(e){}
+  function mv(e){
+    var rows=[].slice.call(list.children),y=e.clientY;
+    for(var i=0;i<rows.length;i++){var r=rows[i];if(r===li) continue;var bb=r.getBoundingClientRect(),mid=bb.top+bb.height/2;
+      if(y<mid&&rows.indexOf(li)>i){list.insertBefore(li,r);break}
+      if(y>mid&&rows.indexOf(li)<i){list.insertBefore(li,r.nextSibling);break}}
+  }
+  function up(){
+    li.classList.remove("drag");document.removeEventListener("pointermove",mv);document.removeEventListener("pointerup",up);document.removeEventListener("pointercancel",up);
+    var shown=[].slice.call(list.children).map(function(r){return +r.dataset.bi}),full=blOrder(),slots=full.map(function(x){return shown.indexOf(x)>=0}),k=0;
+    full=full.map(function(x,i){return slots[i]?shown[k++]:x});
+    if(full.join()!==blOrder().join()) setOrder(full);else renderOrder();
+  }
+  document.addEventListener("pointermove",mv);document.addEventListener("pointerup",up);document.addEventListener("pointercancel",up);
+}
 function showReview(){$("#setup").hidden=true;$("#review").hidden=false;renderReview();setStep(3);window.scrollTo(0,0)}
 function renderReview(){
   $("#famGapWrap").hidden=S.mode!=="family";
+  try{renderOrder()}catch(e){}
   var box=$("#takes");box.innerHTML="";
   S.blessers.forEach(function(b){
     var card=document.createElement("div");card.className="card";
@@ -1306,7 +1359,7 @@ bindOut("lift",dB);bindOut("gap",sec);bindOut("fade",sec);bindOut("famGap",sec);
 function settings(){
   return {nrMix:+$("#nrMix").value/100,aiMix:+$("#aiMix").value/100,deess:+$("#deess").value,highs:+$("#highs").value,mids:+$("#mids").value,
     voiceDb:+$("#voiceDb").value,room:+$("#room").value/100,hall:+$("#hall").value/100,musicDb:+$("#musicDb").value,
-    gap:+$("#gap").value,fade:+$("#fade").value,famGap:+$("#famGap").value,lift:+$("#lift").value,sv:6,preset:S.preset,mlevel:S.mlevel};
+    gap:+$("#gap").value,fade:+$("#fade").value,famGap:+$("#famGap").value,lift:+$("#lift").value,sv:6,preset:S.preset,mlevel:S.mlevel,order:S.mode==="family"?blOrder():undefined};
 }
 ["nrMix","aiMix","deess","highs","mids","voiceDb","room","hall","musicDb"].forEach(function(id){
   $("#"+id).addEventListener("input",function(){if(MIXP.nodes&&MIXP.ctx) applySet(MIXP.nodes,settings(),MIXP.ctx,true);cloudSettingsSoon()});
@@ -1534,11 +1587,11 @@ loadLibrary().then(function(){renderMusic();defaultMusic();showMusicNow()}).catc
 function buildTimeline(){
   var gap=+$("#gap").value,para=gap+0.5,famGap=+$("#famGap").value,kind=S.music;
   var intro=kind==="none"?0.4:4,t=intro,items=[],spans=[];
-  S.blessers.forEach(function(b,bi){
-    var any=false;
+  blOrder().forEach(function(bi,pos){
+    var b=S.blessers[bi],any=false;
     b.sentences.forEach(function(s,i){
       var tk=b.takes[i];if(!tk||!tk.res||tk.res.empty) return;
-      if(!any&&bi>0&&items.length) t+=(kind==="none"?1.5:famGap)-gap;
+      if(!any&&pos>0&&items.length) t+=(kind==="none"?1.5:famGap)-gap;
       any=true;
       var d=tk.res.dry.length/tk.sr;
       items.push({t:t,tk:tk,d:d});spans.push([t,t+d]);
@@ -1965,6 +2018,7 @@ function applySettings(st,music){
     if((id==="aiMix"||id==="room"||id==="hall")&&(st.sv|0)<6&&st.preset&&VOICE_PRESETS[st.preset]){var pv=VOICE_PRESETS[st.preset][id];var e2=$("#"+id);e2.value=pv;e2.dispatchEvent(new Event("input"));return} // echo presets were lowered in sv 4
     var el=$("#"+id);el.value=map[id]?Math.round(v*map[id]):v;el.dispatchEvent(new Event("input"));
   });
+  if(st&&Array.isArray(st.order)) S.order=st.order.slice(0,5).map(Number);
   if(st){S.preset=st.preset!=null?st.preset:S.preset;S.mlevel=st.mlevel!=null?st.mlevel:S.mlevel;markPresets();if((st.sv|0)<5&&S.mlevel&&MUSIC_LEVELS[S.mlevel]!=null) applyLevel(S.mlevel,true)}
   if(music&&music!=="file"&&(music==="none"||music.indexOf("m:")===0)){setMusic(music,false,true);S.musicPicked=true}
 }
@@ -2038,7 +2092,7 @@ function encodeMp3(L,R,sr){
 
 window.addEventListener("beforeunload",function(e){if(CLOUD.on&&!CLOUD.q.length&&!CLOUD.busy) return;if(S.blessers.some(function(b){return b.takes.some(Boolean)})){e.preventDefault();e.returnValue=""}});
 
-window.__kolotDebug={applySettings:applySettings,CLOUD:CLOUD,cloudQueue:cloudQueue,cloudFlush:cloudFlush,submitMix:submitMix,cloudOpen:cloudOpen,unwav:unwav,wavMono:wavMono,setApi:function(u){API=u},S:S,quickCheck:quickCheck,ensureClean:ensureClean,DSP:DSP,startLive:startLive,stopLive:stopLive,MIXP:MIXP,settings:settings,showReview:showReview,renderReview:renderReview,splitText:splitText,resplit:resplit,musicBuffer:musicBuffer,setMusic:setMusic,MLIB:MLIB,duckPoints:duckPoints,buildTimeline:buildTimeline,versOf:versOf,pollPaid:pollPaid};
+window.__kolotDebug={applySettings:applySettings,renderOrder:renderOrder,blOrder:blOrder,CLOUD:CLOUD,cloudQueue:cloudQueue,cloudFlush:cloudFlush,submitMix:submitMix,cloudOpen:cloudOpen,unwav:unwav,wavMono:wavMono,setApi:function(u){API=u},S:S,quickCheck:quickCheck,ensureClean:ensureClean,DSP:DSP,startLive:startLive,stopLive:stopLive,MIXP:MIXP,settings:settings,showReview:showReview,renderReview:renderReview,splitText:splitText,resplit:resplit,musicBuffer:musicBuffer,setMusic:setMusic,MLIB:MLIB,duckPoints:duckPoints,buildTimeline:buildTimeline,versOf:versOf,pollPaid:pollPaid};
 
 /* ---------- live processing timers ---------- */
 setInterval(function(){
@@ -2046,7 +2100,7 @@ setInterval(function(){
 },1000);
 
 /* ---------- visible errors (prototype) ---------- */
-var VERSION="2026-11-26L";
+var VERSION="2026-11-26o";
 function reportErr(msg){
   var el=document.getElementById("errBox");
   if(!el){el=document.createElement("p");el.id="errBox";el.className="note warn";el.style.cssText="position:fixed;inset:auto 8px calc(8px + env(safe-area-inset-bottom,0px)) 8px;z-index:99;background:var(--paper);border:1px solid var(--warn);border-radius:10px;padding:8px 10px;margin:0";document.body.appendChild(el)}

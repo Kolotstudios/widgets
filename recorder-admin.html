@@ -153,12 +153,12 @@ function boot(){
     $("#loginTitle").textContent=setupMode?"הגדרת סיסמה ראשונה":"כניסה";
     $("#newPassWrap").hidden=!setupMode;$("#pass").parentNode.hidden=setupMode;
     $("#loginBtn").textContent=setupMode?"שמירת סיסמה":"כניסה";
-    if(pass&&!setupMode) login();
+    if(pass&&!setupMode) login(true);
   }).catch(function(){$("#loginStatus").textContent="אין חיבור לשרת."});
 }
-function login(){
+function login(silent){
   call("rc_login").then(function(r){
-    if(!r.ok){$("#loginStatus").textContent=r.error||"סיסמה שגויה";return}
+    if(!r.ok){try{sessionStorage.removeItem("kolot_rec_admin")}catch(e){}pass="";if(!silent) $("#loginStatus").textContent=r.error||"סיסמה שגויה";return}
     try{sessionStorage.setItem("kolot_rec_admin",pass)}catch(e){}
     $("#login").hidden=true;$("#create").hidden=false;$("#list").hidden=false;$("#kala").hidden=false;load();
   });
@@ -167,7 +167,7 @@ $("#loginBtn").onclick=function(){
   if(setupMode){
     var np=$("#newPass").value.trim();
     call("rc_setup",{newPass:np}).then(function(r){if(!r.ok){$("#loginStatus").textContent=r.error;return}pass=np;setupMode=false;login()});
-  } else {pass=$("#pass").value;login()}
+  } else {pass=$("#pass").value.trim();login()}
 };
 $("#pass").addEventListener("keydown",function(e){if(e.key==="Enter") $("#loginBtn").click()});
 $("#cMode").onchange=function(){$("#cMaxWrap").hidden=this.value!=="family"};

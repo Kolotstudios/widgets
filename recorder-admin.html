@@ -72,6 +72,7 @@ audio{width:100%}
 .rawrow{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;font-size:14px}
 .rawrow audio{grid-column:1/-1}
 .ltr{direction:ltr;unicode-bidi:isolate}
+.folder{border:1px solid var(--line);border-radius:16px;background:var(--paper);margin-bottom:10px}.folder.attn{border-color:#d08a00}.folder>summary{cursor:pointer;list-style:none;padding:14px 16px;display:grid;gap:2px}.folder>summary::-webkit-details-marker{display:none}.folder>summary::before{content:"📁";margin-inline-end:6px}.folder[open]>summary::before{content:"📂"}.fname{font-size:18px;display:inline}.finfo{color:var(--muted);font-size:14px}.fbody{display:grid;gap:10px;padding:0 12px 12px}
 </style>
 </head>
 <body>
@@ -85,6 +86,14 @@ audio{width:100%}
     <label id="newPassWrap" hidden>סיסמה חדשה (6 תווים לפחות)<input type="password" id="newPass" autocomplete="new-password"></label>
     <div class="row"><button class="btn primary" id="loginBtn" type="button">כניסה</button></div>
     <p class="status" id="loginStatus"></p>
+  </section>
+
+  <section class="card" id="list" hidden>
+    <div class="row between"><h2>הקלטות לפי לקוח</h2><button class="btn" id="refresh" type="button">רענון</button></div>
+    <div class="filters" id="filters" role="group" aria-label="סינון"></div>
+    <input type="search" id="q" placeholder="חיפוש לפי שם, טלפון או קוד">
+    <div id="items"></div>
+    <p class="status" id="listStatus"></p>
   </section>
 
   <section class="card" id="create" hidden>
@@ -115,13 +124,7 @@ audio{width:100%}
     </div>
   </section>
 
-  <section class="card" id="list" hidden>
-    <div class="row between"><h2>הקלטות</h2><button class="btn" id="refresh" type="button">רענון</button></div>
-    <div class="filters" id="filters" role="group" aria-label="סינון"></div>
-    <input type="search" id="q" placeholder="חיפוש לפי שם, טלפון או קוד">
-    <div id="items"></div>
-    <p class="status" id="listStatus"></p>
-  </section>
+
 </div>
 <script>
 (function(){
@@ -182,7 +185,7 @@ $("#copyLink").onclick=function(){copy(linkFor(lastK),this)};
 $("#copyMsg").onclick=function(){copy(msgFor(lastName,lastK),this)};
 $("#refresh").onclick=load;
 var MODES={blessing:"ברכה",family:"ברכות משפחה",drasha:"דרשה",kala:"ברכת כלה"};
-var ITEMS=[],FILTER="all";
+var ITEMS=[],FILTER="all",OPEN={};
 var FILTERS=[["all","הכול"],["waiting","ממתינים לתשלום"],["drafts","ניסיון בחינם"],["paid","שולמו"],["final","עם קובץ סופי"]];
 function statusOf(it){
   if(it.state.status==="done") return ["ok","הושלם"];
@@ -194,6 +197,7 @@ function statusOf(it){
 }
 function waiting(it){return !it.state.expired&&!!it.contact&&(!it.state.paid||(it.state.extraDue>0&&it.due&&it.due.topUp))}
 function fmtDate(t){return new Date(t).toLocaleDateString("he-IL",{day:"numeric",month:"numeric",hour:"2-digit",minute:"2-digit"})}
+setInterval(function(){if(pass&&!document.hidden&&!$("#list").hidden&&!document.querySelector("audio")) load()},60000);
 function load(){
   $("#listStatus").textContent="טוען…";
   call("rc_list").then(function(r){
@@ -223,7 +227,9 @@ function renderList(){
   var list=ITEMS.filter(match).sort(function(a,b){return (waiting(b)-waiting(a))||(b.updated-a.updated)});
   $("#listStatus").textContent=ITEMS.length?(list.length?"":"אין הקלטות שמתאימות לסינון."):"עוד אין הקלטות.";
   var box=$("#items");box.innerHTML="";
-  list.forEach(function(it){
+  renderFolders(box,list);
+}
+function mkItem(it){
     var el=document.createElement("div");el.className="item"+(waiting(it)?" attn":"");
     var st=statusOf(it);
     var top=document.createElement("div");top.className="top";
@@ -299,9 +305,67 @@ function renderList(){
       if(b.dataset.sure){meta_(it.k,{remove:true});return}
       b.dataset.sure="1";b.textContent="ללחוץ שוב למחיקה";setTimeout(function(){delete b.dataset.sure;b.textContent="מחיקה"},3000);
     },"danger");
+    if(it.takes) btn(acts,"⬇ הקול בקובץ אחד",function(b){voiceOnly(it,b)});
     acts.appendChild(more);
-    el.appendChild(acts);box.appendChild(el);
+    el.appendChild(acts);return el;
+}
+// folders: one per customer (phone number); recordings with no contact details go to their own folder
+function custKey(it){var ph=it.contact&&it.contact.phone?String(it.contact.phone).replace(/\D/g,"").replace(/^972/,"0"):"";return ph?"p:"+ph:"none"}
+function renderFolders(box,list){
+  var g={},order=[];
+  list.forEach(function(it){var k=custKey(it);if(!g[k]){g[k]=[];order.push(k)}g[k].push(it)});
+  order.sort(function(a,b){if(a==="none")return 1;if(b==="none")return -1;
+    var wa=g[a].some(waiting),wb=g[b].some(waiting);if(wa!==wb)return wb-wa;
+    return Math.max.apply(null,g[b].map(function(x){return x.updated}))-Math.max.apply(null,g[a].map(function(x){return x.updated}))});
+  order.forEach(function(k){
+    var its=g[k],f=document.createElement("details");f.className="folder"+(its.some(waiting)?" attn":"");
+    if(OPEN[k]||$("#q").value.trim()) f.open=true;f.ontoggle=function(){OPEN[k]=f.open};
+    var sm=document.createElement("summary"),c0=its.find(function(x){return x.contact})||its[0];
+    var nm=document.createElement("b");nm.className="fname";
+    nm.textContent=k==="none"?"ללא פרטי קשר (ניסיונות פתוחים)":((c0.contact&&c0.contact.name)||c0.name||"לקוח");
+    var info=document.createElement("span");info.className="finfo";
+    var paid=its.filter(function(x){return x.state.paid}).length,fin=its.filter(function(x){return x.final}).length,w=its.filter(waiting).length;
+    var last=Math.max.apply(null,its.map(function(x){return x.updated}));
+    var bits=[];if(k!=="none"){var ph=k.slice(2);bits.push(ph.length===10?ph.slice(0,3)+"-"+ph.slice(3):ph)}
+    bits.push(its.length+(its.length===1?" הקלטה":" הקלטות"));if(paid)bits.push(paid+" שולמו");if(fin)bits.push(fin+" עם קובץ סופי");if(w)bits.push(w+" ממתינות לתשלום");bits.push("עדכון אחרון "+fmtDate(last));
+    info.textContent=bits.join(" · ");
+    sm.append(nm,info);f.appendChild(sm);
+    var body=document.createElement("div");body.className="fbody";
+    if(k!=="none"){var wa=document.createElement("a");wa.className="btn";wa.target="_blank";wa.rel="noopener";wa.href="https://wa.me/"+k.slice(2).replace(/^0/,"972");wa.textContent="וואטסאפ ללקוח";body.appendChild(wa)}
+    its.forEach(function(it){body.appendChild(mkItem(it))});
+    f.appendChild(body);box.appendChild(f);
   });
+}
+// all of a recording's chosen takes, in order, as one WAV (voice only, no processing)
+function voiceOnly(it,b){
+  b.disabled=true;var t0=b.textContent;b.textContent="מכין…";
+  call("rc_takes",{k:it.k}).then(function(x){
+    if(!x.ok) throw new Error(x.error||"שגיאה");
+    var ac=new (window.OfflineAudioContext||window.webkitOfflineAudioContext)(1,1,48000),out=[],i=0,sr=48000;
+    function next(){
+      if(i>=x.takes.length) return finish();
+      var t=x.takes[i++];b.textContent="מכין… "+i+"/"+x.takes.length;
+      return call("rc_audio",{k:it.k,f:t.f}).then(function(y){
+        if(!y.ok) return next();
+        var bin=atob(y.wav),u=new Uint8Array(bin.length);for(var j=0;j<bin.length;j++) u[j]=bin.charCodeAt(j);
+        return ac.decodeAudioData(u.buffer).then(function(buf){sr=buf.sampleRate;out.push({b:t.b,d:buf.getChannelData(0)});return next()});
+      });
+    }
+    function finish(){
+      var gap=Math.round(.45*sr),bg=Math.round(3*sr),n=gap,prev=null;
+      out.forEach(function(o){if(prev!==null&&o.b!==prev)n+=bg;n+=o.d.length+gap;prev=o.b});
+      var all=new Float32Array(n),p=gap;prev=null;
+      out.forEach(function(o){if(prev!==null&&o.b!==prev)p+=bg;all.set(o.d,p);p+=o.d.length+gap;prev=o.b});
+      var pk=0;for(var j=0;j<n;j++) pk=Math.max(pk,Math.abs(all[j]));var g=pk?0.89/pk:1;
+      var wav=new ArrayBuffer(44+n*2),v=new DataView(wav),w=function(o,s){for(var q=0;q<s.length;q++) v.setUint8(o+q,s.charCodeAt(q))};
+      w(0,"RIFF");v.setUint32(4,36+n*2,true);w(8,"WAVE");w(12,"fmt ");v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,"data");v.setUint32(40,n*2,true);
+      for(j=0;j<n;j++) v.setInt16(44+j*2,Math.max(-1,Math.min(1,all[j]*g))*32767,true);
+      var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([wav],{type:"audio/wav"}));
+      a.download=((it.contact&&it.contact.name)||it.name||it.k)+" - "+(MODES[it.mode]||"")+" (קול בלבד).wav";document.body.appendChild(a);a.click();
+      b.disabled=false;b.textContent=t0;
+    }
+    return next();
+  }).catch(function(e){b.disabled=false;b.textContent=t0;$("#listStatus").textContent=e.message});
 }
 $("#q").addEventListener("input",renderList);
 $("#kalaShow").onclick=function(){
